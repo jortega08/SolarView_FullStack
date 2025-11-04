@@ -1,0 +1,269 @@
+.tasks-widget {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 20px 20px 18px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+/* Header */
+
+.tasks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.tasks-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.tasks-subtitle {
+  margin: 2px 0 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.tasks-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #e5e7eb;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Empty state */
+
+.tasks-empty {
+  padding: 24px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  border: 1px dashed #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+  text-align: center;
+}
+
+.tasks-empty svg {
+  opacity: 0.6;
+}
+
+.tasks-empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+/* Lista de logros */
+
+.tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Tarjeta individual */
+
+.task-card {
+  border-radius: 14px;
+  border: 1px solid #e2e8f0;
+  padding: 12px 12px 10px;
+  background: #ffffff;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Parte superior: icono + info */
+
+.task-main {
+  display: flex;
+  gap: 10px;
+}
+
+.task-icon-wrapper {
+  flex-shrink: 0;
+}
+
+.task-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.task-icon.solar {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.task-icon.electric {
+  background: rgba(15, 23, 42, 0.08);
+  color: #0f172a;
+}
+
+.task-icon.warning {
+  background: rgba(248, 113, 113, 0.12);
+  color: #ef4444;
+}
+
+.task-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.task-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.task-category {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.task-description {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Estado del logro */
+
+.task-status-pill {
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.task-status-pill.completed {
+  background: rgba(34, 197, 94, 0.12);
+  color: #15803d;
+}
+
+.task-status-pill.in_progress {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+}
+
+.task-status-pill.locked {
+  background: rgba(148, 163, 184, 0.16);
+  color: #475569;
+}
+
+/* Footer: progreso + puntos + CTA */
+
+.task-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.task-progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.task-progress-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.task-progress-label {
+  font-size: 11px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.task-progress-value {
+  font-size: 12px;
+  color: #475569;
+}
+
+.task-points-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Barra de progreso */
+
+.task-progress-bar {
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  overflow: hidden;
+}
+
+.task-progress-fill {
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #3b82f6, #22c55e);
+  transition: width 0.25s ease;
+}
+
+/* Botón CTA */
+
+.task-cta {
+  margin-top: 4px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #2563eb;
+  cursor: pointer;
+}
+
+.task-cta span {
+  text-align: left;
+}
+
+.task-cta svg {
+  flex-shrink: 0;
+}

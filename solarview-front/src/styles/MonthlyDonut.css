@@ -1,0 +1,227 @@
+.monthly-donut-card {
+  background-color: #ffffff;
+  border-radius: 16px;
+  padding: 20px 20px 18px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08),
+    0 1px 2px rgba(15, 23, 42, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+/* Header */
+
+.monthly-donut-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.monthly-donut-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.monthly-donut-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.monthly-donut-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.monthly-donut-month-switcher {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.monthly-donut-nav-button {
+  border: none;
+  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f1f5f9;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.monthly-donut-nav-button:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.monthly-donut-current-month {
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #0f172a;
+  color: #e5e7eb;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* Contenido */
+
+.monthly-donut-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.2fr);
+  gap: 16px;
+}
+
+@media (max-width: 900px) {
+  .monthly-donut-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.monthly-donut-chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 220px;
+}
+
+.monthly-donut-center {
+  position: absolute;
+  inset: 50% 0 auto 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+
+.monthly-donut-center .center-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  margin-bottom: 2px;
+}
+
+.monthly-donut-center .center-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+/* Tooltip */
+
+.monthly-donut-tooltip {
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.08),
+    0 4px 6px -4px rgba(15, 23, 42, 0.06);
+}
+
+.monthly-donut-tooltip .tooltip-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.monthly-donut-tooltip .tooltip-value {
+  font-size: 13px;
+  color: #475569;
+}
+
+/* Leyenda */
+
+.monthly-donut-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-self: center;
+  width: 100%;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.legend-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.legend-icon.electrica {
+  background: rgba(15, 23, 42, 0.06);
+  color: #0f172a;
+}
+
+.legend-icon.solar {
+  background: rgba(245, 158, 11, 0.08);
+  color: #f59e0b;
+}
+
+.legend-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.legend-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #0f172a;
+}
+
+.legend-value {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Footer */
+
+.monthly-donut-footer {
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #f8fafc;
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.footer-icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #475569;
+  flex-shrink: 0;
+}
+
+.footer-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #475569;
+}
+
+.footer-text strong {
+  color: #0f172a;
+}
