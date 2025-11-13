@@ -1,5 +1,7 @@
 import { Link, useLocation } from "react-router-dom"
 import { Home, Users, MapPin, Bell, BarChart3, Calendar, FileText, MessageSquare, Award, LogOut } from 'lucide-react'
+import NivelAvatar from "./NivelAvatar"
+import FacturaMensual from './FacturaMensual';
 
 export default function Layout({ children }) {
   const location = useLocation()
@@ -7,7 +9,7 @@ export default function Layout({ children }) {
   const navItems = [
     { path: '/', icon: Home, label: 'Dashboard' },
     { path: '/users', icon: Users, label: 'Usuarios' },
-    { path: '/domicilios', icon: MapPin, label: 'Domicilios' },
+    { path: '/facturas', icon: FileText, label: 'Facturas' },
     { path: '/alertas', icon: Bell, label: 'Alertas' },
   ]
 
@@ -60,18 +62,26 @@ export default function Layout({ children }) {
               flexShrink: 0,
               backgroundColor: '#334155'
             }}>
-              <img 
-                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Admin" 
-                alt="User"
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-              />
+              <div
+                style={{
+                  width: "48px",
+                  height: "48px",
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                  border: "2px solid #3b82f6",
+                  flexShrink: 0,
+                  backgroundColor: "#334155"
+                }}
+              >
+                <NivelAvatar domicilioId={1} size={48} />
+              </div>
             </div>
-            <div style={{ 
+            <div style={{
               minWidth: 0,
               flex: 1
             }}>
-              <h3 style={{ 
-                margin: 0, 
+              <h3 style={{
+                margin: 0,
                 fontSize: '16px',
                 fontWeight: '600',
                 whiteSpace: 'nowrap',
@@ -80,8 +90,8 @@ export default function Layout({ children }) {
               }}>
                 Admin
               </h3>
-              <p style={{ 
-                margin: 0, 
+              <p style={{
+                margin: 0,
                 fontSize: '13px',
                 color: '#94a3b8',
                 whiteSpace: 'nowrap',
@@ -106,8 +116,8 @@ export default function Layout({ children }) {
             const Icon = item.icon
             const active = isActive(item.path)
             return (
-              <Link 
-                key={item.path} 
+              <Link
+                key={item.path}
                 to={item.path}
                 style={{
                   display: 'flex',

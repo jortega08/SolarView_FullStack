@@ -97,7 +97,7 @@ const TasksTable = ({ tasks = [] }) => {
                   <button className="task-cta">
                     <span>
                       {status === "completed"
-                        ? "Logro completado 🎉"
+                        ? "Completado"
                         : "Ver cómo mejorar tu consumo"}
                     </span>
                     <ChevronRight size={16} />

@@ -1,0 +1,72 @@
+1763050604: mosquitto version 2.0.22 starting
+1763050604: Config loaded from /mosquitto/config/mosquitto.conf.
+1763050604: Opening ipv4 listen socket on port 1883.
+1763050604: Opening ipv6 listen socket on port 1883.
+1763050604: Opening websockets listen socket on port 9001.
+1763050604: mosquitto version 2.0.22 running
+1763050605: New connection from 172.18.0.5:60377 on port 1883.
+1763050605: New client connected from 172.18.0.5:60377 as auto-BF5BCEAB-93F7-C8B8-2C89-CB35E15A85D7 (p2, c1, k60).
+1763050605: New connection from 172.18.0.6:41123 on port 1883.
+1763050605: New client connected from 172.18.0.6:41123 as auto-4E0F809F-547E-B36E-B722-22183AC3B6AE (p2, c1, k60).
+1763052012: mosquitto version 2.0.22 starting
+1763052012: Config loaded from /mosquitto/config/mosquitto.conf.
+1763052012: Opening ipv4 listen socket on port 1883.
+1763052012: Opening ipv6 listen socket on port 1883.
+1763052012: Opening websockets listen socket on port 9001.
+1763052012: mosquitto version 2.0.22 running
+1763052014: New connection from 172.18.0.5:38673 on port 1883.
+1763052014: New client connected from 172.18.0.5:38673 as auto-8C5557D0-3B5C-613F-5912-42468ACE0DD2 (p2, c1, k60).
+1763052014: New connection from 172.18.0.6:57287 on port 1883.
+1763052014: New client connected from 172.18.0.6:57287 as auto-D86CF1AB-47A6-370D-DE48-254C56121A9E (p2, c1, k60).
+1763052476: New connection from 172.18.0.1:58968 on port 1883.
+1763052476: New client connected from 172.18.0.1:58968 as mqttx_bef281c3 (p5, c1, k60).
+1763052881: mosquitto version 2.0.22 starting
+1763052881: Config loaded from /mosquitto/config/mosquitto.conf.
+1763052881: Opening ipv4 listen socket on port 1883.
+1763052881: Opening ipv6 listen socket on port 1883.
+1763052881: Opening websockets listen socket on port 9001.
+1763052881: mosquitto version 2.0.22 running
+1763052882: New connection from 172.18.0.6:51635 on port 1883.
+1763052882: New client connected from 172.18.0.6:51635 as auto-B1373442-8B2D-0BB3-6E53-E20B815F5C08 (p2, c1, k60).
+1763052882: New connection from 172.18.0.5:45931 on port 1883.
+1763052882: New client connected from 172.18.0.5:45931 as auto-67576975-C8DF-8589-8587-C35780B376E9 (p2, c1, k60).
+1763053146: New connection from 172.18.0.1:50212 on port 1883.
+1763053146: New client connected from 172.18.0.1:50212 as mqttx_bef281c3 (p5, c1, k60).
+1763053604: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763053609: New connection from 172.18.0.1:33564 on port 1883.
+1763053609: New client connected from 172.18.0.1:33564 as mqttx_bef281c3 (p5, c1, k60).
+1763054009: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763054014: New connection from 172.18.0.1:41188 on port 1883.
+1763054014: New client connected from 172.18.0.1:41188 as mqttx_bef281c3 (p5, c1, k60).
+1763054489: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763054494: New connection from 172.18.0.1:60276 on port 1883.
+1763054494: New client connected from 172.18.0.1:60276 as mqttx_bef281c3 (p5, c1, k60).
+1763054681: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1763054909: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763054914: New connection from 172.18.0.1:59632 on port 1883.
+1763054914: New client connected from 172.18.0.1:59632 as mqttx_bef281c3 (p5, c1, k60).
+1763055329: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763055334: New connection from 172.18.0.1:49388 on port 1883.
+1763055334: New client connected from 172.18.0.1:49388 as mqttx_bef281c3 (p5, c1, k60).
+1763055749: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763055754: New connection from 172.18.0.1:43520 on port 1883.
+1763055754: New client connected from 172.18.0.1:43520 as mqttx_bef281c3 (p5, c1, k60).
+1763056169: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763056174: New connection from 172.18.0.1:52120 on port 1883.
+1763056174: New client connected from 172.18.0.1:52120 as mqttx_bef281c3 (p5, c1, k60).
+1763058801: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1763058929: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763058934: New connection from 172.18.0.1:37874 on port 1883.
+1763058934: New client connected from 172.18.0.1:37874 as mqttx_bef281c3 (p5, c1, k60).
+1763059409: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763059414: New connection from 172.18.0.1:47472 on port 1883.
+1763059414: New client connected from 172.18.0.1:47472 as mqttx_bef281c3 (p5, c1, k60).
+1763060129: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763060134: New connection from 172.18.0.1:43672 on port 1883.
+1763060134: New client connected from 172.18.0.1:43672 as mqttx_bef281c3 (p5, c1, k60).
+1763060602: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1763061058: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763061063: New connection from 172.18.0.1:50948 on port 1883.
+1763061063: New client connected from 172.18.0.1:50948 as mqttx_bef281c3 (p5, c1, k60).
+1763061153: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763062403: Saving in-memory database to /mosquitto/data//mosquitto.db.

@@ -39,7 +39,7 @@ const Sidebar = () => {
         <button className="nav-item">
           <LogOut size={20} />
         </button>
-        <span className="version">V1.2.4</span>
+        <span className="version">1</span>
       </div>
     </div>
   )

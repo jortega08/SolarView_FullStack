@@ -1,11 +1,18 @@
 # telemetria/views.py
+from django.db.models import Sum
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
+from datetime import datetime
 from django.utils import timezone
+import logging
 from .models import Consumo, Bateria
 from core.models import Domicilio
-import json, random
+import json
+
+logger = logging.getLogger(__name__)
+
+
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -71,3 +78,58 @@ def ver_datos(request):
         "consumos": consumos,
         "baterias": baterias,
     }, safe=False)
+
+
+@require_http_methods(["GET"])
+def factura_mensual(request):
+    domicilio_id = request.GET.get("domicilio_id")
+    mes = request.GET.get("mes")
+    ano = request.GET.get("ano")
+
+    # ✅ Validar los parámetros antes de convertir a int
+    if not domicilio_id or not mes or not ano:
+        return JsonResponse({"error": "Faltan datos"}, status=400)
+
+    try:
+        domicilio_id = int(domicilio_id)
+        mes = int(mes)
+        ano = int(ano)
+    except ValueError:
+        return JsonResponse({"error": "Parámetros inválidos: debe ser número"}, status=400)
+
+    try:
+        domicilio = Domicilio.objects.get(iddomicilio=domicilio_id)
+    except Domicilio.DoesNotExist:
+        return JsonResponse({"error": "Domicilio no encontrado"}, status=404)
+
+    consumos = Consumo.objects.filter(
+        domicilio=domicilio,
+        fecha__year=ano,
+        fecha__month=mes
+    )
+
+    electrica = consumos.filter(fuente='electrica').aggregate(
+        total=Sum('energia_consumida')
+    )['total'] or 0
+
+    solar = consumos.filter(fuente='solar').aggregate(
+        total=Sum('energia_consumida')
+    )['total'] or 0
+
+    costo_total = consumos.aggregate(
+        total=Sum('costo')
+    )['total'] or 0
+
+    usuario_nombre = getattr(domicilio.usuario, 'nombre', str(domicilio.usuario))
+    ciudad_nombre = getattr(domicilio.ciudad, 'nombre', str(domicilio.ciudad))
+
+    return JsonResponse({
+        "electrica": float(electrica),
+        "solar": float(solar),
+        "costo": float(costo_total),
+        "fecha_emision": timezone.now().strftime("%Y-%m-%d"),
+        "usuario": usuario_nombre,
+        "domicilio": str(domicilio),
+        "ciudad": ciudad_nombre,
+        # "consumos": list(consumos.values())  # Solo para depuración, si quieres ver datos
+    })

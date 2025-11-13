@@ -34,15 +34,11 @@ function normalizeData(rawData, period) {
   return rawData
     .map((item) => {
       let date = null
-
-      // 1) Si viene con fecha completa
       if (item.fecha) {
         date = new Date(item.fecha)
       } else if (item.bucket_start) {
         date = new Date(item.bucket_start)
-      }
-      // 2) Si viene como mes/año
-      else if (item.año && item.mes) {
+      } else if (item.año && item.mes) {
         const monthIndex =
           typeof item.mes === "string"
             ? MONTH_MAP[item.mes] ?? 0
@@ -50,17 +46,13 @@ function normalizeData(rawData, period) {
         const day = item.dia ?? 1
         date = new Date(item.año, monthIndex, day)
       }
-
       const solar = item.solar ?? item.solar_kwh ?? 0
       const electrica = item.electrica ?? item.electrica_kwh ?? 0
-
       let label = ""
       if (period === "year" && item.mes && item.año) {
-        // vista anual → Mes Año
         label = `${item.mes} ${item.año}`
       } else if (date instanceof Date && !isNaN(date)) {
         if (period === "week" || period === "month" || period === "custom") {
-          // día/mes corto
           label = date.toLocaleDateString("es-ES", {
             day: "2-digit",
             month: "short",
@@ -78,7 +70,6 @@ function normalizeData(rawData, period) {
       } else {
         label = item.label ?? ""
       }
-
       return {
         ...item,
         date,
@@ -93,18 +84,60 @@ function normalizeData(rawData, period) {
     })
 }
 
+// Agrupa y suma los consumos por período
+function groupAndSumData(data, period) {
+  const grouped = {}
+  console.log("Datos del mes actual:", data)
+
+  data.forEach((item) => {
+    let dateObj = item.date instanceof Date ? item.date : (item.fecha ? new Date(item.fecha) : null)
+    let key = ""
+    if (!dateObj || isNaN(dateObj)) return
+
+    switch (period) {
+      case "week":
+      case "month":
+      case "custom":
+        key = dateObj.toISOString().slice(0, 10) // YYYY-MM-DD
+        break
+      case "year":
+        key = dateObj.getFullYear() + "-" + (dateObj.getMonth() + 1) // YYYY-M
+        break
+      default:
+        key = dateObj.toISOString().slice(0, 10)
+    }
+
+    if (!grouped[key]) {
+      grouped[key] = {
+        date: dateObj,
+        label:
+          period === "year"
+            ? dateObj.toLocaleDateString("es-ES", { month: "short", year: "numeric" })
+            : dateObj.toLocaleDateString("es-ES", { day: "2-digit", month: "short" }),
+        solar: 0,
+        electrica: 0,
+      }
+    }
+    grouped[key].solar += item.solar || 0
+    grouped[key].electrica += item.electrica || 0
+  })
+
+  return Object.values(grouped).sort((a, b) => a.date - b.date)
+}
+
 export default function ActivitiesChart({ data, periodo = "year", onPeriodChange }) {
   const [hoveredBar, setHoveredBar] = useState(null)
   const [selectedBar, setSelectedBar] = useState(null)
 
-  const period = periodo // alias interno para reutilizar en normalizeData y labels
+  const period = periodo
 
-  // Usamos SIEMPRE los datos que vienen del backend para ese período
+  // Filtrado, normalizado, agrupado
   const filteredData = useMemo(() => {
-    return normalizeData(data, period)
+    const normData = normalizeData(data, period)
+    return groupAndSumData(normData, period)
   }, [data, period])
 
-  // Calcular estadísticas
+  // Estadísticas
   const stats = useMemo(() => {
     if (!filteredData || filteredData.length === 0) {
       return {
@@ -172,8 +205,7 @@ export default function ActivitiesChart({ data, periodo = "year", onPeriodChange
             backgroundColor: "white",
             padding: "16px",
             borderRadius: "12px",
-            boxShadow:
-              "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+            boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
             border: "1px solid #e5e7eb",
             minWidth: "200px",
           }}

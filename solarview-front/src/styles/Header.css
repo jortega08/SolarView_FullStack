@@ -1,90 +1,145 @@
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 20px 32px;
+.alerts-dropdown {
+  position: absolute;
+  top: 42px;
+  right: 0;
+  min-width: 260px;
   background: #fff;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-.header-title {
-  font-size: 24px;
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.header-actions {
+  border-radius: 14px;
+  box-shadow: 0 5px 18px rgba(15,23,42,0.14), 0 2px 6px rgba(15,23,42,0.08);
+  border: 1.5px solid #e5e7eb;
+  z-index: 20;
+  padding: 10px 0 10px 0;
   display: flex;
-  align-items: center;
-  gap: 16px;
+  flex-direction: column;
+  gap: 0;
+  animation: fadeIn 0.28s;
+}
+@keyframes fadeIn {
+  from { opacity: 0; translate: 0 -10px; }
+  to { opacity: 1; translate: 0 0; }
+}
+.alerts-dropdown-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #3b82f6;
+  padding: 0 18px 9px 18px;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 4px;
+  letter-spacing: 0.015em;
 }
 
+.alerts-dropdown-item {
+  padding: 8px 18px 8px 18px;
+  border-bottom: 1px solid #f7f8f9;
+  font-size: 13.1px;
+  color: #1e293b;
+  background: #f8fafc;
+  transition: background 0.14s;
+  cursor: pointer;
+}
+.alerts-dropdown-item:last-child {
+  border-bottom: none;
+}
+.alerts-dropdown-item:hover {
+  background: #e0e7ef;
+}
+.alerts-dropdown-item.empty {
+  color: #a1a7b8;
+  text-align: center;
+  background: none;
+  font-style: italic;
+  font-size: 14px;
+  padding-top: 20px;
+  padding-bottom: 16px;
+}
+
+.alerts-dropdown-alert-title {
+  font-weight: 700;
+  color: #be123c;
+  font-size: 13.5px;
+  margin-bottom: 0.5px;
+}
+
+.alerts-dropdown-alert-desc {
+  color: #475569;
+  font-size: 12.6px;
+  margin-bottom: 1.5px;
+  white-space: pre-line;
+}
+
+.alerts-dropdown-alert-date {
+  font-size: 11px;
+  color: #8a97b2;
+  margin-top: 2px;
+  font-style: italic;
+}
+
+/* --- BUSCADOR --- */
 .search-box {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  background: #f9fafb;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
+  background: #f5f5fa;
+  border-radius: 10px;
+  padding: 4px 10px;
+  box-shadow: 0 1px 6px rgba(15,23,42,0.06);
+  border: 1.5px solid #e2e8f0;
+  margin-right: 14px;
 }
 
 .search-box input {
   border: none;
   background: transparent;
+  font-size: 15px;
+  color: #334155;
   outline: none;
-  width: 200px;
-  font-size: 14px;
-  color: #1e293b;
+  width: 160px;
+  font-family: inherit;
+  padding: 3.5px 2px 3.5px 2px;
 }
 
 .search-box input::placeholder {
-  color: #9ca3af;
+  font-size: 15px;
+  color: #94a3b8;
+  opacity: 0.82;
 }
 
+/* --- CAMPANA --- */
 .notification-btn {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 6px 8px;
+  box-shadow: 0 1px 7.5px rgba(15,23,42,0.07);
   display: flex;
   align-items: center;
-  justify-content: center;
   cursor: pointer;
-  color: #64748b;
-  transition: all 0.2s;
+  position: relative;
+  transition: background 0.19s, box-shadow 0.21s, border 0.19s;
 }
 
 .notification-btn:hover {
-  background: #f9fafb;
+  background: #e0e7ef;
+  border-color: #c7d2fe;
 }
 
 .notification-badge {
-  position: absolute;
-  top: -4px;
-  right: -4px;
-  width: 18px;
-  height: 18px;
-  background: #f87171;
+  font-size: 12px;
+  font-weight: 700;
+  background: #ef4444;
   color: #fff;
-  border-radius: 50%;
-  font-size: 10px;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  border-radius: 999px;
+  padding: 1.5px 6px;
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  box-shadow: 0 1px 4px rgba(239,68,68,0.13);
+  pointer-events: none;
 }
 
-.language-select {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #e5e7eb;
-  background: #fff;
-  font-size: 14px;
-  font-weight: 500;
-  color: #1e293b;
-  cursor: pointer;
-  outline: none;
+/* --- ALINEACIÓN DE HEADER --- */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }

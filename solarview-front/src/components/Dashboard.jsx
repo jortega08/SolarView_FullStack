@@ -9,7 +9,10 @@ import MonthlyDonutChart from "./MonthlyDonutChart"
 import StatsCards from "./StatsCards"
 import TasksTable from "./TasksTable"
 import Calendar from "./Calendar"
-import { fetchDashboardData } from "../services/api"
+import BatteryInfoCard from "./BatteryInfoCard"
+import BatteryThermometer from "./BatteryThermometer"
+import TodayConsumptionCard from "./TodayConsumptionCard"
+import { fetchDashboardData, fetchBatteryStatus } from "../services/api"
 import "../styles/Dashboard.css"
 
 const Dashboard = () => {
@@ -18,24 +21,19 @@ const Dashboard = () => {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [periodo, setPeriodo] = useState("year")
-  const [dateRange, setDateRange] = useState(null) // {start, end, startISO, endISO}
-  const [yearActivities, setYearActivities] = useState([]) // datos fijos para el donut
+  const [dateRange, setDateRange] = useState(null)
+  const [yearActivities, setYearActivities] = useState([])
+  const [batteryData, setBatteryData] = useState(null)
 
   const loadDashboardData = async (currentPeriod = periodo, currentRange = dateRange) => {
     try {
       const data = await fetchDashboardData(currentPeriod, currentRange)
-
-      console.log("🔍 Activities que llega al estado:", data.activities)
-
       setStats(data.stats)
       setActivities(data.activities)
       setTasks(data.tasks)
-
-      // Si estamos en vista anual sin rango custom, guardamos dataset anual para el donut
       if (currentPeriod === "year" && !currentRange) {
         setYearActivities(data.activities || [])
       }
-
       setLoading(false)
     } catch (error) {
       console.error("Error loading dashboard data:", error)
@@ -45,18 +43,21 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadDashboardData()
-    const interval = setInterval(() => loadDashboardData(), 30000)
+    fetchBatteryStatus().then((data) => setBatteryData(data))
+    const interval = setInterval(() => {
+      loadDashboardData()
+      fetchBatteryStatus().then((data) => setBatteryData(data))
+    }, 30000)
     return () => clearInterval(interval)
-  }, []) // inicial
+  }, [])
 
   const handlePeriodChange = (newPeriod) => {
     setPeriodo(newPeriod)
-    setDateRange(null) // limpiamos rango custom
+    setDateRange(null)
     loadDashboardData(newPeriod, null)
   }
 
   const handleRangeChange = (range) => {
-    // calendario → periodo custom con rango
     setPeriodo("custom")
     setDateRange(range)
     loadDashboardData("custom", range)
@@ -71,8 +72,6 @@ const Dashboard = () => {
     )
   }
 
-  // Datos que usará el donut: preferimos el anual guardado,
-  // y si no existe aún, usamos lo que haya en activities
   const donutData = yearActivities.length ? yearActivities : activities
 
   return (
@@ -82,7 +81,6 @@ const Dashboard = () => {
         <Header />
         <div className="dashboard-content">
           <HeroBanner userName="Usuario" />
-
           <div className="dashboard-grid">
             <div className="dashboard-left">
               <ActivitiesChart
@@ -90,15 +88,15 @@ const Dashboard = () => {
                 periodo={periodo}
                 onPeriodChange={handlePeriodChange}
               />
+              <BatteryInfoCard data={batteryData} />
               <TasksTable tasks={tasks} />
             </div>
 
             <div className="dashboard-right">
               <Calendar range={dateRange} onRangeChange={handleRangeChange} />
-
-              {/* Nuevo donut de consumo mensual */}
               <MonthlyDonutChart data={donutData} />
-
+              <TodayConsumptionCard />
+              <BatteryThermometer />
               <StatsCards stats={stats} />
             </div>
           </div>

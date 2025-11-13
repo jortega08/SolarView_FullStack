@@ -9,6 +9,7 @@ from .models import Puntaje, Recomendacion
 from core.models import Domicilio
 from telemetria.models import Consumo, Bateria
 import json
+import traceback
 from django.db.models import Sum
 from django.db.models.functions import TruncDay, TruncWeek
 from django.utils import timezone
@@ -64,31 +65,67 @@ def obtener_estadisticas(request):
 def obtener_actividades_mensuales(request):
     try:
         domicilio_id = request.GET.get('domicilio_id', 1)
-        periodo = request.GET.get('periodo', 'year')  # 'week', 'month', 'year'
+        periodo = request.GET.get('periodo', 'year')
         domicilio = Domicilio.objects.get(iddomicilio=domicilio_id)
 
-        # MUY IMPORTANTE: usar la fecha local, no timezone.now() a pelo
         hoy = timezone.localdate()
         actividades = []
 
         if periodo == 'week':
-            # Últimos 7 días (hoy incluido)
+            # Últimos 7 días
             start_date = hoy - timedelta(days=6)
-
             qs = Consumo.objects.filter(
                 domicilio=domicilio,
                 fecha__date__gte=start_date,
                 fecha__date__lte=hoy
             )
-
-            # Una sola query, agrupamos por día y fuente
             agregados = (
                 qs.annotate(dia=TruncDay('fecha'))
                   .values('dia', 'fuente')
                   .annotate(total=Sum('energia_consumida'))
             )
+            mapa = {}
+            for row in agregados:
+                dia = row['dia'].date()
+                fuente = row['fuente']
+                total = float(row['total'] or 0)
+                if dia not in mapa:
+                    mapa[dia] = {'solar': 0.0, 'electrica': 0.0}
+                if fuente == 'solar':
+                    mapa[dia]['solar'] += total
+                elif fuente == 'electrica':
+                    mapa[dia]['electrica'] += total
+            for i in range(6, -1, -1):
+                fecha = hoy - timedelta(days=i)
+                solar = mapa.get(fecha, {}).get('solar', 0.0)
+                electrica = mapa.get(fecha, {}).get('electrica', 0.0)
+                actividades.append({
+                    'mes': fecha.strftime('%a %d'),
+                    'fecha': fecha.isoformat(),
+                    'solar': round(solar, 2),
+                    'electrica': round(electrica, 2)
+                })
 
-            # Pasamos a un dict: {fecha: {'solar': x, 'electrica': y}}
+        elif periodo == 'month':
+            # Consumos diarios del mes actual (desde el día 1 hasta hoy)
+            from calendar import monthrange
+            start_date = hoy.replace(day=1)
+            end_date = hoy
+            ultimo_dia = monthrange(hoy.year, hoy.month)[1]
+
+            qs = Consumo.objects.filter(
+                domicilio=domicilio,
+                fecha__date__gte=start_date,
+                fecha__date__lte=end_date
+            )
+
+            agregados = (
+                qs.annotate(dia=TruncDay('fecha'))
+                .values('dia', 'fuente')
+                .annotate(total=Sum('energia_consumida'))
+                .order_by('dia')
+            )
+
             mapa = {}
             for row in agregados:
                 dia = row['dia'].date()
@@ -101,113 +138,52 @@ def obtener_actividades_mensuales(request):
                 elif fuente == 'electrica':
                     mapa[dia]['electrica'] += total
 
-            # Construimos la lista con TODOS los días, aunque tengan 0
-            for i in range(6, -1, -1):
-                fecha = hoy - timedelta(days=i)
+            actividades = []
+            for day in range(1, ultimo_dia + 1):
+                try:
+                    fecha = hoy.replace(day=day)
+                except ValueError:
+                    continue
                 solar = mapa.get(fecha, {}).get('solar', 0.0)
                 electrica = mapa.get(fecha, {}).get('electrica', 0.0)
-
                 actividades.append({
-                    'mes': fecha.strftime('%a %d'),  # Ej: "Tue 28"
+                    'mes': fecha.strftime('%a %d'),
                     'fecha': fecha.isoformat(),
                     'solar': round(solar, 2),
-                    'electrica': round(electrica, 2)
-                })
-
-        elif periodo == 'month':
-            # Últimas 4 semanas (agrupamos por semana ISO)
-            end_date = hoy
-            start_date = end_date - timedelta(weeks=4)
-
-            qs = Consumo.objects.filter(
-                domicilio=domicilio,
-                fecha__date__gte=start_date,
-                fecha__date__lte=end_date
-            )
-
-            agregados = (
-                qs.annotate(semana=TruncWeek('fecha'))  # lunes como inicio de semana
-                  .values('semana', 'fuente')
-                  .annotate(total=Sum('energia_consumida'))
-                  .order_by('semana')
-            )
-
-            # {semana_inicio: {'solar': x, 'electrica': y}}
-            mapa = {}
-            for row in agregados:
-                semana_inicio = row['semana'].date()
-                fuente = row['fuente']
-                total = float(row['total'] or 0)
-                if semana_inicio not in mapa:
-                    mapa[semana_inicio] = {'solar': 0.0, 'electrica': 0.0}
-                if fuente == 'solar':
-                    mapa[semana_inicio]['solar'] += total
-                elif fuente == 'electrica':
-                    mapa[semana_inicio]['electrica'] += total
-
-            semanas_ordenadas = sorted(mapa.keys())
-            # Nos quedamos con las últimas 4 semanas (por si hay más)
-            semanas_ordenadas = semanas_ordenadas[-4:]
-
-            for idx, semana_inicio in enumerate(semanas_ordenadas, start=1):
-                semana_fin = semana_inicio + timedelta(days=6)
-                # Limitamos semana_fin para no pasar de hoy
-                if semana_fin > end_date:
-                    semana_fin = end_date
-
-                solar = mapa[semana_inicio]['solar']
-                electrica = mapa[semana_inicio]['electrica']
-
-                actividades.append({
-                    'mes': f'Sem {idx}',
-                    'fecha_inicio': semana_inicio.isoformat(),
-                    'fecha_fin': semana_fin.isoformat(),
-                    'solar': round(solar, 2),
-                    'electrica': round(electrica, 2)
+                    'electrica': round(electrica, 2),
+                    'dia': day
                 })
 
         else:  # year
-            # Últimos 12 meses (mantengo tu lógica, solo más clara)
             meses_labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
                             'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
-
-            # Empezamos 11 meses atrás hasta el mes actual
             year = hoy.year
             month = hoy.month
-
             for _ in range(11, -1, -1):
-                # mes/year actuales
                 mes = month
                 año = year
-
                 solar = Consumo.objects.filter(
                     domicilio=domicilio,
                     fuente='solar',
                     fecha__year=año,
                     fecha__month=mes
                 ).aggregate(total=Sum('energia_consumida'))['total'] or 0
-
                 electrica = Consumo.objects.filter(
                     domicilio=domicilio,
                     fuente='electrica',
                     fecha__year=año,
                     fecha__month=mes
                 ).aggregate(total=Sum('energia_consumida'))['total'] or 0
-
                 actividades.append({
                     'mes': meses_labels[mes - 1],
                     'año': año,
                     'solar': round(solar, 2),
                     'electrica': round(electrica, 2)
                 })
-
-                # retrocedemos un mes
                 month -= 1
                 if month == 0:
                     month = 12
                     year -= 1
-
-            # ahora están de más antiguo a más nuevo; si los quieres al revés, haz:
             actividades = list(reversed(actividades))
 
         return JsonResponse({
@@ -257,10 +233,9 @@ def obtener_estado_bateria(request):
     try:
         domicilio_id = request.GET.get('domicilio_id', 1)
         domicilio = Domicilio.objects.get(iddomicilio=domicilio_id)
-        
-        # Get latest battery data
+
         bateria = Bateria.objects.filter(domicilio=domicilio).order_by('-fecha_registro').first()
-        
+
         if bateria:
             return JsonResponse({
                 'success': True,
@@ -280,6 +255,9 @@ def obtener_estado_bateria(request):
                 'data': None
             })
     except Exception as e:
+        # Esto lo verás en tu terminal/aplicación para saber la razón exacta
+        print("Error bateria API:", str(e))
+        traceback.print_exc()
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
     
 @csrf_exempt
@@ -314,4 +292,19 @@ def obtener_logros(request):
         {"success": False, "error": str(e)},
         status=500,
     )
+  
+@csrf_exempt
+@require_http_methods(["GET"])
+def nivel_usuario(request):
+    domicilio_id = request.GET.get("domicilio_id")
+    if not domicilio_id:
+        return JsonResponse({"error": "Falta domicilio_id"}, status=400)
+    puntaje = Puntaje.objects.filter(domicilio__iddomicilio=domicilio_id).order_by('-puntos').first()
+    if not puntaje:
+        return JsonResponse({"error": "No hay puntaje"}, status=404)
+    return JsonResponse({
+        "nivel": puntaje.nivel,
+        "puntos": puntaje.puntos,
+        "ultima_actualizacion": puntaje.ultima_actualizacion.strftime("%Y-%m-%d %H:%M"),
+    })
     

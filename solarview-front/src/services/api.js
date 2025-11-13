@@ -168,13 +168,31 @@ export const getTiposAlerta = async () => {
   return response.json()
 }
 
-export const getAlertasActivasCount = async (domicilioId = null) => {
-  const url = domicilioId
-    ? `${API_BASE_URL}/alertas/alertas/activas/count/?domicilio_id=${domicilioId}`
-    : `${API_BASE_URL}/alertas/alertas/activas/count/`
-  const response = await fetch(url)
-  return response.json()
-}
+export const fetchUltimasAlertas = async (domicilioId = null) => {
+  const params = new URLSearchParams();
+  if (domicilioId) params.append("domicilio_id", domicilioId);
+  const response = await fetch(
+    `${API_BASE_URL}/alertas/ultimas/?${params.toString()}`
+  );
+  return response.json();
+};
+
+
+export const fetchFacturaMensual = async ({ domicilioId, mes, ano }) => {
+  const params = new URLSearchParams();
+  params.append("domicilio_id", domicilioId);
+  params.append("mes", mes);
+  params.append("ano", ano);
+
+  const response = await fetch(`${API_BASE_URL}/factura/mensual/?${params.toString()}`);
+  const data = await response.json();
+  if (data.success !== false) {
+    return data;
+  } else {
+    throw new Error(data.error || "Error generando factura");
+  }
+};
+
 
 export default {
   fetchDashboardData,
@@ -195,5 +213,6 @@ export default {
   updateAlerta,
   deleteAlerta,
   getTiposAlerta,
-  getAlertasActivasCount,
+  fetchUltimasAlertas,
+  fetchFacturaMensual,
 }

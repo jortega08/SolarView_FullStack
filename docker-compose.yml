@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  django:
+    build:
+      context: ./solarviewapp
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - ALLOWED_HOSTS=localhost,127.0.0.1
+    volumes:
+      - ./solarviewapp:/app
+    command: python manage.py runserver 0.0.0.0:8000
+
+  react:
+    build:
+      context: ./solarview-front
+      dockerfile: Dockerfile
+    ports:
+      - "5174:5174"
+    volumes:
+      - ./solarview-front:/app
+      - /app/node_modules
+
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./iot/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./iot/mosquitto/data:/mosquitto/data
+      - ./iot/mosquitto/log:/mosquitto/log
+    environment:
+      - TZ=America/Bogota
+
+  mqtt-publisher:
+    build:
+      context: ./iot/publisher
+      dockerfile: Dockerfile
+    depends_on:
+      - mosquitto
+    environment:
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - DJANGO_API=http://django:8000
+    volumes:
+      - ./iot/publisher:/app
+    command: python app.py
+
+  mqtt-consumer:
+    build:
+      context: ./iot/consumer
+      dockerfile: Dockerfile
+    depends_on:
+      - mosquitto
+      - django
+    environment:
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+      - DJANGO_API=http://django:8000
+    volumes:
+      - ./iot/consumer:/app
+    command: python consumer.py
+
+volumes:
+  mosquitto_data:
+  mosquitto_log:
