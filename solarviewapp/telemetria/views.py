@@ -61,15 +61,9 @@ def registrar_datos(request):
             costo=costo,
         )
 
-        # Ejecutar triggers de gamificacion
-        consumo.actualizar_puntaje()
-        consumo.autonomia_solar()
-        consumo.uso_solar_constante()
-        consumo.reduccion_consumo_semanal()
-        consumo.penalizacion_consumo_diario()
-        consumo.penalizacion_picos_consumo()
-        consumo.logro_mes_solar()
-        consumo.logro_1MWh_generado()
+        # Dispatch gamification to Celery (async)
+        from .tasks import process_gamification
+        process_gamification.delay(consumo.idconsumo)
 
         # Validate bateria fields
         voltaje = _validate_positive_float(data.get("voltaje"), "voltaje")
@@ -95,10 +89,20 @@ def registrar_datos(request):
             tiempo_restante=tiempo_restante,
         )
 
-        # Ejecutar triggers de alerta
-        bateria.alerta_temperatura()
-        bateria.alerta_carga()
-        bateria.actualizar_puntaje_rendimiento(float(data.get("energia_generada", 0)))
+        # Dispatch battery alerts to Celery (async)
+        from .tasks import process_battery_alerts, notify_realtime_update
+        energia_generada = float(data.get("energia_generada", 0))
+        process_battery_alerts.delay(bateria.idbateria, energia_generada)
+
+        # Notify WebSocket clients
+        notify_realtime_update.delay(domicilio_id, 'sensor', {
+            'consumo_id': consumo.idconsumo,
+            'bateria_id': bateria.idbateria,
+            'energia_consumida': energia_consumida,
+            'fuente': fuente,
+            'porcentaje_carga': porcentaje_carga_val,
+            'temperatura': temperatura,
+        })
 
         return JsonResponse({
             "success": True,

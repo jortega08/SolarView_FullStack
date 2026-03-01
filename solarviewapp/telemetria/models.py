@@ -23,6 +23,11 @@ class Consumo(models.Model):
         verbose_name_plural = 'Consumos'
         ordering = ['-fecha']
         unique_together = ('domicilio', 'fecha')
+        indexes = [
+            models.Index(fields=['domicilio', 'fecha'], name='idx_consumo_dom_fecha'),
+            models.Index(fields=['domicilio', 'fuente', 'fecha'], name='idx_consumo_dom_fuente_fecha'),
+            models.Index(fields=['fecha'], name='idx_consumo_fecha'),
+        ]
 
     def __str__(self):
         return f"Consumo de {self.energia_consumida} kwH de {self.fuente} del usuario {self.domicilio.usuario.nombre} el {self.fecha.strftime('%Y-%m-%d %H:%M:%S')}"
@@ -170,6 +175,10 @@ class Bateria(models.Model):
         db_table = 'bateria'
         verbose_name = 'Bateria'
         verbose_name_plural = 'Baterias'
+        indexes = [
+            models.Index(fields=['domicilio', 'fecha_registro'], name='idx_bateria_dom_fecha'),
+            models.Index(fields=['-fecha_registro'], name='idx_bateria_fecha_desc'),
+        ]
 
     def __str__(self):
         # Ajusta esto según lo que tenga Domicilio

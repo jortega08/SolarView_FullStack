@@ -17,6 +17,18 @@ services:
       timeout: 5s
       retries: 5
 
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   django:
     build:
       context: ./solarviewapp
@@ -29,19 +41,64 @@ services:
       - DEBUG=${DEBUG:-True}
       - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
       - POSTGRES_HOST=postgres
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
     volumes:
       - ./solarviewapp:/app
     command: >
       sh -c "python manage.py migrate --noinput &&
-             gunicorn solarviewapp.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 120 --reload"
+             daphne -b 0.0.0.0 -p 8000 solarviewapp.asgi:application"
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/')"]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  celery-worker:
+    build:
+      context: ./solarviewapp
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - ./solarviewapp:/app
+    command: celery -A solarviewapp worker -l info --concurrency=2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-beat:
+    build:
+      context: ./solarviewapp
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - ./solarviewapp:/app
+    command: celery -A solarviewapp beat -l info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   react:
     build:
@@ -108,5 +165,6 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:
   mosquitto_data:
   mosquitto_log:

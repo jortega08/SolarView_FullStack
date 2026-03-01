@@ -1,78 +1,89 @@
-from django.shortcuts import render
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.db.models import Sum, Avg, Count
-from django.utils import timezone
+import logging
+import traceback
+from calendar import monthrange
 from datetime import timedelta
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+from django.db.models import Sum, Avg
+from django.db.models.functions import TruncDay
+from django.utils import timezone
+from django.core.cache import cache
+
 from .models import Puntaje, Recomendacion
+from .gamificacion import construir_logros_para_domicilio
 from core.models import Domicilio
 from telemetria.models import Consumo, Bateria
-import json
-import traceback
-from django.db.models import Sum
-from django.db.models.functions import TruncDay, TruncWeek
-from django.utils import timezone
-from datetime import timedelta
-from .gamificacion import construir_logros_para_domicilio
+
+logger = logging.getLogger(__name__)
+
+CACHE_TTL_SHORT = 30   # 30 seconds for real-time data
+CACHE_TTL_MEDIUM = 300  # 5 minutes for stats
 
 
-@csrf_exempt
-@require_http_methods(["GET"])
+@require_GET
 def obtener_estadisticas(request):
     try:
         domicilio_id = request.GET.get('domicilio_id', 1)
+
+        # Try cache first
+        cache_key = f"stats_{domicilio_id}"
+        cached = cache.get(cache_key)
+        if cached:
+            return JsonResponse({'success': True, 'data': cached, 'cached': True})
+
         domicilio = Domicilio.objects.get(iddomicilio=domicilio_id)
-        
-        # Get puntaje
+
         puntaje = Puntaje.objects.filter(domicilio=domicilio).first()
-        
-        # Calculate statistics
+
         hoy = timezone.now().date()
         inicio_mes = hoy - timedelta(days=30)
-        
-        # Total projects (consumos registrados)
+
         total_registros = Consumo.objects.filter(domicilio=domicilio).count()
-        
-        # Completed tasks (días con datos completos)
+
         dias_completos = Consumo.objects.filter(
             domicilio=domicilio,
             fecha__date__gte=inicio_mes
         ).values('fecha__date').distinct().count()
-        
-        # Earnings (ahorro por uso solar)
+
         ahorro_solar = Consumo.objects.filter(
             domicilio=domicilio,
             fuente='solar',
             fecha__date__gte=inicio_mes
         ).aggregate(total=Sum('costo'))['total'] or 0
-        
-        return JsonResponse({
-            'success': True,
-            'data': {
-                'open_projects': total_registros,
-                'completed_tasks': dias_completos,
-                'earnings': round(ahorro_solar, 2),
-                'puntos': puntaje.puntos if puntaje else 0,
-                'nivel': puntaje.nivel if puntaje else 'basico'
-            }
-        })
+
+        data = {
+            'open_projects': total_registros,
+            'completed_tasks': dias_completos,
+            'earnings': round(float(ahorro_solar), 2),
+            'puntos': puntaje.puntos if puntaje else 0,
+            'nivel': puntaje.nivel if puntaje else 'basico'
+        }
+
+        cache.set(cache_key, data, CACHE_TTL_MEDIUM)
+
+        return JsonResponse({'success': True, 'data': data})
     except Exception as e:
+        logger.exception("Error en obtener_estadisticas")
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
-@csrf_exempt
-@require_http_methods(["GET"])
+
+@require_GET
 def obtener_actividades_mensuales(request):
     try:
         domicilio_id = request.GET.get('domicilio_id', 1)
         periodo = request.GET.get('periodo', 'year')
-        domicilio = Domicilio.objects.get(iddomicilio=domicilio_id)
 
+        cache_key = f"actividades_{domicilio_id}_{periodo}"
+        cached = cache.get(cache_key)
+        if cached:
+            return JsonResponse({'success': True, 'data': cached, 'periodo': periodo, 'cached': True})
+
+        domicilio = Domicilio.objects.get(iddomicilio=domicilio_id)
         hoy = timezone.localdate()
         actividades = []
 
         if periodo == 'week':
-            # Últimos 7 días
             start_date = hoy - timedelta(days=6)
             qs = Consumo.objects.filter(
                 domicilio=domicilio,
@@ -91,10 +102,9 @@ def obtener_actividades_mensuales(request):
                 total = float(row['total'] or 0)
                 if dia not in mapa:
                     mapa[dia] = {'solar': 0.0, 'electrica': 0.0}
-                if fuente == 'solar':
-                    mapa[dia]['solar'] += total
-                elif fuente == 'electrica':
-                    mapa[dia]['electrica'] += total
+                if fuente in ('solar', 'electrica'):
+                    mapa[dia][fuente] += total
+
             for i in range(6, -1, -1):
                 fecha = hoy - timedelta(days=i)
                 solar = mapa.get(fecha, {}).get('solar', 0.0)
@@ -107,25 +117,20 @@ def obtener_actividades_mensuales(request):
                 })
 
         elif periodo == 'month':
-            # Consumos diarios del mes actual (desde el día 1 hasta hoy)
-            from calendar import monthrange
             start_date = hoy.replace(day=1)
-            end_date = hoy
             ultimo_dia = monthrange(hoy.year, hoy.month)[1]
 
             qs = Consumo.objects.filter(
                 domicilio=domicilio,
                 fecha__date__gte=start_date,
-                fecha__date__lte=end_date
+                fecha__date__lte=hoy
             )
-
             agregados = (
                 qs.annotate(dia=TruncDay('fecha'))
                 .values('dia', 'fuente')
                 .annotate(total=Sum('energia_consumida'))
                 .order_by('dia')
             )
-
             mapa = {}
             for row in agregados:
                 dia = row['dia'].date()
@@ -133,12 +138,9 @@ def obtener_actividades_mensuales(request):
                 total = float(row['total'] or 0)
                 if dia not in mapa:
                     mapa[dia] = {'solar': 0.0, 'electrica': 0.0}
-                if fuente == 'solar':
-                    mapa[dia]['solar'] += total
-                elif fuente == 'electrica':
-                    mapa[dia]['electrica'] += total
+                if fuente in ('solar', 'electrica'):
+                    mapa[dia][fuente] += total
 
-            actividades = []
             for day in range(1, ultimo_dia + 1):
                 try:
                     fecha = hoy.replace(day=day)
@@ -154,29 +156,40 @@ def obtener_actividades_mensuales(request):
                     'dia': day
                 })
 
-        else:  # year
+        else:  # year - optimized with single query
             meses_labels = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
                             'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
             year = hoy.year
             month = hoy.month
+
+            # Single query for 12 months instead of 24 separate queries
+            twelve_months_ago = hoy - timedelta(days=365)
+            qs = Consumo.objects.filter(
+                domicilio=domicilio,
+                fecha__date__gte=twelve_months_ago,
+                fecha__date__lte=hoy
+            ).values(
+                'fecha__year', 'fecha__month', 'fuente'
+            ).annotate(
+                total=Sum('energia_consumida')
+            )
+
+            mapa = {}
+            for row in qs:
+                key = (row['fecha__year'], row['fecha__month'])
+                if key not in mapa:
+                    mapa[key] = {'solar': 0.0, 'electrica': 0.0}
+                fuente = row['fuente']
+                if fuente in ('solar', 'electrica'):
+                    mapa[key][fuente] = float(row['total'] or 0)
+
             for _ in range(11, -1, -1):
-                mes = month
-                año = year
-                solar = Consumo.objects.filter(
-                    domicilio=domicilio,
-                    fuente='solar',
-                    fecha__year=año,
-                    fecha__month=mes
-                ).aggregate(total=Sum('energia_consumida'))['total'] or 0
-                electrica = Consumo.objects.filter(
-                    domicilio=domicilio,
-                    fuente='electrica',
-                    fecha__year=año,
-                    fecha__month=mes
-                ).aggregate(total=Sum('energia_consumida'))['total'] or 0
+                key = (year, month)
+                solar = mapa.get(key, {}).get('solar', 0.0)
+                electrica = mapa.get(key, {}).get('electrica', 0.0)
                 actividades.append({
-                    'mes': meses_labels[mes - 1],
-                    'año': año,
+                    'mes': meses_labels[month - 1],
+                    'ano': year,
                     'solar': round(solar, 2),
                     'electrica': round(electrica, 2)
                 })
@@ -186,115 +199,85 @@ def obtener_actividades_mensuales(request):
                     year -= 1
             actividades = list(reversed(actividades))
 
+        cache.set(cache_key, actividades, CACHE_TTL_SHORT)
+
         return JsonResponse({
             'success': True,
             'data': actividades,
             'periodo': periodo
         })
     except Exception as e:
+        logger.exception("Error en obtener_actividades_mensuales")
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
-@csrf_exempt
-@require_http_methods(["GET"])
-def obtener_tareas_recientes(request):
-    try:
-        domicilio_id = request.GET.get('domicilio_id', 1)
-        domicilio = Domicilio.objects.get(iddomicilio=domicilio_id)
-        
-        # Get recent consumos as "tasks"
-        consumos_recientes = Consumo.objects.filter(
-            domicilio=domicilio
-        ).order_by('-fecha')[:10]
-        
-        tareas = []
-        for consumo in consumos_recientes:
-            tareas.append({
-                'id': consumo.idconsumo,
-                'department': 'Energy',
-                'stage': 'Monitoring',
-                'assigned': domicilio.usuario.nombre,
-                'team': consumo.fuente.capitalize(),
-                'date': consumo.fecha.strftime('%Y-%m-%d'),
-                'status': 'done' if consumo.fuente == 'solar' else 'pending',
-                'energia': consumo.energia_consumida,
-                'costo': consumo.costo
-            })
-        
-        return JsonResponse({
-            'success': True,
-            'data': tareas
-        })
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
-@csrf_exempt
-@require_http_methods(["GET"])
+@require_GET
 def obtener_estado_bateria(request):
     try:
         domicilio_id = request.GET.get('domicilio_id', 1)
-        domicilio = Domicilio.objects.get(iddomicilio=domicilio_id)
 
+        cache_key = f"bateria_{domicilio_id}"
+        cached = cache.get(cache_key)
+        if cached is not None:
+            return JsonResponse({'success': True, 'data': cached, 'cached': True})
+
+        domicilio = Domicilio.objects.get(iddomicilio=domicilio_id)
         bateria = Bateria.objects.filter(domicilio=domicilio).order_by('-fecha_registro').first()
 
         if bateria:
-            return JsonResponse({
-                'success': True,
-                'data': {
-                    'voltaje': bateria.voltaje,
-                    'corriente': bateria.corriente,
-                    'temperatura': bateria.temperatura,
-                    'capacidad': bateria.capacidad_bateria,
-                    'porcentaje_carga': bateria.porcentaje_carga,
-                    'tiempo_restante': bateria.tiempo_restante,
-                    'fecha': bateria.fecha_registro.isoformat()
-                }
-            })
+            data = {
+                'voltaje': bateria.voltaje,
+                'corriente': bateria.corriente,
+                'temperatura': bateria.temperatura,
+                'capacidad': bateria.capacidad_bateria,
+                'porcentaje_carga': bateria.porcentaje_carga,
+                'tiempo_restante': bateria.tiempo_restante,
+                'fecha': bateria.fecha_registro.isoformat()
+            }
         else:
-            return JsonResponse({
-                'success': True,
-                'data': None
-            })
+            data = None
+
+        cache.set(cache_key, data, CACHE_TTL_SHORT)
+
+        return JsonResponse({'success': True, 'data': data})
     except Exception as e:
-        # Esto lo verás en tu terminal/aplicación para saber la razón exacta
-        print("Error bateria API:", str(e))
-        traceback.print_exc()
+        logger.exception("Error en obtener_estado_bateria")
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
-    
-@csrf_exempt
-@require_http_methods(["GET"])
+
+
+@require_GET
 def obtener_logros(request):
-  try:
-    domicilio_id = request.GET.get("domicilio_id")
+    try:
+        domicilio_id = request.GET.get("domicilio_id")
 
-    if not domicilio_id:
-      return JsonResponse(
-          {"success": False, "error": "domicilio_id es requerido"},
-          status=400,
-      )
+        if not domicilio_id:
+            return JsonResponse(
+                {"success": False, "error": "domicilio_id es requerido"},
+                status=400,
+            )
 
-    domicilio = Domicilio.objects.get(iddomicilio=domicilio_id)
+        cache_key = f"logros_{domicilio_id}"
+        cached = cache.get(cache_key)
+        if cached:
+            return JsonResponse({"success": True, "data": cached, "cached": True})
 
-    logros = construir_logros_para_domicilio(domicilio)
+        domicilio = Domicilio.objects.get(iddomicilio=domicilio_id)
+        logros = construir_logros_para_domicilio(domicilio)
 
-    return JsonResponse(
-        {
-            "success": True,
-            "data": logros,
-        }
-    )
-  except Domicilio.DoesNotExist:
-    return JsonResponse(
-        {"success": False, "error": "Domicilio no encontrado"},
-        status=404,
-    )
-  except Exception as e:
-    return JsonResponse(
-        {"success": False, "error": str(e)},
-        status=500,
-    )
-  
-@csrf_exempt
-@require_http_methods(["GET"])
+        cache.set(cache_key, logros, CACHE_TTL_MEDIUM)
+
+        return JsonResponse({"success": True, "data": logros})
+    except Domicilio.DoesNotExist:
+        return JsonResponse(
+            {"success": False, "error": "Domicilio no encontrado"},
+            status=404,
+        )
+    except Exception as e:
+        logger.exception("Error en obtener_logros")
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
+
+
+@require_GET
 def nivel_usuario(request):
     domicilio_id = request.GET.get("domicilio_id")
     if not domicilio_id:
@@ -307,4 +290,3 @@ def nivel_usuario(request):
         "puntos": puntaje.puntos,
         "ultima_actualizacion": puntaje.ultima_actualizacion.strftime("%Y-%m-%d %H:%M"),
     })
-    

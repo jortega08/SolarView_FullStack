@@ -6,10 +6,17 @@ django-cors-headers==4.9.0
 djangorestframework==3.15.2
 djangorestframework-simplejwt==5.4.0
 django-filter==24.3
+drf-spectacular==0.28.0
 PyJWT==2.10.1
 python-decouple==3.8
 psycopg2-binary==2.9.10
 gunicorn==23.0.0
+celery==5.4.0
+redis==5.2.1
+django-redis==5.4.0
+channels==4.2.0
+channels-redis==4.2.1
+daphne==4.1.2
 idna==3.11
 requests==2.32.5
 sqlparse==0.5.3

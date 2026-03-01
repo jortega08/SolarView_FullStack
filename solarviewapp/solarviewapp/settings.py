@@ -23,6 +23,7 @@ ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(','
 # Application definition
 
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -32,6 +33,8 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'django_filters',
+    'drf_spectacular',
+    'channels',
 
     'core',
     'alerta',
@@ -69,6 +72,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'solarviewapp.wsgi.application'
+ASGI_APPLICATION = 'solarviewapp.asgi.application'
 
 
 # Database
@@ -128,6 +132,23 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
 CORS_ALLOW_CREDENTIALS = True
 
 
+# Redis
+REDIS_URL = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
+
+
+# Cache with Redis
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'TIMEOUT': 300,
+    }
+}
+
+
 # Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -144,6 +165,16 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+
+# Swagger / OpenAPI (drf-spectacular)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'SolarView Smart Grid API',
+    'DESCRIPTION': 'API para monitoreo de energia solar, consumo, baterias, gamificacion y alertas.',
+    'VERSION': '2.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
 
 
@@ -154,6 +185,27 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': False,
     'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+
+# Celery Configuration
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/1')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+
+
+# Django Channels
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [os.environ.get('REDIS_URL', 'redis://redis:6379/2')],
+        },
+    },
 }
 
 
@@ -179,6 +231,11 @@ LOGGING = {
     },
     'loggers': {
         'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'celery': {
             'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
