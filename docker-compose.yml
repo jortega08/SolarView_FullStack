@@ -1,18 +1,104 @@
 version: '3.8'
 
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-solarview}
+      - POSTGRES_USER=${POSTGRES_USER:-solarview}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-solarview_secret_2024}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-solarview}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   django:
     build:
       context: ./solarviewapp
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
+    env_file:
+      - .env
     environment:
-      - DEBUG=True
-      - ALLOWED_HOSTS=localhost,127.0.0.1
+      - DEBUG=${DEBUG:-True}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      - POSTGRES_HOST=postgres
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
     volumes:
       - ./solarviewapp:/app
-    command: python manage.py runserver 0.0.0.0:8000
+    command: >
+      sh -c "python manage.py migrate --noinput &&
+             daphne -b 0.0.0.0 -p 8000 solarviewapp.asgi:application"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/admin/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  celery-worker:
+    build:
+      context: ./solarviewapp
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - ./solarviewapp:/app
+    command: celery -A solarviewapp worker -l info --concurrency=2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  celery-beat:
+    build:
+      context: ./solarviewapp
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      - POSTGRES_HOST=postgres
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/1
+      - CELERY_RESULT_BACKEND=redis://redis:6379/1
+    volumes:
+      - ./solarviewapp:/app
+    command: celery -A solarviewapp beat -l info
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   react:
     build:
@@ -31,21 +117,29 @@ services:
       - "9001:9001"
     volumes:
       - ./iot/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./iot/mosquitto/data:/mosquitto/data
-      - ./iot/mosquitto/log:/mosquitto/log
+      - ./iot/mosquitto/config/mosquitto_passwd:/mosquitto/config/mosquitto_passwd
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
     environment:
       - TZ=America/Bogota
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -h localhost -p 1883 -u ${MQTT_USER:-solarview} -P ${MQTT_PASS:-solarview_mqtt_2024} -t '$$SYS/broker/uptime' -C 1 -W 3 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   mqtt-publisher:
     build:
       context: ./iot/publisher
       dockerfile: Dockerfile
     depends_on:
-      - mosquitto
+      mosquitto:
+        condition: service_healthy
     environment:
       - MQTT_BROKER=mosquitto
       - MQTT_PORT=1883
-      - DJANGO_API=http://django:8000
+      - MQTT_USER=${MQTT_USER:-solarview}
+      - MQTT_PASS=${MQTT_PASS:-solarview_mqtt_2024}
     volumes:
       - ./iot/publisher:/app
     command: python app.py
@@ -55,16 +149,22 @@ services:
       context: ./iot/consumer
       dockerfile: Dockerfile
     depends_on:
-      - mosquitto
-      - django
+      mosquitto:
+        condition: service_healthy
+      django:
+        condition: service_healthy
     environment:
       - MQTT_BROKER=mosquitto
       - MQTT_PORT=1883
+      - MQTT_USER=${MQTT_USER:-solarview}
+      - MQTT_PASS=${MQTT_PASS:-solarview_mqtt_2024}
       - DJANGO_API=http://django:8000
     volumes:
       - ./iot/consumer:/app
     command: python consumer.py
 
 volumes:
+  postgres_data:
+  redis_data:
   mosquitto_data:
   mosquitto_log:
