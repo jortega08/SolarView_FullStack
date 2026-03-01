@@ -70,3 +70,31 @@
 1763061063: New client connected from 172.18.0.1:50948 as mqttx_bef281c3 (p5, c1, k60).
 1763061153: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
 1763062403: Saving in-memory database to /mosquitto/data//mosquitto.db.
+1763082350: mosquitto version 2.0.22 starting
+1763082350: Config loaded from /mosquitto/config/mosquitto.conf.
+1763082350: Opening ipv4 listen socket on port 1883.
+1763082350: Opening ipv6 listen socket on port 1883.
+1763082350: Opening websockets listen socket on port 9001.
+1763082350: mosquitto version 2.0.22 running
+1763082352: New connection from 172.18.0.6:45359 on port 1883.
+1763082352: New connection from 172.18.0.5:33951 on port 1883.
+1763082352: New client connected from 172.18.0.6:45359 as auto-1F5A4EAD-C4F7-FFD4-770C-CF17BBC99B6B (p2, c1, k60).
+1763082352: New client connected from 172.18.0.5:33951 as auto-FC78F11F-2412-30B6-DBC5-C6F47C6F68A0 (p2, c1, k60).
+1763082358: New connection from 172.18.0.1:50258 on port 1883.
+1763082358: New client connected from 172.18.0.1:50258 as mqttx_bef281c3 (p5, c1, k60).
+1763082777: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763082782: New connection from 172.18.0.1:43616 on port 1883.
+1763082782: New client connected from 172.18.0.1:43616 as mqttx_bef281c3 (p5, c1, k60).
+1763083195: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763083200: New connection from 172.18.0.1:55272 on port 1883.
+1763083200: New client connected from 172.18.0.1:55272 as mqttx_bef281c3 (p5, c1, k60).
+1763083676: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763083681: New connection from 172.18.0.1:40642 on port 1883.
+1763083681: New client connected from 172.18.0.1:40642 as mqttx_bef281c3 (p5, c1, k60).
+1763084156: Client mqttx_bef281c3 has exceeded timeout, disconnecting.
+1763084160: New connection from 172.18.0.1:51950 on port 1883.
+1763084160: New client connected from 172.18.0.1:51950 as mqttx_bef281c3 (p5, c1, k60).
+1763084161: Client auto-FC78F11F-2412-30B6-DBC5-C6F47C6F68A0 closed its connection.
+1763084161: Client auto-1F5A4EAD-C4F7-FFD4-770C-CF17BBC99B6B closed its connection.
+1763084162: mosquitto version 2.0.22 terminating
+1763084162: Saving in-memory database to /mosquitto/data//mosquitto.db.

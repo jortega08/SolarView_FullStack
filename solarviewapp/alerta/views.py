@@ -1,9 +1,29 @@
 from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
-from alerta.models import Alerta
+from rest_framework import viewsets
+from rest_framework.permissions import AllowAny
+from django_filters.rest_framework import DjangoFilterBackend
 
-@csrf_exempt
+from .models import Alerta, TipoAlerta
+from .serializers import AlertaSerializer, TipoAlertaSerializer
+
+
+class AlertaViewSet(viewsets.ModelViewSet):
+    queryset = Alerta.objects.select_related('tipoalerta', 'domicilio').all()
+    serializer_class = AlertaSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['estado', 'domicilio', 'tipoalerta']
+
+
+class TipoAlertaViewSet(viewsets.ModelViewSet):
+    queryset = TipoAlerta.objects.all()
+    serializer_class = TipoAlertaSerializer
+    permission_classes = [AllowAny]
+    pagination_class = None
+
+
 @require_GET
 def ultimas_alertas(request):
     domicilio_id = request.GET.get("domicilio_id")
@@ -14,8 +34,7 @@ def ultimas_alertas(request):
     if domicilio_id:
         queryset = queryset.filter(domicilio__iddomicilio=domicilio_id)
     alertas = queryset.order_by('-fecha')[:10]
-    
-    # Armar respuesta con campos útiles
+
     data = [
         {
             "id": alerta.idalerta,

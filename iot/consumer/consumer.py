@@ -5,6 +5,8 @@ import os
 
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
+MQTT_USER = os.getenv("MQTT_USER", "")
+MQTT_PASS = os.getenv("MQTT_PASS", "")
 DJANGO_API = os.getenv("DJANGO_API", "http://localhost:8000")
 
 def on_connect(client, userdata, flags, rc):
@@ -35,6 +37,9 @@ def main():
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
     client.on_message = on_message
+
+    if MQTT_USER:
+        client.username_pw_set(MQTT_USER, MQTT_PASS)
 
     print(f"[Consumer] MQTT Broker: {MQTT_BROKER}:{MQTT_PORT}")
     client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)
