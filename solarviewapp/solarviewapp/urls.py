@@ -1,6 +1,5 @@
 from django.contrib import admin
-from django.urls import path
-from django.urls import include
+from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -8,4 +7,5 @@ urlpatterns = [
     path('', include('telemetria.urls')),
     path('', include('analitica.urls')),
     path('', include('alerta.urls')),
+    path('', include('usuario.urls')),
 ]

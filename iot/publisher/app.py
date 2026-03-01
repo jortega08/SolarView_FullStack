@@ -1,14 +1,14 @@
 import paho.mqtt.client as mqtt
 import json
 import time
-import requests
 import os
 import random
 from datetime import datetime
 
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
-DJANGO_API = os.getenv("DJANGO_API", "http://localhost:8000")
+MQTT_USER = os.getenv("MQTT_USER", "")
+MQTT_PASS = os.getenv("MQTT_PASS", "")
 DOMICILIO_ID = int(os.getenv("DOMICILIO_ID", 1))
 
 def on_connect(client, userdata, flags, rc):
@@ -36,21 +36,10 @@ def publish_sensor_data(client):
             "timestamp": datetime.now().isoformat()
         }
 
-        # Publica en un topic MQTT (opcional, solo si tus consumidores lo usan)
+        # Publica en MQTT - el consumer se encarga de enviar al API Django
         topic = f"solarview/battery/{DOMICILIO_ID}"
         client.publish(topic, json.dumps(data), qos=1)
         print(f"[Publisher] Publicado en {topic}: {data}")
-
-        # Enviar al backend Django vía REST
-        try:
-            response = requests.post(
-                f"{DJANGO_API}/api/telemetria/registrar_datos/",
-                json=data,
-                timeout=5
-            )
-            print(f"[Publisher] Django Status: {response.status_code} | Resp: {response.text}")
-        except Exception as e:
-            print(f"[Publisher] Error Django API: {e}")
 
         time.sleep(10)
 
@@ -58,6 +47,9 @@ def main():
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
+
+    if MQTT_USER:
+        client.username_pw_set(MQTT_USER, MQTT_PASS)
 
     print(f"[Publisher] MQTT Broker: {MQTT_BROKER}:{MQTT_PORT}")
     client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)

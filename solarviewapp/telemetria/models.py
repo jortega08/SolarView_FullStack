@@ -1,5 +1,4 @@
 from django.db import models
-from flask import app
 from core.models import Domicilio
 from analitica.models import Puntaje
 

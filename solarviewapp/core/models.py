@@ -1,4 +1,6 @@
 from django.db import models
+from django.contrib.auth.hashers import make_password, check_password
+
 
 class Pais(models.Model):
     idpais = models.AutoField(primary_key=True)
@@ -42,7 +44,7 @@ class Usuario(models.Model):
     idusuario = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=255)
     email = models.EmailField(unique=True)
-    contrasena = models.CharField(max_length=16)
+    contrasena = models.CharField(max_length=128)
     ROLES = (
         ('admin', 'Administrador'),
         ('user', 'Usuario'),
@@ -58,6 +60,18 @@ class Usuario(models.Model):
     def __str__(self):
         return self.nombre
 
+    def set_password(self, raw_password):
+        self.contrasena = make_password(raw_password)
+
+    def check_password(self, raw_password):
+        return check_password(raw_password, self.contrasena)
+
+    def save(self, *args, **kwargs):
+        # Hash password if it's not already hashed
+        if self.contrasena and not self.contrasena.startswith(('pbkdf2_sha256$', 'bcrypt$', 'argon2')):
+            self.contrasena = make_password(self.contrasena)
+        super().save(*args, **kwargs)
+
 class Domicilio(models.Model):
     iddomicilio = models.AutoField(primary_key=True)
     ciudad = models.ForeignKey(Ciudad, on_delete=models.CASCADE, related_name='domicilios')
@@ -70,7 +84,6 @@ class Domicilio(models.Model):
 
     def __str__(self):
         return f"{self.usuario.nombre}-{self.ciudad.nombre}"
-    
 
 
 class ConfiguracionUser(models.Model):
@@ -85,13 +98,13 @@ class ConfiguracionUser(models.Model):
         ('auto', 'Auto')
     )
     from alerta.models import Alerta
-    
+
     prioridad = models.CharField(max_length=10, choices=PRIORIDADES, default='auto')
     alertas_activas = models.ManyToManyField(Alerta, related_name='configuraciones', blank=True)
-    
+
     def tiene_alertas_activas(self):
         return Alerta.objects.filter(domicilio=self.domicilio, estado='activa').exists()
-    
+
     def obtener_alertas_activas(self):
         return Alerta.objects.filter(domicilio=self.domicilio, estado='activa')
 
@@ -101,4 +114,4 @@ class ConfiguracionUser(models.Model):
         verbose_name_plural = 'Configuraciones de Usuario'
 
     def __str__(self):
-        return f"Configuración de {self.domicilio.nombre} - Alertas Activas: {self.tiene_alertas_activas()}"
+        return f"Configuración de {self.domicilio} - Alertas Activas: {self.tiene_alertas_activas()}"
