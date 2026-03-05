@@ -79,10 +79,10 @@ ASGI_APPLICATION = 'solarviewapp.asgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB', 'solarview'),
-        'USER': os.environ.get('POSTGRES_USER', 'solarview'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'solarview'),
-        'HOST': os.environ.get('POSTGRES_HOST', 'postgres'),
+        'NAME': os.environ.get('POSTGRES_DB', 'solarviewdb'),
+        'USER': os.environ.get('POSTGRES_USER', 'postgres'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', default=''),
+        'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
         'PORT': os.environ.get('POSTGRES_PORT', '5432'),
     }
 }

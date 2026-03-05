@@ -48,7 +48,7 @@ services:
       - ./solarviewapp:/app
     command: >
       sh -c "python manage.py migrate --noinput &&
-             daphne -b 0.0.0.0 -p 8000 solarviewapp.asgi:application"
+        daphne -b 0.0.0.0 -p 8000 solarviewapp.asgi:application"
     depends_on:
       postgres:
         condition: service_healthy
@@ -117,9 +117,9 @@ services:
       - "9001:9001"
     volumes:
       - ./iot/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./iot/mosquitto/config/mosquitto_passwd:/mosquitto/config/mosquitto_passwd
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
+      - mosquitto_config:/mosquitto/config
     environment:
       - TZ=America/Bogota
     healthcheck:
@@ -168,3 +168,4 @@ volumes:
   redis_data:
   mosquitto_data:
   mosquitto_log:
+  mosquitto_config:
