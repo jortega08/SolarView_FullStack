@@ -1,29 +1,43 @@
 """
 Django settings for solarviewapp project.
+
+Works in two modes:
+- LOCAL: python manage.py runserver (SQLite, no Redis/Celery/Channels needed)
+- DOCKER: docker-compose up (PostgreSQL, Redis, Celery, Channels)
 """
 
 import os
 from pathlib import Path
 from datetime import timedelta
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Security settings from environment variables
+# ---------------------------------------------------------------------------
+# Helper: detect installed packages
+# ---------------------------------------------------------------------------
+def _is_installed(package):
+    try:
+        __import__(package)
+        return True
+    except ImportError:
+        return False
+
+# ---------------------------------------------------------------------------
+# Core security
+# ---------------------------------------------------------------------------
 SECRET_KEY = os.environ.get(
     'SECRET_KEY',
     'django-insecure-9fzp(*k2)65i&w*qb6iz9xzq!2ev#+&9s2oc+r*n6@-ltvt!aj'
 )
 
-DEBUG = os.environ.get('DEBUG', 'False').lower() in ('true', '1', 'yes')
+DEBUG = os.environ.get('DEBUG', 'True').lower() in ('true', '1', 'yes')
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1,0.0.0.0').split(',')
 
-
-# Application definition
-
+# ---------------------------------------------------------------------------
+# Applications
+# ---------------------------------------------------------------------------
 INSTALLED_APPS = [
-    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -33,8 +47,6 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     'django_filters',
-    'drf_spectacular',
-    'channels',
 
     'core',
     'alerta',
@@ -43,6 +55,19 @@ INSTALLED_APPS = [
     'usuario',
 ]
 
+# Optional packages added only if installed
+if _is_installed('drf_spectacular'):
+    INSTALLED_APPS.append('drf_spectacular')
+
+if _is_installed('channels'):
+    INSTALLED_APPS.append('channels')
+
+if _is_installed('daphne'):
+    INSTALLED_APPS.insert(0, 'daphne')
+
+# ---------------------------------------------------------------------------
+# Middleware
+# ---------------------------------------------------------------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -74,56 +99,61 @@ TEMPLATES = [
 WSGI_APPLICATION = 'solarviewapp.wsgi.application'
 ASGI_APPLICATION = 'solarviewapp.asgi.application'
 
-
+# ---------------------------------------------------------------------------
 # Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB', 'solarview'),
-        'USER': os.environ.get('POSTGRES_USER', 'solarview'),
-        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'solarview'),
-        'HOST': os.environ.get('POSTGRES_HOST', 'postgres'),
-        'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+# AUTO-DETECT: Uses PostgreSQL if POSTGRES_HOST is set, otherwise SQLite
+# ---------------------------------------------------------------------------
+POSTGRES_HOST = os.environ.get('POSTGRES_HOST', '')
+
+if POSTGRES_HOST:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('POSTGRES_DB', 'solarview'),
+            'USER': os.environ.get('POSTGRES_USER', 'solarview'),
+            'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'solarview'),
+            'HOST': POSTGRES_HOST,
+            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+        }
     }
-}
+else:
+    # Local development fallback: SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
-
+# ---------------------------------------------------------------------------
 # Password validation
+# ---------------------------------------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
+    {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator'},
+    {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
-
+# ---------------------------------------------------------------------------
 # Internationalization
+# ---------------------------------------------------------------------------
 LANGUAGE_CODE = 'es-co'
-
 TIME_ZONE = 'America/Bogota'
-
 USE_I18N = True
-
 USE_TZ = True
 
-
+# ---------------------------------------------------------------------------
 # Static files
+# ---------------------------------------------------------------------------
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-
-# CORS Configuration
+# ---------------------------------------------------------------------------
+# CORS
+# ---------------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = os.environ.get(
     'CORS_ALLOWED_ORIGINS',
     'http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,http://localhost:3000'
@@ -131,25 +161,36 @@ CORS_ALLOWED_ORIGINS = os.environ.get(
 
 CORS_ALLOW_CREDENTIALS = True
 
-
-# Redis
+# ---------------------------------------------------------------------------
+# Cache: Redis in Docker, in-memory locally
+# ---------------------------------------------------------------------------
 REDIS_URL = os.environ.get('REDIS_URL', 'redis://redis:6379/0')
 
-
-# Cache with Redis
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': REDIS_URL,
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'TIMEOUT': 300,
+if _is_installed('django_redis') and REDIS_URL:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django_redis.cache.RedisCache',
+            'LOCATION': REDIS_URL,
+            'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient'},
+            'TIMEOUT': 300,
+        }
     }
-}
+else:
+    # Local fallback: in-process memory cache
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
+    }
 
-
+# ---------------------------------------------------------------------------
 # Django REST Framework
+# ---------------------------------------------------------------------------
+_drf_schema = (
+    {'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'}
+    if _is_installed('drf_spectacular') else {}
+)
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -165,20 +206,23 @@ REST_FRAMEWORK = {
         'rest_framework.filters.SearchFilter',
         'rest_framework.filters.OrderingFilter',
     ],
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    **_drf_schema,
 }
 
+# ---------------------------------------------------------------------------
+# Swagger / OpenAPI (optional)
+# ---------------------------------------------------------------------------
+if _is_installed('drf_spectacular'):
+    SPECTACULAR_SETTINGS = {
+        'TITLE': 'SolarView Smart Grid API',
+        'DESCRIPTION': 'API para monitoreo de energia solar, consumo, baterias, gamificacion y alertas.',
+        'VERSION': '2.0.0',
+        'SERVE_INCLUDE_SCHEMA': False,
+    }
 
-# Swagger / OpenAPI (drf-spectacular)
-SPECTACULAR_SETTINGS = {
-    'TITLE': 'SolarView Smart Grid API',
-    'DESCRIPTION': 'API para monitoreo de energia solar, consumo, baterias, gamificacion y alertas.',
-    'VERSION': '2.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-}
-
-
-# JWT Configuration
+# ---------------------------------------------------------------------------
+# JWT
+# ---------------------------------------------------------------------------
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(hours=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
@@ -187,8 +231,9 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-
-# Celery Configuration
+# ---------------------------------------------------------------------------
+# Celery (optional, only active when broker is reachable)
+# ---------------------------------------------------------------------------
 CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/1')
 CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/1')
 CELERY_ACCEPT_CONTENT = ['json']
@@ -197,19 +242,29 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 
-
-# Django Channels
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [os.environ.get('REDIS_URL', 'redis://redis:6379/2')],
+# ---------------------------------------------------------------------------
+# Django Channels (optional)
+# ---------------------------------------------------------------------------
+if _is_installed('channels_redis'):
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels_redis.core.RedisChannelLayer',
+            'CONFIG': {
+                'hosts': [os.environ.get('REDIS_URL', 'redis://redis:6379/2')],
+            },
         },
-    },
-}
+    }
+elif _is_installed('channels'):
+    # In-memory channel layer for local testing (single process only)
+    CHANNEL_LAYERS = {
+        'default': {
+            'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        }
+    }
 
-
+# ---------------------------------------------------------------------------
 # Logging
+# ---------------------------------------------------------------------------
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -225,20 +280,9 @@ LOGGING = {
             'formatter': 'verbose',
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
+    'root': {'handlers': ['console'], 'level': 'INFO'},
     'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'celery': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
+        'django': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
+        'celery': {'handlers': ['console'], 'level': 'INFO', 'propagate': False},
     },
 }

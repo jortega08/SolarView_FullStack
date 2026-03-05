@@ -1,8 +1,13 @@
 import os
-from celery import Celery
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'solarviewapp.settings')
+try:
+    from celery import Celery
 
-app = Celery('solarviewapp')
-app.config_from_object('django.conf:settings', namespace='CELERY')
-app.autodiscover_tasks()
+    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'solarviewapp.settings')
+
+    app = Celery('solarviewapp')
+    app.config_from_object('django.conf:settings', namespace='CELERY')
+    app.autodiscover_tasks()
+
+except ImportError:
+    app = None
