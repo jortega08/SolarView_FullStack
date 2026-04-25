@@ -1,8 +1,20 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Sun, Zap } from 'lucide-react'
+import { Zap, BarChart2, Battery } from 'lucide-react'
 import '../styles/Auth.css'
+
+function SoleinMark({ size = 42 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <path d="M30 9 C30 9 22 8 16 13.5 C10 19 16 24 20 21.5" stroke="#E0B63D" strokeWidth="2.8" strokeLinecap="round" fill="none"/>
+      <path d="M20 21.5 C24 19 30 23.5 25 29 C20 34.5 11 33 11 33" stroke="#3F687A" strokeWidth="2.8" strokeLinecap="round" fill="none"/>
+      <circle cx="30" cy="9"    r="2.8" fill="#E0B63D"/>
+      <circle cx="20" cy="21.5" r="2.8" fill="#9B7720"/>
+      <circle cx="11" cy="33"   r="2.8" fill="#3F687A"/>
+    </svg>
+  )
+}
 
 export default function Login() {
   const [email, setEmail] = useState('')
@@ -26,15 +38,18 @@ export default function Login() {
     <div className="auth-layout">
       <div className="auth-brand">
         <div className="auth-brand-content">
-          <div className="auth-brand-icon">
-            <Sun size={48} />
+          <div className="auth-brand-logo">
+            <SoleinMark size={48} />
+            <div>
+              <h1 className="auth-brand-logo-name">Solein</h1>
+              <p className="auth-brand-logo-tagline">Monitoreo y Control Energético</p>
+            </div>
           </div>
-          <h1>Soleim</h1>
-          <p>Monitorea tu energía solar en tiempo real. Controla el consumo, gestiona baterías y ahorra más.</p>
+          <p>Gestiona tus instalaciones solares en tiempo real. Controla el consumo, monitorea baterías y toma decisiones con datos.</p>
           <div className="auth-brand-features">
             <div className="auth-feature"><Zap size={16} /><span>Dashboard en tiempo real</span></div>
-            <div className="auth-feature"><Zap size={16} /><span>Gestión de baterías</span></div>
-            <div className="auth-feature"><Zap size={16} /><span>Facturación inteligente</span></div>
+            <div className="auth-feature"><BarChart2 size={16} /><span>Analítica y reportes</span></div>
+            <div className="auth-feature"><Battery size={16} /><span>Monitoreo de baterías</span></div>
           </div>
         </div>
       </div>
@@ -68,7 +83,7 @@ export default function Login() {
                 required
               />
             </div>
-            <button type="submit" className="btn-primary auth-btn" disabled={loading}>
+            <button type="submit" className="auth-btn" disabled={loading}>
               {loading ? 'Ingresando...' : 'Ingresar'}
             </button>
           </form>

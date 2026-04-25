@@ -31,7 +31,7 @@ const ESTADO_CONFIG = {
   inactivo:      { label: "Inactivo",      color: "#9ca3af", bg: "#f8fafc" },
 }
 
-function MetricCard({ icon: Icon, label, value, unit, color = "#3b82f6", bg = "#eff6ff" }) {
+function MetricCard({ icon: Icon, label, value, unit, color = "#3F687A", bg = "#e8f4f7" }) {
   return (
     <div className="metric-card">
       <div className="metric-icon" style={{ background: bg }}>
@@ -261,9 +261,9 @@ const InstalacionDetalle = () => {
               <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} axisLine={false} tickLine={false} width={32} />
               <Tooltip content={<CustomTooltip />} />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12 }} />
-              <Line type="monotone" dataKey="solar" name="Solar kWh" stroke="#f59e0b" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="electrica" name="Eléctrica kWh" stroke="#6366f1" strokeWidth={2} dot={false} />
-              <Line type="monotone" dataKey="bateria_avg" name="Batería %" stroke="#10b981" strokeWidth={2} dot={false} strokeDasharray="4 2" />
+              <Line type="monotone" dataKey="solar" name="Solar kWh" stroke="#E0B63D" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="electrica" name="Eléctrica kWh" stroke="#3F687A" strokeWidth={2} dot={false} />
+              <Line type="monotone" dataKey="bateria_avg" name="Batería %" stroke="#16a34a" strokeWidth={2} dot={false} strokeDasharray="4 2" />
             </LineChart>
           </ResponsiveContainer>
         </div>

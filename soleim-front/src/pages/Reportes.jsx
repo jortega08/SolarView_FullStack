@@ -132,8 +132,8 @@ const Reportes = () => {
           icon={BarChart3}
           title="Consumo energético"
           description={`Registros de consumo solar y eléctrico con potencia y costo — últimos ${dias} días.`}
-          color="#3b82f6"
-          bg="#eff6ff"
+          color="var(--solein-teal)"
+          bg="var(--solein-teal-bg)"
           onDownload={handleConsumo}
           loading={loadingConsumo}
         />
@@ -141,8 +141,8 @@ const Reportes = () => {
           icon={AlertTriangle}
           title="Historial de alertas"
           description={`Todas las alertas generadas con severidad, causa probable y acción sugerida — últimos ${dias} días.`}
-          color="#f59e0b"
-          bg="#fffbeb"
+          color="var(--solein-gold-dark)"
+          bg="var(--solein-gold-bg)"
           onDownload={handleAlertas}
           loading={loadingAlertas}
         />

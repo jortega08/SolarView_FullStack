@@ -157,8 +157,8 @@ const Dashboard = () => {
       {/* KPI cards */}
       <div className="b2b-kpis">
         <div className="kpi-card">
-          <div className="kpi-icon" style={{ background: "#eff6ff" }}>
-            <Building2 size={22} color="#3b82f6" />
+          <div className="kpi-icon" style={{ background: "var(--solein-teal-bg)" }}>
+            <Building2 size={22} color="var(--solein-teal)" />
           </div>
           <div>
             <p className="kpi-value">{resumen.total}</p>
@@ -166,7 +166,7 @@ const Dashboard = () => {
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-icon" style={{ background: instalaciones.filter(i => i.estado === "activo").length > 0 ? "#f0fdf4" : "#f8fafc" }}>
+          <div className="kpi-icon" style={{ background: "#f0fdf4" }}>
             <Zap size={22} color="#16a34a" />
           </div>
           <div>
@@ -175,19 +175,19 @@ const Dashboard = () => {
           </div>
         </div>
         <div className="kpi-card" style={{ borderColor: resumen.con_alerta_critica > 0 ? "#fecaca" : undefined }}>
-          <div className="kpi-icon" style={{ background: resumen.con_alerta_critica > 0 ? "#fef2f2" : "#f8fafc" }}>
-            <AlertTriangle size={22} color={resumen.con_alerta_critica > 0 ? "#dc2626" : "#94a3b8"} />
+          <div className="kpi-icon" style={{ background: resumen.con_alerta_critica > 0 ? "#fef2f2" : "var(--solein-bg)" }}>
+            <AlertTriangle size={22} color={resumen.con_alerta_critica > 0 ? "var(--solein-red)" : "#94a3b8"} />
           </div>
           <div>
-            <p className="kpi-value" style={{ color: resumen.con_alerta_critica > 0 ? "#dc2626" : undefined }}>
+            <p className="kpi-value" style={{ color: resumen.con_alerta_critica > 0 ? "var(--solein-red)" : undefined }}>
               {resumen.con_alerta_critica}
             </p>
             <p className="kpi-label">Con alertas críticas</p>
           </div>
         </div>
         <div className="kpi-card">
-          <div className="kpi-icon" style={{ background: "#fffbeb" }}>
-            <Wrench size={22} color="#d97706" />
+          <div className="kpi-icon" style={{ background: "var(--solein-gold-bg)" }}>
+            <Wrench size={22} color="var(--solein-gold-dark)" />
           </div>
           <div>
             <p className="kpi-value">{resumen.en_mantenimiento}</p>

@@ -46,6 +46,7 @@ services:
       - ./soleimapp:/app
     command: >
       sh -c "until python manage.py migrate --noinput; do echo '[Django] Esperando BD...'; sleep 3; done &&
+        python manage.py collectstatic --noinput &&
         daphne -b 0.0.0.0 -p 8000 soleimapp.asgi:application"
     depends_on:
       postgres:
@@ -101,14 +102,14 @@ services:
         condition: service_healthy
 
   react:
-    build:
-      context: ./soleim-front
-      dockerfile: Dockerfile
+    image: node:22-alpine
+    working_dir: /app
     ports:
       - "5174:5174"
     volumes:
       - ./soleim-front:/app
       - /app/node_modules
+    command: sh -c "npm install && npm run dev"
 
   mosquitto:
     build:

@@ -1,8 +1,20 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Sun, Zap } from 'lucide-react'
+import { ShieldCheck, Bell, BarChart2 } from 'lucide-react'
 import '../styles/Auth.css'
+
+function SoleinMark({ size = 42 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-hidden="true">
+      <path d="M30 9 C30 9 22 8 16 13.5 C10 19 16 24 20 21.5" stroke="#E0B63D" strokeWidth="2.8" strokeLinecap="round" fill="none"/>
+      <path d="M20 21.5 C24 19 30 23.5 25 29 C20 34.5 11 33 11 33" stroke="#3F687A" strokeWidth="2.8" strokeLinecap="round" fill="none"/>
+      <circle cx="30" cy="9"    r="2.8" fill="#E0B63D"/>
+      <circle cx="20" cy="21.5" r="2.8" fill="#9B7720"/>
+      <circle cx="11" cy="33"   r="2.8" fill="#3F687A"/>
+    </svg>
+  )
+}
 
 export default function Register() {
   const [form, setForm] = useState({ nombre: '', email: '', contrasena: '', confirmContrasena: '' })
@@ -31,15 +43,18 @@ export default function Register() {
     <div className="auth-layout">
       <div className="auth-brand">
         <div className="auth-brand-content">
-          <div className="auth-brand-icon">
-            <Sun size={48} />
+          <div className="auth-brand-logo">
+            <SoleinMark size={48} />
+            <div>
+              <h1 className="auth-brand-logo-name">Solein</h1>
+              <p className="auth-brand-logo-tagline">Monitoreo y Control Energético</p>
+            </div>
           </div>
-          <h1>Soleim</h1>
-          <p>Comienza a monitorear tu sistema solar hoy mismo. Gratis y sin complicaciones.</p>
+          <p>Crea tu cuenta y empieza a monitorear tus instalaciones solares con datos en tiempo real.</p>
           <div className="auth-brand-features">
-            <div className="auth-feature"><Zap size={16} /><span>Configuración en minutos</span></div>
-            <div className="auth-feature"><Zap size={16} /><span>Alertas automáticas</span></div>
-            <div className="auth-feature"><Zap size={16} /><span>Gamificación solar</span></div>
+            <div className="auth-feature"><BarChart2 size={16} /><span>Dashboard y analítica</span></div>
+            <div className="auth-feature"><Bell size={16} /><span>Alertas automáticas</span></div>
+            <div className="auth-feature"><ShieldCheck size={16} /><span>Acceso seguro por empresa</span></div>
           </div>
         </div>
       </div>
@@ -47,7 +62,7 @@ export default function Register() {
       <div className="auth-form-panel">
         <div className="auth-form-container">
           <h2>Crear cuenta</h2>
-          <p className="auth-subtitle">Únete a Soleim gratis</p>
+          <p className="auth-subtitle">Regístrate para acceder a tu panel</p>
 
           {err && <div className="auth-error">{err}</div>}
 
@@ -71,7 +86,7 @@ export default function Register() {
                 name="email"
                 value={form.email}
                 onChange={handleChange}
-                placeholder="tu@email.com"
+                placeholder="tu@empresa.com"
                 required
               />
             </div>
@@ -98,7 +113,7 @@ export default function Register() {
                 required
               />
             </div>
-            <button type="submit" className="btn-primary auth-btn" disabled={loading}>
+            <button type="submit" className="auth-btn" disabled={loading}>
               {loading ? 'Creando cuenta...' : 'Crear cuenta'}
             </button>
           </form>

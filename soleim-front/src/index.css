@@ -1,4 +1,31 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "./styles/pages.css";
+
+/* ── Solein Design Tokens ─────────────────────────────────────────────────── */
+:root {
+  --solein-navy:        #1E2F45;
+  --solein-navy-hover:  #2A3F5A;
+  --solein-navy-light:  #243648;
+  --solein-gold:        #E0B63D;
+  --solein-gold-dark:   #9B7720;
+  --solein-gold-bg:     #fdf6e3;
+  --solein-teal:        #3F687A;
+  --solein-teal-hover:  #4E7D92;
+  --solein-teal-bg:     #e8f4f7;
+  --solein-bg:          #EDF2F7;
+  --solein-white:       #FFFFFF;
+  --solein-border:      #e2e8f0;
+  --solein-text:        #1E2F45;
+  --solein-text-muted:  #64748b;
+  --solein-red:         #dc2626;
+  --solein-green:       #16a34a;
+
+  --radius-sm:  6px;
+  --radius-md:  10px;
+  --radius-lg:  14px;
+  --shadow-sm:  0 1px 4px rgba(30,47,69,.07);
+  --shadow-md:  0 4px 14px rgba(30,47,69,.10);
+}
 
 * {
   margin: 0;
@@ -7,11 +34,11 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans",
-    "Droid Sans", "Helvetica Neue", sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #f5f7fa;
+  background: var(--solein-bg);
+  color: var(--solein-text);
 }
 
 

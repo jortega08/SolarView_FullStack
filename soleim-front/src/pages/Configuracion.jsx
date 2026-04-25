@@ -41,7 +41,7 @@ const Configuracion = () => {
       {/* User profile */}
       <div className="config-card">
         <div className="config-card-header">
-          <User size={18} color="#3b82f6" />
+          <User size={18} color="var(--solein-teal)" />
           <h2>Perfil de usuario</h2>
         </div>
         <div className="profile-grid">
@@ -71,7 +71,7 @@ const Configuracion = () => {
       {/* Alert thresholds */}
       <div className="config-card">
         <div className="config-card-header">
-          <Bell size={18} color="#f59e0b" />
+          <Bell size={18} color="var(--solein-gold-dark)" />
           <h2>Umbrales de alerta de batería</h2>
         </div>
         <p className="config-description">
@@ -119,7 +119,7 @@ const Configuracion = () => {
         </div>
 
         <div className="config-actions">
-          <button className="save-btn" onClick={handleSave}>
+          <button className={`save-btn${saved ? " saved" : ""}`} onClick={handleSave}>
             {saved ? (
               <><CheckCircle size={16} /> Guardado</>
             ) : (

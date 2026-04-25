@@ -1,169 +1,242 @@
-"use client"
-
 import { useState, useEffect } from "react"
+import { AlertTriangle, CheckCircle, XCircle, Clock, Filter, RefreshCw } from "lucide-react"
 import api from "../services/api"
 
-export default function Alertas() {
-  const [alertas, setAlertas] = useState([])
-  const [domicilios, setDomicilios] = useState([])
-  const [tiposAlerta, setTiposAlerta] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [filter, setFilter] = useState("todas")
-  const [formData, setFormData] = useState({
-    domicilio_id: "",
-    tipoalerta_id: "",
-    mensaje: "",
-  })
+const SEVERIDAD = {
+  critica: { label: "Crítica",     bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
+  alta:    { label: "Alta",        bg: "#fff7ed", color: "#ea580c", border: "#fed7aa" },
+  media:   { label: "Media",       bg: "#fffbeb", color: "#d97706", border: "#fde68a" },
+  baja:    { label: "Baja",        bg: "#f7fee7", color: "#65a30d", border: "#bbf7d0" },
+}
 
-  useEffect(() => {
-    fetchData()
-  }, [])
+const ESTADO_TABS = [
+  { value: "todas",    label: "Todas" },
+  { value: "activa",   label: "Activas" },
+  { value: "resuelta", label: "Resueltas" },
+  { value: "cancelada",label: "Canceladas" },
+]
 
-  const fetchData = async () => {
-    try {
-      const [alertasData, domiciliosData, tiposData] = await Promise.all([
-        api.getAlertas(),
-        api.getDomicilios(),
-        api.getTiposAlerta(),
-      ])
-      setAlertas(alertasData)
-      setDomicilios(domiciliosData)
-      setTiposAlerta(tiposData)
-    } catch (error) {
-      console.error("Error fetching data:", error)
-    } finally {
-      setLoading(false)
-    }
+function AlertCard({ alerta, onResolver }) {
+  const sev = SEVERIDAD[alerta.severidad] || SEVERIDAD.baja
+  const [resolving, setResolving] = useState(false)
+
+  const handleResolve = async () => {
+    setResolving(true)
+    try { await onResolver(alerta.idalerta) }
+    finally { setResolving(false) }
   }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    try {
-      await api.createAlerta(formData)
-      setFormData({ domicilio_id: "", tipoalerta_id: "", mensaje: "" })
-      setShowForm(false)
-      fetchData()
-    } catch (error) {
-      console.error("Error creating alerta:", error)
-      alert("Error al crear alerta")
-    }
-  }
-
-  const handleUpdateEstado = async (id, nuevoEstado) => {
-    try {
-      await api.updateAlerta(id, { estado: nuevoEstado })
-      fetchData()
-    } catch (error) {
-      console.error("Error updating alerta:", error)
-    }
-  }
-
-  const filteredAlertas = alertas.filter((alerta) => {
-    if (filter === "todas") return true
-    return alerta.estado === filter
-  })
-
-  if (loading) return <div className="loading">Cargando...</div>
 
   return (
-    <div className="alertas-page">
-      <div className="page-header">
-        <h1>Gestión de Alertas</h1>
-        <div className="header-actions">
-          <select className="filter-select" value={filter} onChange={(e) => setFilter(e.target.value)}>
-            <option value="todas">Todas</option>
-            <option value="activa">Activas</option>
-            <option value="resuelta">Resueltas</option>
-            <option value="cancelada">Canceladas</option>
-          </select>
-          <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
-            {showForm ? "Cancelar" : "Nueva Alerta"}
-          </button>
+    <div style={{
+      background: "#fff",
+      border: `1px solid var(--solein-border)`,
+      borderLeft: `4px solid ${sev.color}`,
+      borderRadius: "0 var(--radius-lg) var(--radius-lg) 0",
+      padding: "16px 20px",
+      display: "flex",
+      flexDirection: "column",
+      gap: 10,
+      transition: "box-shadow .2s",
+    }}
+      onMouseEnter={e => e.currentTarget.style.boxShadow = "var(--shadow-sm)"}
+      onMouseLeave={e => e.currentTarget.style.boxShadow = "none"}
+    >
+      {/* Top row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{
+            background: sev.bg, color: sev.color,
+            border: `1px solid ${sev.border}`,
+            borderRadius: 20, padding: "2px 10px",
+            fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".3px"
+          }}>
+            {sev.label}
+          </span>
+          {alerta.estado !== "activa" && (
+            <span style={{
+              background: alerta.estado === "resuelta" ? "#f0fdf4" : "var(--solein-bg)",
+              color: alerta.estado === "resuelta" ? "var(--solein-green)" : "var(--solein-text-muted)",
+              borderRadius: 20, padding: "2px 10px", fontSize: 11, fontWeight: 600,
+            }}>
+              {alerta.estado === "resuelta" ? "✓ Resuelta" : "Cancelada"}
+            </span>
+          )}
         </div>
+        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--solein-text-muted)" }}>
+          <Clock size={11} />
+          {new Date(alerta.fecha).toLocaleString("es-CO", { dateStyle: "short", timeStyle: "short" })}
+        </span>
       </div>
 
-      {showForm && (
-        <div className="form-card">
-          <h2>Crear Alerta</h2>
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
-              <label>Domicilio</label>
-              <select
-                value={formData.domicilio_id}
-                onChange={(e) => setFormData({ ...formData, domicilio_id: e.target.value })}
-                required
-              >
-                <option value="">Seleccionar domicilio</option>
-                {domicilios.map((dom) => (
-                  <option key={dom.iddomicilio} value={dom.iddomicilio}>
-                    {dom.usuario.nombre} - {dom.ciudad.nombre}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Tipo de Alerta</label>
-              <select
-                value={formData.tipoalerta_id}
-                onChange={(e) => setFormData({ ...formData, tipoalerta_id: e.target.value })}
-              >
-                <option value="">Sin tipo específico</option>
-                {tiposAlerta.map((tipo) => (
-                  <option key={tipo.idtipoalerta} value={tipo.idtipoalerta}>
-                    {tipo.nombre} - {tipo.descripcion}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Mensaje</label>
-              <textarea
-                value={formData.mensaje}
-                onChange={(e) => setFormData({ ...formData, mensaje: e.target.value })}
-                required
-                rows={4}
-                maxLength={255}
-              />
-            </div>
-            <button type="submit" className="btn-primary">
-              Crear Alerta
-            </button>
-          </form>
+      {/* Tipo */}
+      {alerta.tipoalerta && (
+        <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: "var(--solein-teal)", textTransform: "uppercase", letterSpacing: ".3px" }}>
+          {alerta.tipoalerta.nombre}
+        </p>
+      )}
+
+      {/* Mensaje */}
+      <p style={{ margin: 0, fontSize: 14, color: "var(--solein-navy)", fontWeight: 500, lineHeight: 1.5 }}>
+        {alerta.mensaje}
+      </p>
+
+      {/* Footer */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", paddingTop: 8, borderTop: "1px solid var(--solein-border)" }}>
+        <span style={{ fontSize: 12, color: "var(--solein-text-muted)" }}>
+          Instalación ID: <strong style={{ color: "var(--solein-navy)" }}>{alerta.instalacion_id || alerta.domicilio_id || "—"}</strong>
+        </span>
+        {alerta.estado === "activa" && (
+          <button
+            onClick={handleResolve}
+            disabled={resolving}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "#f0fdf4", color: "var(--solein-green)",
+              border: "1px solid #bbf7d0", borderRadius: "var(--radius-sm)",
+              padding: "5px 12px", fontSize: 12, fontWeight: 600,
+              cursor: resolving ? "not-allowed" : "pointer",
+              opacity: resolving ? .7 : 1, fontFamily: "inherit", transition: "all .15s",
+            }}
+            onMouseEnter={e => { if (!resolving) e.currentTarget.style.background = "#dcfce7" }}
+            onMouseLeave={e => e.currentTarget.style.background = "#f0fdf4"}
+          >
+            <CheckCircle size={13} />
+            {resolving ? "Resolviendo..." : "Marcar resuelta"}
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export default function Alertas() {
+  const [alertas, setAlertas]     = useState([])
+  const [loading, setLoading]     = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
+  const [filter, setFilter]       = useState("todas")
+
+  const fetchData = async (silent = false) => {
+    if (!silent) setLoading(true)
+    else setRefreshing(true)
+    try {
+      const data = await api.getAlertas()
+      setAlertas(Array.isArray(data) ? data : data.results ?? [])
+    } catch {
+      setAlertas([])
+    } finally {
+      setLoading(false)
+      setRefreshing(false)
+    }
+  }
+
+  useEffect(() => { fetchData() }, [])
+
+  const handleResolver = async (id) => {
+    await api.resolverAlerta(id)
+    setAlertas(prev => prev.map(a => a.idalerta === id ? { ...a, estado: "resuelta" } : a))
+  }
+
+  const filtered = alertas.filter(a => filter === "todas" || a.estado === filter)
+
+  const counts = {
+    todas:     alertas.length,
+    activa:    alertas.filter(a => a.estado === "activa").length,
+    resuelta:  alertas.filter(a => a.estado === "resuelta").length,
+    cancelada: alertas.filter(a => a.estado === "cancelada").length,
+  }
+
+  return (
+    <div style={{ padding: "32px 36px", maxWidth: 900 }}>
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
+            <AlertTriangle size={22} color="var(--solein-navy)" />
+            <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--solein-navy)", margin: 0, letterSpacing: "-0.3px" }}>
+              Alertas
+            </h1>
+          </div>
+          <p style={{ fontSize: 13, color: "var(--solein-text-muted)", margin: 0 }}>
+            {loading ? "Cargando alertas..." : `${counts.activa} activa${counts.activa !== 1 ? "s" : ""} · ${counts.resuelta} resuelta${counts.resuelta !== 1 ? "s" : ""}`}
+          </p>
+        </div>
+        <button
+          onClick={() => fetchData(true)}
+          disabled={refreshing}
+          title="Actualizar"
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "var(--solein-white)", border: "1px solid var(--solein-border)",
+            borderRadius: "var(--radius-md)", padding: "8px 14px",
+            fontSize: 13, fontWeight: 500, color: "var(--solein-text-muted)",
+            cursor: "pointer", fontFamily: "inherit", transition: "all .2s",
+          }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--solein-teal)"; e.currentTarget.style.color = "var(--solein-teal)" }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--solein-border)"; e.currentTarget.style.color = "var(--solein-text-muted)" }}
+        >
+          <RefreshCw size={14} style={{ animation: refreshing ? "spin .7s linear infinite" : "none" }} />
+          Actualizar
+        </button>
+      </div>
+
+      {/* Tabs de filtro */}
+      <div style={{
+        display: "flex", gap: 4,
+        background: "var(--solein-bg)", borderRadius: "var(--radius-md)",
+        padding: 4, marginBottom: 20, width: "fit-content",
+      }}>
+        {ESTADO_TABS.map(tab => (
+          <button
+            key={tab.value}
+            onClick={() => setFilter(tab.value)}
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: filter === tab.value ? "var(--solein-white)" : "transparent",
+              border: "none", borderRadius: "var(--radius-sm)",
+              padding: "7px 14px", fontSize: 13, fontWeight: filter === tab.value ? 600 : 500,
+              color: filter === tab.value ? "var(--solein-navy)" : "var(--solein-text-muted)",
+              cursor: "pointer", transition: "all .15s", fontFamily: "inherit",
+              boxShadow: filter === tab.value ? "0 1px 3px rgba(0,0,0,.08)" : "none",
+            }}
+          >
+            {tab.label}
+            {counts[tab.value] > 0 && (
+              <span style={{
+                background: filter === tab.value ? "var(--solein-teal-bg)" : "var(--solein-border)",
+                color: filter === tab.value ? "var(--solein-teal)" : "var(--solein-text-muted)",
+                borderRadius: 20, padding: "0 7px", fontSize: 11, fontWeight: 700,
+              }}>
+                {counts[tab.value]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Lista */}
+      {loading ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {[1,2,3].map(i => (
+            <div key={i} style={{ height: 110, background: "var(--solein-white)", border: "1px solid var(--solein-border)", borderRadius: "var(--radius-lg)", animation: "pulse 1.5s infinite" }} />
+          ))}
+        </div>
+      ) : filtered.length === 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, padding: "60px 20px", color: "var(--solein-text-muted)" }}>
+          {filter === "activa"
+            ? <><CheckCircle size={40} color="var(--solein-green)" strokeWidth={1.5} /><p style={{ margin: 0, fontWeight: 500 }}>Sin alertas activas</p><p style={{ margin: 0, fontSize: 13 }}>Todo está operando correctamente</p></>
+            : <><XCircle size={40} strokeWidth={1.5} /><p style={{ margin: 0, fontWeight: 500 }}>Sin resultados para este filtro</p></>
+          }
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {filtered.map(a => (
+            <AlertCard key={a.idalerta} alerta={a} onResolver={handleResolver} />
+          ))}
         </div>
       )}
 
-      <div className="alertas-list">
-        {filteredAlertas.map((alerta) => (
-          <div key={alerta.idalerta} className={`alerta-card alerta-${alerta.estado}`}>
-            <div className="alerta-header">
-              <span className={`badge badge-${alerta.estado}`}>{alerta.estado.toUpperCase()}</span>
-              <span className="alerta-fecha">{new Date(alerta.fecha).toLocaleString()}</span>
-            </div>
-            <div className="alerta-body">
-              {alerta.tipoalerta && (
-                <p className="alerta-tipo">
-                  <strong>{alerta.tipoalerta.nombre}:</strong> {alerta.tipoalerta.descripcion}
-                </p>
-              )}
-              <p className="alerta-mensaje">{alerta.mensaje}</p>
-              <p className="alerta-domicilio">
-                <strong>Domicilio ID:</strong> {alerta.domicilio_id}
-              </p>
-            </div>
-            {alerta.estado === "activa" && (
-              <div className="alerta-actions">
-                <button className="btn-success btn-sm" onClick={() => handleUpdateEstado(alerta.idalerta, "resuelta")}>
-                  Resolver
-                </button>
-                <button className="btn-warning btn-sm" onClick={() => handleUpdateEstado(alerta.idalerta, "cancelada")}>
-                  Cancelar
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} } @keyframes spin { to{transform:rotate(360deg)} }`}</style>
     </div>
   )
 }
