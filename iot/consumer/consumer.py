@@ -11,7 +11,7 @@ DJANGO_API = os.getenv("DJANGO_API", "http://localhost:8000")
 
 def on_connect(client, userdata, flags, rc):
     print(f"[Consumer] Conectado MQTT: {rc}")
-    client.subscribe("solarview/battery/#", qos=1)
+    client.subscribe("soleim/battery/#", qos=1)
 
 def on_disconnect(client, userdata, rc):
     print(f"[Consumer] Desconectado MQTT: {rc}")

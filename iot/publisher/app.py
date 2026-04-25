@@ -1,15 +1,16 @@
 import paho.mqtt.client as mqtt
 import json
 import time
-import requests
 import os
 import random
 from datetime import datetime
 
 MQTT_BROKER = os.getenv("MQTT_BROKER", "localhost")
 MQTT_PORT = int(os.getenv("MQTT_PORT", 1883))
-DJANGO_API = os.getenv("DJANGO_API", "http://localhost:8000")
-DOMICILIO_ID = int(os.getenv("DOMICILIO_ID", 1))
+MQTT_USER = os.getenv("MQTT_USER", "")
+MQTT_PASS = os.getenv("MQTT_PASS", "")
+DOMICILIO_ID = int(os.getenv("DOMICILIO_ID", 0)) or None
+INSTALACION_ID = int(os.getenv("INSTALACION_ID", 0)) or None
 
 def on_connect(client, userdata, flags, rc):
     print(f"[Publisher] Conectado al broker MQTT: {rc}")
@@ -18,10 +19,15 @@ def on_disconnect(client, userdata, rc):
     print(f"[Publisher] Desconectado del broker MQTT: {rc}")
 
 def publish_sensor_data(client):
+    if INSTALACION_ID is None and DOMICILIO_ID is None:
+        print("[Publisher] ERROR: se requiere INSTALACION_ID o DOMICILIO_ID en env. Abortando.")
+        return
+
+    context_key = INSTALACION_ID if INSTALACION_ID else DOMICILIO_ID
+    topic = f"soleim/battery/{context_key}"
+
     while True:
-        # Simula los datos que esperan tus modelos Django
         data = {
-            "domicilio_id": DOMICILIO_ID,
             "energia_consumida": round(random.uniform(0.5, 2.5), 2),
             "potencia": round(random.uniform(0.1, 1.0), 2),
             "fuente": random.choice(["solar", "electrica"]),
@@ -35,22 +41,13 @@ def publish_sensor_data(client):
             "energia_generada": round(random.uniform(0.3, 1.5), 2),
             "timestamp": datetime.now().isoformat()
         }
+        if INSTALACION_ID:
+            data["instalacion_id"] = INSTALACION_ID
+        else:
+            data["domicilio_id"] = DOMICILIO_ID
 
-        # Publica en un topic MQTT (opcional, solo si tus consumidores lo usan)
-        topic = f"solarview/battery/{DOMICILIO_ID}"
         client.publish(topic, json.dumps(data), qos=1)
         print(f"[Publisher] Publicado en {topic}: {data}")
-
-        # Enviar al backend Django vía REST
-        try:
-            response = requests.post(
-                f"{DJANGO_API}/api/telemetria/registrar_datos/",
-                json=data,
-                timeout=5
-            )
-            print(f"[Publisher] Django Status: {response.status_code} | Resp: {response.text}")
-        except Exception as e:
-            print(f"[Publisher] Error Django API: {e}")
 
         time.sleep(10)
 
@@ -58,6 +55,9 @@ def main():
     client = mqtt.Client()
     client.on_connect = on_connect
     client.on_disconnect = on_disconnect
+
+    if MQTT_USER:
+        client.username_pw_set(MQTT_USER, MQTT_PASS)
 
     print(f"[Publisher] MQTT Broker: {MQTT_BROKER}:{MQTT_PORT}")
     client.connect(MQTT_BROKER, MQTT_PORT, keepalive=60)

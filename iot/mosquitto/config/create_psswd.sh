@@ -1,11 +1,11 @@
 #!/bin/sh
 # Generate mosquitto password file
-# Usage: docker run --rm -v $(pwd)/iot/mosquitto/config:/mosquitto/config eclipse-mosquitto mosquitto_passwd -b /mosquitto/config/mosquitto_passwd solarview solarview_mqtt_2024
+# Usage: docker run --rm -v $(pwd)/iot/mosquitto/config:/mosquitto/config eclipse-mosquitto mosquitto_passwd -b /mosquitto/config/mosquitto_passwd soleim soleim_mqtt_2024
 # Or run this script inside the mosquitto container
 
 PASSWD_FILE="/mosquitto/config/mosquitto_passwd"
-USERNAME="${MQTT_USER:-solarview}"
-PASSWORD="${MQTT_PASS:-solarview_mqtt_2024}"
+USERNAME="${MQTT_USER:-soleim}"
+PASSWORD="${MQTT_PASS:-soleim_mqtt_2024}"
 
 # Create password file if it doesn't exist
 if [ ! -f "$PASSWD_FILE" ]; then
