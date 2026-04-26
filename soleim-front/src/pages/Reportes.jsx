@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { FileDown, BarChart3, AlertTriangle, Loader, Building2 } from "lucide-react"
 import { fetchInstalaciones, descargarReporteConsumo, descargarReporteAlertas } from "../services/api"
+import usePageTitle from "../hooks/usePageTitle"
 import "../styles/Reportes.css"
 
 const PERIODOS = [
@@ -29,6 +30,7 @@ const ReporteCard = ({ icon: Icon, title, description, color, bg, onDownload, lo
 )
 
 const Reportes = () => {
+  usePageTitle("Reportes")
   const [instalaciones, setInstalaciones] = useState([])
   const [instalacionId, setInstalacionId] = useState("")
   const [dias, setDias] = useState(30)

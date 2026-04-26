@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { User, Bell, Shield, Save, CheckCircle } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
+import usePageTitle from "../hooks/usePageTitle"
 import "../styles/Configuracion.css"
 
 const ROL_LABELS = {
@@ -21,6 +22,7 @@ function loadThresholds() {
 }
 
 const Configuracion = () => {
+  usePageTitle("Configuración")
   const { user } = useAuth()
   const [thresholds, setThresholds] = useState(loadThresholds)
   const [saved, setSaved] = useState(false)

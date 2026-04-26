@@ -3,10 +3,11 @@ import { useNavigate } from "react-router-dom"
 import {
   Building2, Zap, AlertTriangle, Wrench,
   Battery, TrendingUp, ChevronRight, RefreshCw,
-  CheckCircle, AlertCircle, Clock
+  CheckCircle, AlertCircle, Clock, Search
 } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
 import { fetchPanelEmpresa } from "../services/api"
+import usePageTitle from "../hooks/usePageTitle"
 import "../styles/Dashboard.css"
 
 const RIESGO_CONFIG = {
@@ -90,12 +91,15 @@ function InstalacionCard({ inst, onClick }) {
 }
 
 const Dashboard = () => {
+  usePageTitle("Panel")
   const { user } = useAuth()
   const navigate = useNavigate()
-  const [panel, setPanel] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [error, setError] = useState(null)
+  const [panel,       setPanel]       = useState(null)
+  const [loading,     setLoading]     = useState(true)
+  const [refreshing,  setRefreshing]  = useState(false)
+  const [error,       setError]       = useState(null)
+  const [lastUpdated, setLastUpdated] = useState(null)
+  const [search,      setSearch]      = useState("")
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -103,6 +107,7 @@ const Dashboard = () => {
     try {
       const data = await fetchPanelEmpresa()
       setPanel(data)
+      setLastUpdated(new Date())
       setError(null)
     } catch {
       setError("No se pudo cargar el panel. Verifica la conexión.")
@@ -127,9 +132,21 @@ const Dashboard = () => {
     )
   }
 
-  const empresa = panel?.empresa
+  const empresa     = panel?.empresa
   const instalaciones = panel?.instalaciones || []
-  const resumen = panel?.resumen || { total: 0, con_alerta_critica: 0, en_mantenimiento: 0 }
+  const resumen     = panel?.resumen || { total: 0, con_alerta_critica: 0, en_mantenimiento: 0 }
+
+  const filtradas = search.trim()
+    ? instalaciones.filter(i => i.nombre.toLowerCase().includes(search.toLowerCase()))
+    : instalaciones
+
+  const updatedLabel = (() => {
+    if (!lastUpdated) return null
+    const diff = Math.floor((Date.now() - lastUpdated) / 60000)
+    if (diff < 1) return "Actualizado ahora"
+    if (diff === 1) return "Actualizado hace 1 min"
+    return `Actualizado hace ${diff} min`
+  })()
 
   return (
     <div className="b2b-panel">
@@ -143,13 +160,21 @@ const Dashboard = () => {
             Bienvenido, {user?.nombre} · {new Date().toLocaleDateString("es-CO", { weekday: "long", day: "numeric", month: "long" })}
           </p>
         </div>
-        <button
-          className={`refresh-btn${refreshing ? " spinning" : ""}`}
-          onClick={() => load(true)}
-          title="Actualizar"
-        >
-          <RefreshCw size={16} />
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {updatedLabel && (
+            <span style={{ fontSize: 12, color: "var(--solein-text-muted)", display: "flex", alignItems: "center", gap: 5 }}>
+              <Clock size={12} />
+              {updatedLabel}
+            </span>
+          )}
+          <button
+            className={`refresh-btn${refreshing ? " spinning" : ""}`}
+            onClick={() => load(true)}
+            title="Actualizar"
+          >
+            <RefreshCw size={16} />
+          </button>
+        </div>
       </div>
 
       {error && <div className="b2b-error">{error}</div>}
@@ -196,13 +221,36 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Instalaciones grid */}
-      <div className="b2b-section-header">
-        <h2 className="b2b-section-title">
-          <TrendingUp size={18} />
-          Instalaciones
-        </h2>
-        <span className="b2b-count">{instalaciones.length}</span>
+      {/* Instalaciones: header + búsqueda */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 12 }}>
+        <div className="b2b-section-header" style={{ margin: 0 }}>
+          <h2 className="b2b-section-title">
+            <TrendingUp size={18} />
+            Instalaciones
+          </h2>
+          <span className="b2b-count">{filtradas.length}{search && instalaciones.length !== filtradas.length ? ` de ${instalaciones.length}` : ""}</span>
+        </div>
+
+        {instalaciones.length > 0 && (
+          <div style={{ position: "relative" }}>
+            <Search size={14} color="var(--solein-text-muted)" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+            <input
+              type="text"
+              placeholder="Buscar instalación…"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              style={{
+                border: "1px solid var(--solein-border)", borderRadius: "var(--radius-md)",
+                padding: "7px 12px 7px 30px", fontSize: 13,
+                fontFamily: "inherit", color: "var(--solein-navy)",
+                background: "var(--solein-white)", outline: "none",
+                width: 220, transition: "border-color .2s",
+              }}
+              onFocus={e => e.target.style.borderColor = "var(--solein-teal)"}
+              onBlur={e => e.target.style.borderColor = "var(--solein-border)"}
+            />
+          </div>
+        )}
       </div>
 
       {instalaciones.length === 0 ? (
@@ -210,9 +258,14 @@ const Dashboard = () => {
           <Building2 size={40} color="#cbd5e1" />
           <p>No hay instalaciones asignadas a tu cuenta.</p>
         </div>
+      ) : filtradas.length === 0 ? (
+        <div className="b2b-empty">
+          <Search size={36} color="#cbd5e1" />
+          <p>Sin resultados para <strong>"{search}"</strong></p>
+        </div>
       ) : (
         <div className="inst-grid">
-          {instalaciones.map(inst => (
+          {filtradas.map(inst => (
             <InstalacionCard
               key={inst.id}
               inst={inst}

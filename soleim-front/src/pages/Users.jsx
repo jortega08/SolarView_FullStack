@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react"
 import { UserPlus, Trash2, X, Users as UsersIcon, Shield, User } from "lucide-react"
 import api from "../services/api"
+import { useToast, useConfirm } from "../context/ToastContext"
+import usePageTitle from "../hooks/usePageTitle"
 
 const ROL_CONFIG = {
   admin: { label: "Administrador", bg: "var(--solein-navy)", color: "#fff" },
@@ -18,6 +20,10 @@ function SkeletonRow() {
 }
 
 export default function Users() {
+  usePageTitle("Usuarios")
+  const toast   = useToast()
+  const confirm = useConfirm()
+
   const [users, setUsers]       = useState([])
   const [loading, setLoading]   = useState(true)
   const [showForm, setShowForm] = useState(false)
@@ -49,6 +55,7 @@ export default function Users() {
       setFormData({ nombre: "", email: "", contrasena: "", rol: "user" })
       setShowForm(false)
       fetchUsers()
+      toast("Usuario creado correctamente.", "success")
     } catch {
       setFormErr("Error al crear el usuario. Verifica los datos.")
     } finally {
@@ -57,13 +64,20 @@ export default function Users() {
   }
 
   const handleDelete = async (id, nombre) => {
-    if (!window.confirm(`¿Eliminar al usuario "${nombre}"? Esta acción no se puede deshacer.`)) return
+    const ok = await confirm({
+      title: `¿Eliminar usuario?`,
+      message: `Se eliminará a "${nombre}" permanentemente. Esta acción no se puede deshacer.`,
+      confirmLabel: "Eliminar",
+      danger: true,
+    })
+    if (!ok) return
     setDeleting(id)
     try {
       await api.deleteUser(id)
       setUsers(prev => prev.filter(u => u.idusuario !== id))
+      toast(`Usuario "${nombre}" eliminado.`, "success")
     } catch {
-      alert("No se pudo eliminar el usuario.")
+      toast("No se pudo eliminar el usuario.", "error")
     } finally {
       setDeleting(null)
     }
@@ -73,7 +87,7 @@ export default function Users() {
     `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1E2F45&color=E0B63D&bold=true&size=64`
 
   return (
-    <div style={{ padding: "32px 36px", maxWidth: 1100 }}>
+    <div style={{ padding: "32px 36px", width: "100%" }}>
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>

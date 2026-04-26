@@ -2,7 +2,7 @@
 
 .det-page {
   padding: 28px 36px;
-  max-width: 1280px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 24px;

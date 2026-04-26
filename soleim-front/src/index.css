@@ -53,6 +53,27 @@ body {
   min-height: 100vh;
 }
 
+/* ── Full-width page wrapper ──────────────────────────────────────────────── */
+/* Todas las páginas ocupan todo el ancho disponible */
+.b2b-panel,
+.reportes-page,
+.config-page,
+.det-page {
+  max-width: 100% !important;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* ── Responsive global ────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  .b2b-panel,
+  .reportes-page,
+  .config-page,
+  .det-page {
+    padding: 20px 16px !important;
+  }
+}
+
 .sidebar {
   width: 280px;
   background: #1a1d3f;

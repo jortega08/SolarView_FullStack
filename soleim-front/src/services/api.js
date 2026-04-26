@@ -158,6 +158,39 @@ export const getDomicilios = async () => {
   return response.json()
 }
 
+export const createDomicilio = async ({ usuario_id, ciudad_id }) => {
+  const response = await fetch(`${API_BASE_URL}/core/domicilios/`, {
+    method: "POST",
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ usuario_id, ciudad_id }),
+  })
+  if (!response.ok) throw new Error("Error al crear domicilio")
+  return response.json()
+}
+
+export const deleteDomicilio = async (id) => {
+  const response = await fetch(`${API_BASE_URL}/core/domicilios/${id}/`, {
+    method: "DELETE",
+    headers: getAuthHeaders(),
+  })
+  return response.ok
+}
+
+export const getPaises = async () => {
+  const response = await fetch(`${API_BASE_URL}/core/paises/`, { headers: getAuthHeaders() })
+  return response.json()
+}
+
+export const getEstados = async (paisId) => {
+  const response = await fetch(`${API_BASE_URL}/core/estados/?pais_id=${paisId}`, { headers: getAuthHeaders() })
+  return response.json()
+}
+
+export const getCiudades = async (estadoId) => {
+  const response = await fetch(`${API_BASE_URL}/core/ciudades/?estado_id=${estadoId}`, { headers: getAuthHeaders() })
+  return response.json()
+}
+
 export const getTiposAlerta = async () => {
   const response = await fetch(`${API_BASE_URL}/alertas/tipos-alerta/`, { headers: getAuthHeaders() })
   return response.json()
@@ -193,6 +226,11 @@ export default {
   updateUser,
   deleteUser,
   getDomicilios,
+  createDomicilio,
+  deleteDomicilio,
+  getPaises,
+  getEstados,
+  getCiudades,
   getTiposAlerta,
   fetchFacturaMensual,
 }

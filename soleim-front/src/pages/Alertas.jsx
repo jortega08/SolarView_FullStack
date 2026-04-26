@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react"
 import { AlertTriangle, CheckCircle, XCircle, Clock, Filter, RefreshCw } from "lucide-react"
 import api from "../services/api"
+import usePageTitle from "../hooks/usePageTitle"
 
 const SEVERIDAD = {
   critica: { label: "Crítica",     bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
@@ -110,6 +111,7 @@ function AlertCard({ alerta, onResolver }) {
 }
 
 export default function Alertas() {
+  usePageTitle("Alertas")
   const [alertas, setAlertas]     = useState([])
   const [loading, setLoading]     = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -146,7 +148,7 @@ export default function Alertas() {
   }
 
   return (
-    <div style={{ padding: "32px 36px", maxWidth: 900 }}>
+    <div style={{ padding: "32px 36px", width: "100%" }}>
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 24 }}>

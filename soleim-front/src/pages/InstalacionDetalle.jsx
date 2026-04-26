@@ -10,6 +10,7 @@ import {
   Tooltip, Legend, ResponsiveContainer
 } from "recharts"
 import { fetchDetalleInstalacion, fetchTendencia, resolverAlerta } from "../services/api"
+import usePageTitle from "../hooks/usePageTitle"
 import "../styles/InstalacionDetalle.css"
 
 const SEVERIDAD_CONFIG = {
@@ -108,12 +109,15 @@ const CustomTooltip = ({ active, payload, label }) => {
 const InstalacionDetalle = () => {
   const { id } = useParams()
   const navigate = useNavigate()
-  const [detalle, setDetalle] = useState(null)
-  const [tendencia, setTendencia] = useState([])
-  const [alertas, setAlertas] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [refreshing, setRefreshing] = useState(false)
-  const [dias, setDias] = useState(7)
+  const [detalle,    setDetalle]   = useState(null)
+  const [tendencia,  setTendencia] = useState([])
+  const [alertas,    setAlertas]   = useState([])
+  const [loading,    setLoading]   = useState(true)
+  const [refreshing, setRefreshing]= useState(false)
+  const [dias,       setDias]      = useState(7)
+
+  const nombreInstalacion = detalle?.instalacion?.nombre
+  usePageTitle(nombreInstalacion || "Instalación")
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
