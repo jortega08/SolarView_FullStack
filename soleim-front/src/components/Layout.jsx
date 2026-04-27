@@ -515,7 +515,11 @@ export default function Layout({ children }) {
           borderBottom: "1px solid rgba(255,255,255,0.07)",
           minHeight: 72, transition: "padding .25s",
         }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
+          <NavLink
+            to="/"
+            title="Ir al Panel principal"
+            style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}
+          >
             <div style={{ flexShrink: 0 }}><SoleinMark size={32} /></div>
             {!isCollapsed && (
               <div style={{ overflow: "hidden" }}>
@@ -525,7 +529,7 @@ export default function Layout({ children }) {
                 </p>
               </div>
             )}
-          </div>
+          </NavLink>
         </div>
 
         {/* Nav */}

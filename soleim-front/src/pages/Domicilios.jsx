@@ -9,7 +9,7 @@ function SkeletonRow() {
     <tr>
       {[1, 2, 3, 4, 5].map(i => (
         <td key={i} style={{ padding: "14px 16px" }}>
-          <div style={{ height: 14, background: "#f1f5f9", borderRadius: 4, width: i === 1 ? "60%" : "75%", animation: "pulse 1.5s infinite" }} />
+          <div style={{ height: 14, background: "var(--solein-border)", borderRadius: 4, width: i === 1 ? "60%" : "75%", animation: "pulse 1.5s infinite" }} />
         </td>
       ))}
     </tr>

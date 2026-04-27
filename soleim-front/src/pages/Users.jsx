@@ -13,7 +13,7 @@ function SkeletonRow() {
   return (
     <tr>
       {[1,2,3,4,5,6].map(i => (
-        <td key={i}><div style={{ height: 14, background: "#f1f5f9", borderRadius: 4, width: i === 1 ? 32 : "80%" }} /></td>
+        <td key={i}><div style={{ height: 14, background: "var(--solein-border)", borderRadius: 4, width: i === 1 ? 32 : "80%" }} /></td>
       ))}
     </tr>
   )
