@@ -26,8 +26,11 @@ const Configuracion = () => {
   usePageTitle("Configuración")
   const { user } = useAuth()
   const [isDark, setIsDark] = useDarkMode()
-  const [thresholds, setThresholds] = useState(loadThresholds)
-  const [saved,      setSaved]      = useState(false)
+  const [thresholds,     setThresholds]     = useState(loadThresholds)
+  const [saved,          setSaved]          = useState(false)
+  // Estado de texto libre para cada input — solo se valida en onBlur
+  const [rawCritica,     setRawCritica]     = useState(() => String(loadThresholds().bateria_critica))
+  const [rawAdvertencia, setRawAdvertencia] = useState(() => String(loadThresholds().bateria_advertencia))
 
   const handleSave = () => {
     localStorage.setItem(THRESHOLD_KEY, JSON.stringify(thresholds))
@@ -162,10 +165,16 @@ const Configuracion = () => {
                   min={5}
                   max={thresholds.bateria_advertencia - 5}
                   step={1}
-                  value={thresholds.bateria_critica}
-                  onChange={e => {
-                    const v = Math.min(+e.target.value, thresholds.bateria_advertencia - 5)
-                    setThresholds(t => ({ ...t, bateria_critica: Math.max(5, v) }))
+                  value={rawCritica}
+                  onChange={e => setRawCritica(e.target.value)}
+                  onBlur={() => {
+                    const parsed  = parseInt(rawCritica, 10)
+                    const fallback = thresholds.bateria_critica
+                    const next    = isNaN(parsed)
+                      ? fallback
+                      : Math.max(5, Math.min(parsed, thresholds.bateria_advertencia - 5))
+                    setThresholds({ ...thresholds, bateria_critica: next })
+                    setRawCritica(String(next))
                   }}
                 />
                 <span>%</span>
@@ -190,10 +199,16 @@ const Configuracion = () => {
                   min={thresholds.bateria_critica + 5}
                   max={60}
                   step={1}
-                  value={thresholds.bateria_advertencia}
-                  onChange={e => {
-                    const v = Math.max(+e.target.value, thresholds.bateria_critica + 5)
-                    setThresholds(t => ({ ...t, bateria_advertencia: Math.min(60, v) }))
+                  value={rawAdvertencia}
+                  onChange={e => setRawAdvertencia(e.target.value)}
+                  onBlur={() => {
+                    const parsed   = parseInt(rawAdvertencia, 10)
+                    const fallback = thresholds.bateria_advertencia
+                    const next     = isNaN(parsed)
+                      ? fallback
+                      : Math.max(thresholds.bateria_critica + 5, Math.min(parsed, 60))
+                    setThresholds({ ...thresholds, bateria_advertencia: next })
+                    setRawAdvertencia(String(next))
                   }}
                 />
                 <span>%</span>
