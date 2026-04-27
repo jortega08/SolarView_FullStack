@@ -1,14 +1,15 @@
 import { useState } from "react"
-import { User, Bell, Shield, Save, CheckCircle } from "lucide-react"
+import { User, Bell, Shield, Save, CheckCircle, Moon, Sun } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
 import usePageTitle from "../hooks/usePageTitle"
+import useDarkMode from "../hooks/useDarkMode"
 import "../styles/Configuracion.css"
 
 const ROL_LABELS = {
   admin_empresa: "Administrador de empresa",
-  operador: "Operador",
-  viewer: "Visor",
-  admin: "Super admin",
+  operador:      "Operador",
+  viewer:        "Visor",
+  admin:         "Super admin",
 }
 
 const THRESHOLD_KEY = "soleim_alert_thresholds"
@@ -24,8 +25,9 @@ function loadThresholds() {
 const Configuracion = () => {
   usePageTitle("Configuración")
   const { user } = useAuth()
+  const [isDark, setIsDark] = useDarkMode()
   const [thresholds, setThresholds] = useState(loadThresholds)
-  const [saved, setSaved] = useState(false)
+  const [saved,      setSaved]      = useState(false)
 
   const handleSave = () => {
     localStorage.setItem(THRESHOLD_KEY, JSON.stringify(thresholds))
@@ -40,7 +42,7 @@ const Configuracion = () => {
         <p className="config-subtitle">Ajusta tus preferencias y umbrales de alerta</p>
       </div>
 
-      {/* User profile */}
+      {/* ── Perfil de usuario ────────────────────────────────────────────── */}
       <div className="config-card">
         <div className="config-card-header">
           <User size={18} color="var(--solein-teal)" />
@@ -70,76 +72,169 @@ const Configuracion = () => {
         </p>
       </div>
 
-      {/* Alert thresholds */}
+      {/* ── Apariencia ───────────────────────────────────────────────────── */}
+      <div className="config-card">
+        <div className="config-card-header">
+          {isDark ? <Moon size={18} color="var(--solein-teal)" /> : <Sun size={18} color="var(--solein-gold-dark)" />}
+          <h2>Apariencia</h2>
+        </div>
+
+        <div className="appearance-row">
+          <div className="appearance-info">
+            <p className="appearance-label">Modo oscuro</p>
+            <p className="appearance-hint">
+              {isDark ? "Interfaz con fondo oscuro activada" : "Interfaz con fondo claro activada"}
+            </p>
+          </div>
+
+          {/* Toggle switch */}
+          <button
+            role="switch"
+            aria-checked={isDark}
+            onClick={() => setIsDark(v => !v)}
+            className={`dark-toggle${isDark ? " dark-toggle--on" : ""}`}
+            title={isDark ? "Desactivar modo oscuro" : "Activar modo oscuro"}
+          >
+            <span className="dark-toggle__thumb">
+              {isDark
+                ? <Moon  size={11} color="#3F687A" />
+                : <Sun   size={11} color="#E0B63D" />
+              }
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* ── Umbrales de alerta ───────────────────────────────────────────── */}
       <div className="config-card">
         <div className="config-card-header">
           <Bell size={18} color="var(--solein-gold-dark)" />
           <h2>Umbrales de alerta de batería</h2>
         </div>
         <p className="config-description">
-          Define los porcentajes de carga a partir de los cuales se generan alertas automáticas.
+          Define los porcentajes de carga en que se generan alertas automáticas.
         </p>
-        <div className="threshold-grid">
-          <div className="threshold-item">
-            <label htmlFor="critica">
-              Alerta crítica (%)
-              <span className="threshold-hint">Se genera alerta de severidad alta</span>
-            </label>
-            <div className="threshold-input-row">
-              <input
-                id="critica"
-                type="range"
-                min={5}
-                max={40}
-                step={1}
-                value={thresholds.bateria_critica}
-                onChange={e => setThresholds(t => ({ ...t, bateria_critica: +e.target.value }))}
-                style={{ "--pct": `${((thresholds.bateria_critica - 5) / 35) * 100}%` }}
-              />
-              <span className="threshold-val critical">{thresholds.bateria_critica}%</span>
+
+        {/* Barra de zonas visual */}
+        <div className="zones-bar-wrap">
+          <div className="zones-bar">
+            <div
+              className="zones-bar__seg zones-bar__seg--critical"
+              style={{ width: `${thresholds.bateria_critica}%` }}
+            >
+              {thresholds.bateria_critica >= 8 && <span>{thresholds.bateria_critica}%</span>}
+            </div>
+            <div
+              className="zones-bar__seg zones-bar__seg--warning"
+              style={{ width: `${thresholds.bateria_advertencia - thresholds.bateria_critica}%` }}
+            >
+              {(thresholds.bateria_advertencia - thresholds.bateria_critica) >= 8 && (
+                <span>{thresholds.bateria_advertencia}%</span>
+              )}
+            </div>
+            <div className="zones-bar__seg zones-bar__seg--safe" style={{ flex: 1 }}>
+              <span>100%</span>
             </div>
           </div>
-          <div className="threshold-item">
-            <label htmlFor="advertencia">
-              Advertencia (%)
-              <span className="threshold-hint">Se genera alerta de severidad media</span>
-            </label>
-            <div className="threshold-input-row">
-              <input
-                id="advertencia"
-                type="range"
-                min={20}
-                max={60}
-                step={1}
-                value={thresholds.bateria_advertencia}
-                onChange={e => setThresholds(t => ({ ...t, bateria_advertencia: +e.target.value }))}
-                style={{ "--pct": `${((thresholds.bateria_advertencia - 20) / 40) * 100}%` }}
-              />
-              <span className="threshold-val warning">{thresholds.bateria_advertencia}%</span>
+          <div className="zones-bar-legend">
+            <span className="zones-bar-legend__item zones-bar-legend__item--critical">Crítico</span>
+            <span className="zones-bar-legend__item zones-bar-legend__item--warning">Advertencia</span>
+            <span className="zones-bar-legend__item zones-bar-legend__item--safe">Seguro</span>
+          </div>
+        </div>
+
+        {/* Tarjetas de zona */}
+        <div className="zone-cards">
+          {/* Zona crítica */}
+          <div className="zone-card zone-card--critical">
+            <div className="zone-card__top">
+              <span className="zone-card__dot" />
+              <span className="zone-card__title">Crítico</span>
+            </div>
+            <p className="zone-card__range">0 % — {thresholds.bateria_critica} %</p>
+            <p className="zone-card__desc">Alerta de severidad alta</p>
+            <div className="zone-card__field">
+              <label htmlFor="critica">Umbral</label>
+              <div className="zone-card__input-wrap">
+                <input
+                  id="critica"
+                  type="number"
+                  min={5}
+                  max={thresholds.bateria_advertencia - 5}
+                  step={1}
+                  value={thresholds.bateria_critica}
+                  onChange={e => {
+                    const v = Math.min(+e.target.value, thresholds.bateria_advertencia - 5)
+                    setThresholds(t => ({ ...t, bateria_critica: Math.max(5, v) }))
+                  }}
+                />
+                <span>%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Zona advertencia */}
+          <div className="zone-card zone-card--warning">
+            <div className="zone-card__top">
+              <span className="zone-card__dot" />
+              <span className="zone-card__title">Advertencia</span>
+            </div>
+            <p className="zone-card__range">{thresholds.bateria_critica} % — {thresholds.bateria_advertencia} %</p>
+            <p className="zone-card__desc">Alerta de severidad media</p>
+            <div className="zone-card__field">
+              <label htmlFor="advertencia">Umbral</label>
+              <div className="zone-card__input-wrap">
+                <input
+                  id="advertencia"
+                  type="number"
+                  min={thresholds.bateria_critica + 5}
+                  max={60}
+                  step={1}
+                  value={thresholds.bateria_advertencia}
+                  onChange={e => {
+                    const v = Math.max(+e.target.value, thresholds.bateria_critica + 5)
+                    setThresholds(t => ({ ...t, bateria_advertencia: Math.min(60, v) }))
+                  }}
+                />
+                <span>%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Zona segura */}
+          <div className="zone-card zone-card--safe">
+            <div className="zone-card__top">
+              <span className="zone-card__dot" />
+              <span className="zone-card__title">Seguro</span>
+            </div>
+            <p className="zone-card__range">{thresholds.bateria_advertencia} % — 100 %</p>
+            <p className="zone-card__desc">Operación normal sin alertas</p>
+            <div className="zone-card__field zone-card__field--static">
+              <label>Umbral</label>
+              <span className="zone-card__static-val">Automático</span>
             </div>
           </div>
         </div>
 
         <div className="config-actions">
           <button className={`save-btn${saved ? " saved" : ""}`} onClick={handleSave}>
-            {saved ? (
-              <><CheckCircle size={16} /> Guardado</>
-            ) : (
-              <><Save size={16} /> Guardar preferencias</>
-            )}
+            {saved
+              ? <><CheckCircle size={16} /> Guardado</>
+              : <><Save size={16} /> Guardar preferencias</>
+            }
           </button>
           {saved && <span className="saved-hint">Los cambios se aplican al recargar.</span>}
         </div>
       </div>
 
-      {/* Version info */}
+      {/* ── Sistema ──────────────────────────────────────────────────────── */}
       <div className="config-card config-card-flat">
         <div className="config-card-header">
           <Shield size={18} color="#94a3b8" />
           <h2>Sistema</h2>
         </div>
         <div className="sys-grid">
-          <div className="sys-item"><span>Plataforma</span><strong>Soleim B2B</strong></div>
+          <div className="sys-item"><span>Plataforma</span><strong>Solein B2B</strong></div>
           <div className="sys-item"><span>Versión</span><strong>2.0</strong></div>
           <div className="sys-item"><span>Entorno</span><strong>Producción</strong></div>
         </div>

@@ -38,7 +38,7 @@ function AlertCard({ alerta, onResolver }) {
 
   return (
     <div style={{
-      background: "#fff",
+      background: "var(--solein-white)",
       border: `1px solid var(--solein-border)`,
       borderLeft: `4px solid ${sev.color}`,
       borderRadius: "0 var(--radius-lg) var(--radius-lg) 0",

@@ -1,32 +1,87 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "./styles/pages.css";
 
-/* ── Solein Design Tokens ─────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════════════
+   Solein Design Tokens — Light mode
+   ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  --solein-navy:        #1E2F45;
-  --solein-navy-hover:  #2A3F5A;
-  --solein-navy-light:  #243648;
+  /* Paleta principal */
+  --solein-navy:        #1A2740;
+  --solein-navy-hover:  #243552;
+  --solein-navy-light:  #223147;
   --solein-gold:        #E0B63D;
   --solein-gold-dark:   #9B7720;
   --solein-gold-bg:     #fdf6e3;
-  --solein-teal:        #3F687A;
-  --solein-teal-hover:  #4E7D92;
-  --solein-teal-bg:     #e8f4f7;
+  --solein-teal:        #2B4B5E;
+  --solein-teal-hover:  #3A6070;
+  --solein-teal-bg:     #e0eef4;
+
+  /* Superficies */
   --solein-bg:          #EDF2F7;
   --solein-white:       #FFFFFF;
-  --solein-border:      #e2e8f0;
-  --solein-text:        #1E2F45;
+  --solein-border:      #dde4ed;
+
+  /* Texto */
+  --solein-text:        #1A2740;
   --solein-text-muted:  #64748b;
+
+  /* Semánticos */
   --solein-red:         #dc2626;
   --solein-green:       #16a34a;
 
+  /* Radios y sombras */
   --radius-sm:  6px;
   --radius-md:  10px;
   --radius-lg:  14px;
-  --shadow-sm:  0 1px 4px rgba(30,47,69,.07);
-  --shadow-md:  0 4px 14px rgba(30,47,69,.10);
+  --shadow-sm:  0 1px 4px rgba(26,39,64,.07);
+  --shadow-md:  0 4px 14px rgba(26,39,64,.10);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Dark mode tokens
+   Solo cambian superficies, bordes y texto.
+   Los colores de acento (gold, teal) y el fondo del sidebar se mantienen.
+   --solein-navy se vuelve claro para que sirva como color de TEXTO legible.
+   Los fondos que usan navy (sidebar, botones) están hardcodeados en su CSS.
+   ═══════════════════════════════════════════════════════════════════════════ */
+[data-theme="dark"] {
+  --solein-bg:          #0d1829;
+  --solein-white:       #172236;
+  --solein-border:      #263548;
+  --solein-text:        #d8e4f0;
+  --solein-text-muted:  #8899b0;
+  --solein-gold-bg:     #211c0a;
+  --solein-teal-bg:     #0c2030;
+
+  /* Navy → claro para que el texto sea legible sobre fondo oscuro */
+  --solein-navy:        #b8cde0;
+  --solein-navy-hover:  #cad8e9;
+
+  --shadow-sm:  0 1px 4px rgba(0,0,0,.45);
+  --shadow-md:  0 4px 16px rgba(0,0,0,.55);
+}
+
+/* Botones que usan navy como fondo: mantener oscuros en dark mode */
+[data-theme="dark"] .auth-btn,
+[data-theme="dark"] .save-btn,
+[data-theme="dark"] .reporte-dl-btn {
+  background: #1D3D52 !important;   /* teal oscuro fijo */
+  color: #ffffff !important;
+}
+
+[data-theme="dark"] .auth-btn:hover:not(:disabled),
+[data-theme="dark"] .save-btn:hover,
+[data-theme="dark"] .reporte-dl-btn:hover:not(:disabled) {
+  background: #2B4F65 !important;
+}
+
+[data-theme="dark"] .save-btn.saved {
+  background: var(--solein-green) !important;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Reset y base
+   ═══════════════════════════════════════════════════════════════════════════ */
 * {
   margin: 0;
   padding: 0;
@@ -41,8 +96,6 @@ body {
   color: var(--solein-text);
 }
 
-
-
 #root {
   width: 100%;
   min-height: 100vh;
@@ -54,7 +107,6 @@ body {
 }
 
 /* ── Full-width page wrapper ──────────────────────────────────────────────── */
-/* Todas las páginas ocupan todo el ancho disponible */
 .b2b-panel,
 .reportes-page,
 .config-page,
@@ -74,6 +126,7 @@ body {
   }
 }
 
+/* ── Legados (no eliminar) ────────────────────────────────────────────────── */
 .sidebar {
   width: 280px;
   background: #1a1d3f;
@@ -83,94 +136,6 @@ body {
   height: 100vh;
   left: 0;
   top: 0;
-}
-
-.sidebar-header {
-  padding: 2rem 1.5rem;
-}
-
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.user-avatar {
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: white;
-}
-
-.user-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.user-info h3 {
-  color: white;
-  font-size: 1rem;
-  margin: 0 0 0.25rem 0;
-}
-
-.user-info p {
-  color: #a0a3bd;
-  font-size: 0.85rem;
-  margin: 0;
-}
-
-.sidebar-nav {
-  flex: 1;
-  padding: 1rem 0;
-}
-
-.nav-item {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  color: #a0a3bd;
-  text-decoration: none;
-  transition: all 0.2s;
-  cursor: pointer;
-}
-
-.nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: white;
-}
-
-.nav-item.active {
-  background: #ff6b6b;
-  color: white;
-  border-radius: 0 25px 25px 0;
-  margin-right: 1rem;
-}
-
-.nav-item span {
-  font-size: 0.95rem;
-  font-weight: 500;
-}
-
-.sidebar-footer {
-  padding: 1rem 1.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.sidebar-footer .nav-item {
-  padding: 0.75rem;
-  justify-content: center;
-  display: inline-flex;
-  margin: 0.25rem;
-}
-
-.version {
-  text-align: center;
-  color: #a0a3bd;
-  font-size: 0.75rem;
-  margin-top: 1rem;
 }
 
 .main-content {

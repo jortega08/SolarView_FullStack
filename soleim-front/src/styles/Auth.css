@@ -5,6 +5,18 @@
 .auth-layout {
   display: flex;
   min-height: 100vh;
+  /* Forzar tema claro independientemente de data-theme="dark" */
+  --solein-bg:          #EDF2F7;
+  --solein-white:       #FFFFFF;
+  --solein-border:      #dde4ed;
+  --solein-text:        #1A2740;
+  --solein-text-muted:  #64748b;
+  --solein-navy:        #1A2740;
+  --solein-navy-hover:  #243552;
+  --solein-gold-bg:     #fdf6e3;
+  --solein-teal-bg:     #e0eef4;
+  --shadow-sm:          0 1px 4px rgba(26,39,64,.07);
+  --shadow-md:          0 4px 14px rgba(26,39,64,.10);
 }
 
 /* ── Panel izquierdo — formulario ───────────────────────────────────────── */
@@ -249,7 +261,7 @@
 
 .auth-brand {
   flex: 1;
-  background: var(--solein-navy);
+  background: #1A2740;   /* hardcodeado: no cambia con dark mode */
   /* Dot-grid sutil */
   background-image:
     radial-gradient(circle, rgba(63, 104, 122, 0.28) 1px, transparent 1px);

@@ -1,13 +1,17 @@
-import { useState, useEffect, useCallback } from "react"
-import { NavLink, useNavigate } from "react-router-dom"
+import { useState, useEffect, useRef } from "react"
+import { NavLink, useNavigate, useLocation } from "react-router-dom"
 import {
   Home, AlertTriangle, FileDown, Settings,
-  LogOut, Users, ChevronLeft, ChevronRight, MapPin
+  LogOut, Users, MapPin,
+  Bell, ChevronDown, User, CheckCircle,
+  Menu, Sun, Moon,
 } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
 import { useToast } from "../context/ToastContext"
+import useDarkMode from "../hooks/useDarkMode"
 import api from "../services/api"
 
+/* ── Configuración de navegación ──────────────────────────────────────────── */
 const navGroups = [
   {
     label: "Principal",
@@ -19,7 +23,7 @@ const navGroups = [
     label: "Operaciones",
     items: [
       { to: "/alertas",  icon: AlertTriangle, label: "Alertas", badge: true },
-      { to: "/reportes", icon: FileDown,      label: "Reportes" },
+      { to: "/reportes", icon: FileDown,       label: "Reportes" },
     ],
   },
   {
@@ -32,6 +36,33 @@ const navGroups = [
   },
 ]
 
+/* Mapeo de rutas → label para el breadcrumb */
+const ROUTE_LABELS = {
+  "/":              "Panel",
+  "/alertas":       "Alertas",
+  "/reportes":      "Reportes",
+  "/configuracion": "Configuración",
+  "/users":         "Usuarios",
+  "/domicilios":    "Domicilios",
+  "/perfil":        "Mi Perfil",
+}
+
+const SEVERIDAD_COLOR = {
+  critica: "#dc2626",
+  alta:    "#ea580c",
+  media:   "#d97706",
+  baja:    "#65a30d",
+}
+
+function timeAgo(dateStr) {
+  const diff = Math.floor((Date.now() - new Date(dateStr)) / 60000)
+  if (diff < 1)    return "Ahora"
+  if (diff < 60)   return `Hace ${diff}m`
+  if (diff < 1440) return `Hace ${Math.floor(diff / 60)}h`
+  return `Hace ${Math.floor(diff / 1440)}d`
+}
+
+/* ── Marca Solein ─────────────────────────────────────────────────────────── */
 function SoleinMark({ size = 34 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-label="Solein">
@@ -44,6 +75,358 @@ function SoleinMark({ size = 34 }) {
   )
 }
 
+/* ── Topbar ───────────────────────────────────────────────────────────────── */
+function Topbar({ user, alertBadge, recentAlerts, onLogout, onToggleSidebar, isDark, onToggleDark }) {
+  const navigate  = useNavigate()
+  const location  = useLocation()
+  const [bellOpen,    setBellOpen]    = useState(false)
+  const [profileOpen, setProfileOpen] = useState(false)
+  const bellRef    = useRef(null)
+  const profileRef = useRef(null)
+
+  /* Breadcrumb label */
+  const currentLabel = (() => {
+    const path = location.pathname
+    if (ROUTE_LABELS[path]) return ROUTE_LABELS[path]
+    if (path.startsWith("/instalacion/")) return "Detalle de instalación"
+    return ""
+  })()
+
+  const avatarUrl = user
+    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nombre)}&background=1E2F45&color=E0B63D&bold=true`
+    : `https://ui-avatars.com/api/?name=U&background=1E2F45&color=E0B63D&bold=true`
+
+  /* Cerrar dropdowns al hacer click fuera */
+  useEffect(() => {
+    const handler = (e) => {
+      if (bellRef.current    && !bellRef.current.contains(e.target))    setBellOpen(false)
+      if (profileRef.current && !profileRef.current.contains(e.target)) setProfileOpen(false)
+    }
+    document.addEventListener("mousedown", handler)
+    return () => document.removeEventListener("mousedown", handler)
+  }, [])
+
+  /* Cerrar con Escape */
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.key === "Escape") { setBellOpen(false); setProfileOpen(false) }
+    }
+    document.addEventListener("keydown", handler)
+    return () => document.removeEventListener("keydown", handler)
+  }, [])
+
+  const btnBase = {
+    display: "flex", alignItems: "center", justifyContent: "center",
+    background: "transparent", border: "1px solid transparent",
+    borderRadius: "50%", cursor: "pointer", transition: "all .15s",
+    color: "var(--solein-text-muted)",
+  }
+
+  return (
+    <header style={{
+      position: "sticky",
+      top: 0,
+      zIndex: 100,
+      height: 60,
+      background: "var(--solein-bg)",
+      borderBottom: "1px solid var(--solein-border)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      padding: "0 20px 0 16px",
+      gap: 6,
+    }}>
+
+      {/* ── Lado izquierdo: hamburger + breadcrumb ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        {/* Hamburger */}
+        <button
+          onClick={onToggleSidebar}
+          title="Menú de navegación"
+          style={{
+            ...btnBase,
+            width: 36, height: 36,
+            borderRadius: "var(--radius-sm)",
+            flexShrink: 0,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--solein-white)"; e.currentTarget.style.borderColor = "var(--solein-border)" }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent" }}
+        >
+          <Menu size={18} />
+        </button>
+
+        {/* Breadcrumb */}
+        {currentLabel && (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 11, color: "var(--solein-text-muted)", userSelect: "none" }}>Solein</span>
+            <span style={{ fontSize: 11, color: "var(--solein-border)", userSelect: "none" }}>/</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--solein-navy)" }}>
+              {currentLabel}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ── Lado derecho: tema + campana + perfil ── */}
+      <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+
+        {/* Toggle tema (sol / luna) */}
+        <button
+          onClick={onToggleDark}
+          title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+          style={{
+            ...btnBase,
+            width: 36, height: 36,
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = "var(--solein-white)"; e.currentTarget.style.borderColor = "var(--solein-border)" }}
+          onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent" }}
+        >
+          {isDark
+            ? <Sun  size={17} color="var(--solein-gold)" />
+            : <Moon size={17} />
+          }
+        </button>
+
+        {/* ── Campana ── */}
+        <div ref={bellRef} style={{ position: "relative" }}>
+          <button
+            onClick={() => { setBellOpen(v => !v); setProfileOpen(false) }}
+            title="Notificaciones"
+            style={{
+              ...btnBase,
+              width: 36, height: 36,
+              background: bellOpen ? "var(--solein-white)" : "transparent",
+              borderColor: bellOpen ? "var(--solein-border)" : "transparent",
+            }}
+            onMouseEnter={e => { if (!bellOpen) { e.currentTarget.style.background = "var(--solein-white)"; e.currentTarget.style.borderColor = "var(--solein-border)" } }}
+            onMouseLeave={e => { if (!bellOpen) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent" } }}
+          >
+            <Bell size={17} />
+            {alertBadge > 0 && (
+              <span style={{
+                position: "absolute", top: 7, right: 7,
+                width: 8, height: 8, borderRadius: "50%",
+                background: "var(--solein-red)",
+                border: "2px solid var(--solein-bg)",
+              }} />
+            )}
+          </button>
+
+          {/* Dropdown campana */}
+          {bellOpen && (
+            <div style={{
+              position: "absolute", top: "calc(100% + 8px)", right: 0,
+              width: 320,
+              background: "var(--solein-white)",
+              border: "1px solid var(--solein-border)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-md)",
+              overflow: "hidden",
+              zIndex: 300,
+            }}>
+              {/* Header */}
+              <div style={{
+                padding: "13px 16px 11px",
+                borderBottom: "1px solid var(--solein-border)",
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+              }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: "var(--solein-navy)" }}>
+                  Notificaciones
+                </span>
+                {alertBadge > 0 && (
+                  <span style={{
+                    fontSize: 11, fontWeight: 700,
+                    background: "var(--solein-red)", color: "#fff",
+                    borderRadius: 20, padding: "1px 8px",
+                  }}>
+                    {alertBadge} activa{alertBadge !== 1 ? "s" : ""}
+                  </span>
+                )}
+              </div>
+
+              {/* Lista de alertas */}
+              {recentAlerts.length === 0 ? (
+                <div style={{
+                  padding: "28px 16px",
+                  display: "flex", flexDirection: "column", alignItems: "center", gap: 8,
+                  color: "var(--solein-text-muted)",
+                }}>
+                  <CheckCircle size={28} color="var(--solein-green)" strokeWidth={1.5} />
+                  <p style={{ margin: 0, fontSize: 13, fontWeight: 500 }}>Sin alertas activas</p>
+                  <p style={{ margin: 0, fontSize: 12 }}>Todo opera correctamente</p>
+                </div>
+              ) : (
+                <>
+                  <div style={{ maxHeight: 260, overflowY: "auto" }}>
+                    {recentAlerts.map((a, i) => (
+                      <div
+                        key={a.idalerta}
+                        style={{
+                          padding: "11px 16px",
+                          borderBottom: i < recentAlerts.length - 1 ? "1px solid var(--solein-border)" : "none",
+                          display: "flex", gap: 10, alignItems: "flex-start",
+                          cursor: "pointer", transition: "background .15s",
+                        }}
+                        onClick={() => { setBellOpen(false); navigate("/alertas") }}
+                        onMouseEnter={e => e.currentTarget.style.background = "var(--solein-bg)"}
+                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                      >
+                        <span style={{
+                          width: 8, height: 8, borderRadius: "50%",
+                          background: SEVERIDAD_COLOR[a.severidad] || "#94a3b8",
+                          flexShrink: 0, marginTop: 5,
+                        }} />
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <p style={{
+                            fontSize: 12.5, color: "var(--solein-text)",
+                            margin: "0 0 2px", lineHeight: 1.45,
+                            overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                          }}>
+                            {a.mensaje}
+                          </p>
+                          <p style={{ fontSize: 11, color: "var(--solein-text-muted)", margin: 0 }}>
+                            {timeAgo(a.fecha)}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ padding: "10px 12px", borderTop: "1px solid var(--solein-border)" }}>
+                    <button
+                      onClick={() => { setBellOpen(false); navigate("/alertas") }}
+                      style={{
+                        width: "100%", padding: "8px", fontSize: 12, fontWeight: 600,
+                        background: "var(--solein-bg)", color: "var(--solein-teal)",
+                        border: "1px solid var(--solein-border)", borderRadius: "var(--radius-md)",
+                        cursor: "pointer", fontFamily: "inherit", transition: "all .15s",
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = "var(--solein-teal-bg)"; e.currentTarget.style.borderColor = "var(--solein-teal)" }}
+                      onMouseLeave={e => { e.currentTarget.style.background = "var(--solein-bg)"; e.currentTarget.style.borderColor = "var(--solein-border)" }}
+                    >
+                      Ver todas las alertas →
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Perfil ── */}
+        <div ref={profileRef} style={{ position: "relative" }}>
+          <button
+            onClick={() => { setProfileOpen(v => !v); setBellOpen(false) }}
+            style={{
+              display: "flex", alignItems: "center", gap: 8,
+              padding: "5px 10px 5px 5px",
+              borderRadius: 40,
+              background: profileOpen ? "var(--solein-white)" : "transparent",
+              border: `1px solid ${profileOpen ? "var(--solein-border)" : "transparent"}`,
+              cursor: "pointer", transition: "all .15s",
+            }}
+            onMouseEnter={e => { if (!profileOpen) { e.currentTarget.style.background = "var(--solein-white)"; e.currentTarget.style.borderColor = "var(--solein-border)" } }}
+            onMouseLeave={e => { if (!profileOpen) { e.currentTarget.style.background = "transparent"; e.currentTarget.style.borderColor = "transparent" } }}
+          >
+            <img
+              src={avatarUrl}
+              alt={user?.nombre}
+              style={{ width: 30, height: 30, borderRadius: "50%", border: "2px solid var(--solein-gold)", flexShrink: 0 }}
+            />
+            <div style={{ textAlign: "left", lineHeight: 1.25 }}>
+              <p style={{ fontSize: 12.5, fontWeight: 600, color: "var(--solein-text)", margin: 0, whiteSpace: "nowrap" }}>
+                {user?.nombre
+                  ? user.nombre.split(' ').slice(0, 2).join(' ')
+                  : "Usuario"}
+              </p>
+              <p style={{ fontSize: 11, color: "var(--solein-text-muted)", margin: 0, whiteSpace: "nowrap" }}>
+                {user?.email || ""}
+              </p>
+            </div>
+            <ChevronDown
+              size={14}
+              color="var(--solein-text-muted)"
+              style={{ transition: "transform .2s", transform: profileOpen ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}
+            />
+          </button>
+
+          {/* Dropdown perfil */}
+          {profileOpen && (
+            <div style={{
+              position: "absolute", top: "calc(100% + 8px)", right: 0,
+              width: 220,
+              background: "var(--solein-white)",
+              border: "1px solid var(--solein-border)",
+              borderRadius: "var(--radius-lg)",
+              boxShadow: "var(--shadow-md)",
+              overflow: "hidden",
+              zIndex: 300,
+            }}>
+              {/* Cabecera usuario */}
+              <div style={{ padding: "14px 16px", borderBottom: "1px solid var(--solein-border)" }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: "var(--solein-navy)", margin: "0 0 2px" }}>
+                  {user?.nombre}
+                </p>
+                <p style={{ fontSize: 11.5, color: "var(--solein-text-muted)", margin: 0 }}>
+                  {user?.email}
+                </p>
+              </div>
+
+              {/* Links */}
+              <div style={{ padding: "6px" }}>
+                {[
+                  { label: "Mi perfil",     icon: User,     to: "/perfil" },
+                  { label: "Configuración", icon: Settings, to: "/configuracion" },
+                ].map(item => (
+                  <button
+                    key={item.to}
+                    onClick={() => { setProfileOpen(false); navigate(item.to) }}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 9,
+                      width: "100%", padding: "9px 10px",
+                      borderRadius: "var(--radius-sm)",
+                      background: "transparent", border: "none",
+                      cursor: "pointer", color: "var(--solein-text)",
+                      fontSize: 13, fontFamily: "inherit", textAlign: "left",
+                      transition: "background .15s",
+                    }}
+                    onMouseEnter={e => e.currentTarget.style.background = "var(--solein-bg)"}
+                    onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                  >
+                    <item.icon size={15} color="var(--solein-text-muted)" />
+                    {item.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Cerrar sesión */}
+              <div style={{ padding: "6px", borderTop: "1px solid var(--solein-border)" }}>
+                <button
+                  onClick={() => { setProfileOpen(false); onLogout() }}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 9,
+                    width: "100%", padding: "9px 10px",
+                    borderRadius: "var(--radius-sm)",
+                    background: "transparent", border: "none",
+                    cursor: "pointer", color: "var(--solein-red)",
+                    fontSize: 13, fontFamily: "inherit", textAlign: "left",
+                    transition: "background .15s",
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.background = "#fef2f2"}
+                  onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                >
+                  <LogOut size={15} />
+                  Cerrar sesión
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </header>
+  )
+}
+
+/* ── Layout principal ─────────────────────────────────────────────────────── */
 const W_OPEN     = 220
 const W_CLOSED   = 64
 const BREAKPOINT = 768
@@ -52,13 +435,14 @@ export default function Layout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const toast = useToast()
+  const [isDark, setIsDark] = useDarkMode()
 
-  const [collapsed, setCollapsed] = useState(() =>
-    localStorage.getItem("solein_sidebar") === "1"
-  )
-  const [isMobile, setIsMobile] = useState(window.innerWidth < BREAKPOINT)
-  const [alertBadge, setAlertBadge] = useState(0)
+  const [collapsed,    setCollapsed]    = useState(() => localStorage.getItem("solein_sidebar") === "1")
+  const [isMobile,     setIsMobile]     = useState(window.innerWidth < BREAKPOINT)
+  const [alertBadge,   setAlertBadge]   = useState(0)
+  const [recentAlerts, setRecentAlerts] = useState([])
 
+  // Responsive
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth < BREAKPOINT)
     window.addEventListener("resize", onResize)
@@ -76,21 +460,22 @@ export default function Layout({ children }) {
     return () => window.removeEventListener("solein:session-expired", handleSessionExpired)
   }, [logout, navigate, toast])
 
-  // Polling de alertas activas para el badge del sidebar
+  // Polling de alertas activas para badge + dropdown
   useEffect(() => {
-    const fetchBadge = async () => {
+    const fetchAlerts = async () => {
       try {
         const data = await api.getAlertas()
         const list = Array.isArray(data) ? data : data.results ?? []
-        setAlertBadge(list.filter(a => a.estado === "activa").length)
+        const active = list.filter(a => a.estado === "activa")
+        setAlertBadge(active.length)
+        setRecentAlerts(active.slice(0, 5))
       } catch { /* silencioso */ }
     }
-    fetchBadge()
-    const iv = setInterval(fetchBadge, 60000)
+    fetchAlerts()
+    const iv = setInterval(fetchAlerts, 60000)
     return () => clearInterval(iv)
   }, [])
 
-  // En móvil siempre colapsado
   const isCollapsed = isMobile || collapsed
 
   const toggle = () => {
@@ -110,92 +495,55 @@ export default function Layout({ children }) {
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "var(--solein-bg)", fontFamily: "'Inter', sans-serif" }}>
 
-      {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
+      {/* ── Sidebar ───────────────────────────────────────────────────────── */}
       <aside style={{
-        width: W,
-        minWidth: W,
-        background: "var(--solein-navy)",
-        display: "flex",
-        flexDirection: "column",
-        position: "fixed",
-        height: "100vh",
+        width: W, minWidth: W,
+        background: "#1A2740",   /* hardcodeado: no cambia con dark mode */
+        display: "flex", flexDirection: "column",
+        position: "fixed", height: "100vh",
         zIndex: 200,
         transition: "width .25s ease, min-width .25s ease",
         overflow: "hidden",
         borderRight: "1px solid rgba(255,255,255,0.06)",
       }}>
 
-        {/* Logo */}
+        {/* Logo — sin botón toggle (se movió al topbar) */}
         <div style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: isCollapsed ? "center" : "space-between",
-          padding: isCollapsed ? "20px 0" : "20px 16px 20px 16px",
+          display: "flex", alignItems: "center",
+          justifyContent: isCollapsed ? "center" : "flex-start",
+          padding: isCollapsed ? "20px 0" : "20px 16px",
           borderBottom: "1px solid rgba(255,255,255,0.07)",
-          minHeight: 72,
-          transition: "padding .25s",
+          minHeight: 72, transition: "padding .25s",
         }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10, overflow: "hidden" }}>
-            <div style={{ flexShrink: 0 }}>
-              <SoleinMark size={32} />
-            </div>
+            <div style={{ flexShrink: 0 }}><SoleinMark size={32} /></div>
             {!isCollapsed && (
               <div style={{ overflow: "hidden" }}>
                 <p style={{ color: "#fff", fontWeight: 700, fontSize: 16, margin: 0, letterSpacing: "-0.3px", whiteSpace: "nowrap" }}>Solein</p>
-                <p style={{ color: "var(--solein-gold)", fontSize: 9, fontWeight: 600, margin: "2px 0 0", letterSpacing: "0.12em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
+                <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 9, fontWeight: 600, margin: "2px 0 0", letterSpacing: "0.12em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
                   Monitoreo Energético
                 </p>
               </div>
             )}
           </div>
-
-          {/* Toggle — solo en desktop */}
-          {!isMobile && (
-            <button
-              onClick={toggle}
-              title={collapsed ? "Expandir menú" : "Colapsar menú"}
-              style={{
-                display: "flex", alignItems: "center", justifyContent: "center",
-                width: 24, height: 24, borderRadius: "50%",
-                background: "rgba(255,255,255,0.08)", border: "none",
-                color: "#94a3b8", cursor: "pointer", flexShrink: 0,
-                transition: "background .2s",
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(255,255,255,0.16)"}
-              onMouseLeave={e => e.currentTarget.style.background = "rgba(255,255,255,0.08)"}
-            >
-              {collapsed ? <ChevronRight size={13} /> : <ChevronLeft size={13} />}
-            </button>
-          )}
         </div>
 
         {/* Nav */}
         <nav style={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          gap: 0,
-          padding: "8px 8px",
-          overflowY: "auto",
-          overflowX: "hidden",
+          flex: 1, display: "flex", flexDirection: "column", gap: 0,
+          padding: "8px 8px", overflowY: "auto", overflowX: "hidden",
         }}>
           {navGroups.map((group, gi) => (
             <div key={group.label} style={{ marginBottom: 4 }}>
-              {/* Etiqueta de grupo — solo visible cuando está expandido */}
               {!isCollapsed && (
                 <span style={{
-                  display: "block",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: "#475569",
-                  textTransform: "uppercase",
-                  letterSpacing: ".08em",
+                  display: "block", fontSize: 10, fontWeight: 700,
+                  color: "#475569", textTransform: "uppercase", letterSpacing: ".08em",
                   padding: gi === 0 ? "8px 12px 4px" : "16px 12px 4px",
                 }}>
                   {group.label}
                 </span>
               )}
-              {/* Línea divisora cuando está colapsado (excepto el primero) */}
               {isCollapsed && gi > 0 && (
                 <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "8px 12px" }} />
               )}
@@ -208,8 +556,7 @@ export default function Layout({ children }) {
                     end={end}
                     title={isCollapsed ? label : undefined}
                     style={({ isActive }) => ({
-                      display: "flex",
-                      alignItems: "center",
+                      display: "flex", alignItems: "center",
                       justifyContent: isCollapsed ? "center" : "flex-start",
                       gap: 10,
                       padding: isCollapsed ? "10px 0" : "9px 12px",
@@ -217,16 +564,13 @@ export default function Layout({ children }) {
                       color: isActive ? "#1E2F45" : "#94a3b8",
                       background: isActive ? "var(--solein-gold)" : "transparent",
                       textDecoration: "none",
-                      fontSize: 13.5,
-                      fontWeight: isActive ? 600 : 500,
+                      fontSize: 13.5, fontWeight: isActive ? 600 : 500,
                       transition: "all .18s",
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      position: "relative",
+                      whiteSpace: "nowrap", overflow: "hidden", position: "relative",
                     })}
                     onMouseEnter={e => {
                       if (e.currentTarget.getAttribute("aria-current") !== "page") {
-                        e.currentTarget.style.background = "#2A3F5A"
+                        e.currentTarget.style.background = "#243352"
                         e.currentTarget.style.color = "#fff"
                       }
                     }}
@@ -236,7 +580,6 @@ export default function Layout({ children }) {
                       e.currentTarget.style.color = active ? "#1E2F45" : "#94a3b8"
                     }}
                   >
-                    {/* Icono con dot rojo en modo colapsado */}
                     <div style={{ position: "relative", flexShrink: 0 }}>
                       <Icon size={17} />
                       {isCollapsed && badgeCount > 0 && (
@@ -244,26 +587,19 @@ export default function Layout({ children }) {
                           position: "absolute", top: -4, right: -4,
                           width: 8, height: 8, borderRadius: "50%",
                           background: "var(--solein-red)",
-                          border: "1.5px solid var(--solein-navy)",
+                          border: "1.5px solid #1A2740",
                         }} />
                       )}
                     </div>
-
                     {!isCollapsed && (
                       <>
                         <span style={{ flex: 1 }}>{label}</span>
                         {badgeCount > 0 && (
                           <span style={{
-                            background: "var(--solein-red)",
-                            color: "#fff",
-                            borderRadius: 20,
-                            padding: "1px 6px",
-                            fontSize: 10,
-                            fontWeight: 700,
-                            minWidth: 18,
-                            textAlign: "center",
-                            lineHeight: "16px",
-                            flexShrink: 0,
+                            background: "var(--solein-red)", color: "#fff",
+                            borderRadius: 20, padding: "1px 6px",
+                            fontSize: 10, fontWeight: 700, minWidth: 18,
+                            textAlign: "center", lineHeight: "16px", flexShrink: 0,
                           }}>
                             {badgeCount > 99 ? "99+" : badgeCount}
                           </span>
@@ -277,31 +613,24 @@ export default function Layout({ children }) {
           ))}
         </nav>
 
-        {/* Footer: avatar + logout */}
+        {/* Footer sidebar: avatar compacto */}
         <div style={{
           borderTop: "1px solid rgba(255,255,255,0.07)",
           padding: "10px 8px",
-          display: "flex",
-          flexDirection: "column",
-          gap: 4,
         }}>
-          {/* Avatar + info */}
           <NavLink
             to="/perfil"
             title={isCollapsed ? user?.nombre || "Mi perfil" : undefined}
             style={{ textDecoration: "none" }}
           >
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              padding: isCollapsed ? "8px 0" : "8px 10px",
-              borderRadius: 10,
-              cursor: "pointer",
-              transition: "background .18s",
-              justifyContent: isCollapsed ? "center" : "flex-start",
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = "#2A3F5A"}
+            <div
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: isCollapsed ? "8px 0" : "8px 10px",
+                borderRadius: 10, cursor: "pointer", transition: "background .18s",
+                justifyContent: isCollapsed ? "center" : "flex-start",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "#243352"}
               onMouseLeave={e => e.currentTarget.style.background = "transparent"}
             >
               <img
@@ -321,35 +650,6 @@ export default function Layout({ children }) {
               )}
             </div>
           </NavLink>
-
-          {/* Cerrar sesión */}
-          <button
-            onClick={handleLogout}
-            title={isCollapsed ? "Cerrar sesión" : undefined}
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: isCollapsed ? "center" : "flex-start",
-              gap: 10,
-              width: "100%",
-              padding: isCollapsed ? "9px 0" : "9px 12px",
-              borderRadius: 10,
-              background: "transparent",
-              border: "none",
-              color: "#64748b",
-              cursor: "pointer",
-              fontSize: 13.5,
-              fontWeight: 500,
-              transition: "all .18s",
-              fontFamily: "inherit",
-              whiteSpace: "nowrap",
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = "#2A3F5A"; e.currentTarget.style.color = "#fff" }}
-            onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#64748b" }}
-          >
-            <LogOut size={16} style={{ flexShrink: 0 }} />
-            {!isCollapsed && <span>Cerrar sesión</span>}
-          </button>
         </div>
       </aside>
 
@@ -362,8 +662,21 @@ export default function Layout({ children }) {
         transition: "margin-left .25s ease",
         minWidth: 0,
         width: `calc(100% - ${W}px)`,
+        display: "flex",
+        flexDirection: "column",
       }}>
-        {children}
+        <Topbar
+          user={user}
+          alertBadge={alertBadge}
+          recentAlerts={recentAlerts}
+          onLogout={handleLogout}
+          onToggleSidebar={toggle}
+          isDark={isDark}
+          onToggleDark={() => setIsDark(v => !v)}
+        />
+        <div style={{ flex: 1 }}>
+          {children}
+        </div>
       </main>
     </div>
   )
