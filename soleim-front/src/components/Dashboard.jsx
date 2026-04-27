@@ -100,6 +100,7 @@ const Dashboard = () => {
   const [error,       setError]       = useState(null)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [search,      setSearch]      = useState("")
+  const [sortBy,      setSortBy]      = useState("riesgo")
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true)
@@ -136,9 +137,21 @@ const Dashboard = () => {
   const instalaciones = panel?.instalaciones || []
   const resumen     = panel?.resumen || { total: 0, con_alerta_critica: 0, en_mantenimiento: 0 }
 
-  const filtradas = search.trim()
-    ? instalaciones.filter(i => i.nombre.toLowerCase().includes(search.toLowerCase()))
-    : instalaciones
+  const RIESGO_ORDER = { alto: 0, medio: 1, bajo: 2 }
+
+  const filtradas = (() => {
+    let list = search.trim()
+      ? instalaciones.filter(i => i.nombre.toLowerCase().includes(search.toLowerCase()))
+      : [...instalaciones]
+
+    switch (sortBy) {
+      case "riesgo":   list.sort((a, b) => (RIESGO_ORDER[a.riesgo] ?? 2) - (RIESGO_ORDER[b.riesgo] ?? 2)); break
+      case "bateria":  list.sort((a, b) => (a.bateria_pct ?? 101) - (b.bateria_pct ?? 101)); break
+      case "nombre":   list.sort((a, b) => a.nombre.localeCompare(b.nombre)); break
+      case "alertas":  list.sort((a, b) => (b.alertas_criticas ?? 0) - (a.alertas_criticas ?? 0)); break
+    }
+    return list
+  })()
 
   const updatedLabel = (() => {
     if (!lastUpdated) return null
@@ -232,7 +245,26 @@ const Dashboard = () => {
         </div>
 
         {instalaciones.length > 0 && (
-          <div style={{ position: "relative" }}>
+          <div style={{ display: "flex", gap: 8 }}>
+            {/* Ordenamiento */}
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              style={{
+                border: "1px solid var(--solein-border)", borderRadius: "var(--radius-md)",
+                padding: "7px 10px", fontSize: 13, fontFamily: "inherit",
+                color: "var(--solein-navy)", background: "var(--solein-white)",
+                outline: "none", cursor: "pointer",
+              }}
+            >
+              <option value="riesgo">Ordenar: Riesgo</option>
+              <option value="bateria">Ordenar: Batería ↑</option>
+              <option value="alertas">Ordenar: Alertas ↓</option>
+              <option value="nombre">Ordenar: Nombre A-Z</option>
+            </select>
+
+            {/* Búsqueda */}
+            <div style={{ position: "relative" }}>
             <Search size={14} color="var(--solein-text-muted)" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
             <input
               type="text"
@@ -244,11 +276,12 @@ const Dashboard = () => {
                 padding: "7px 12px 7px 30px", fontSize: 13,
                 fontFamily: "inherit", color: "var(--solein-navy)",
                 background: "var(--solein-white)", outline: "none",
-                width: 220, transition: "border-color .2s",
+                width: 200, transition: "border-color .2s",
               }}
               onFocus={e => e.target.style.borderColor = "var(--solein-teal)"}
               onBlur={e => e.target.style.borderColor = "var(--solein-border)"}
             />
+            </div>
           </div>
         )}
       </div>

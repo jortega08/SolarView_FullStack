@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { Zap, BarChart2, Battery } from 'lucide-react'
+import usePageTitle from '../hooks/usePageTitle'
 import '../styles/Auth.css'
 
 function SoleinMark({ size = 42 }) {
@@ -17,6 +18,7 @@ function SoleinMark({ size = 42 }) {
 }
 
 export default function Login() {
+  usePageTitle("Iniciar sesión")
   const [email, setEmail] = useState('')
   const [contrasena, setContrasena] = useState('')
   const [err, setErr] = useState('')

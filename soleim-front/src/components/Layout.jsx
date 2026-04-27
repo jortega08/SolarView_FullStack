@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { NavLink, useNavigate } from "react-router-dom"
 import {
   Home, AlertTriangle, FileDown, Settings,
   LogOut, Users, ChevronLeft, ChevronRight, MapPin
 } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
+import { useToast } from "../context/ToastContext"
 import api from "../services/api"
 
 const navGroups = [
@@ -50,6 +51,7 @@ const BREAKPOINT = 768
 export default function Layout({ children }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const toast = useToast()
 
   const [collapsed, setCollapsed] = useState(() =>
     localStorage.getItem("solein_sidebar") === "1"
@@ -62,6 +64,17 @@ export default function Layout({ children }) {
     window.addEventListener("resize", onResize)
     return () => window.removeEventListener("resize", onResize)
   }, [])
+
+  // Auto-logout cuando cualquier llamada API retorna 401
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      logout()
+      toast?.("Tu sesión ha expirado. Por favor inicia sesión nuevamente.", "warning", 6000)
+      navigate("/login")
+    }
+    window.addEventListener("solein:session-expired", handleSessionExpired)
+    return () => window.removeEventListener("solein:session-expired", handleSessionExpired)
+  }, [logout, navigate, toast])
 
   // Polling de alertas activas para el badge del sidebar
   useEffect(() => {

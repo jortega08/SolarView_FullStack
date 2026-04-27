@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { ShieldCheck, Bell, BarChart2 } from 'lucide-react'
+import usePageTitle from '../hooks/usePageTitle'
 import '../styles/Auth.css'
 
 function SoleinMark({ size = 42 }) {
@@ -17,6 +18,7 @@ function SoleinMark({ size = 42 }) {
 }
 
 export default function Register() {
+  usePageTitle("Crear cuenta")
   const [form, setForm] = useState({ nombre: '', email: '', contrasena: '', confirmContrasena: '' })
   const [err, setErr] = useState('')
   const { register, loading } = useAuth()

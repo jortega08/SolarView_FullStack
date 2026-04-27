@@ -32,6 +32,47 @@ const ESTADO_CONFIG = {
   inactivo:      { label: "Inactivo",      color: "#9ca3af", bg: "#f8fafc" },
 }
 
+function BatteryGauge({ pct }) {
+  const W  = 160
+  const cx = W / 2           // 80
+  const cy = W * 0.58        // 92.8
+  const r  = W * 0.38        // 60.8
+  const sw = W * 0.09        // 14.4  stroke-width
+
+  const color = pct == null ? "#9ca3af"
+    : pct < 20 ? "#dc2626"
+    : pct < 50 ? "#d97706"
+    : "#16a34a"
+
+  const angle  = Math.PI * (1 - Math.min(Math.max(pct ?? 0, 0), 100) / 100)
+  const xEnd   = cx + r * Math.cos(angle)
+  const yEnd   = cy - r * Math.sin(angle)
+  const bgPath = `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`
+  const filled = (pct == null || pct <= 0) ? null
+    : pct >= 100 ? bgPath
+    : `M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${xEnd.toFixed(1)} ${yEnd.toFixed(1)}`
+
+  return (
+    <div className="metric-card" style={{ flexDirection: "column", alignItems: "center", padding: "16px 20px", gap: 4 }}>
+      <svg width={W} height={W * 0.62} viewBox={`0 0 ${W} ${W * 0.62}`} style={{ overflow: "visible" }}>
+        {/* Track */}
+        <path d={bgPath} fill="none" stroke="#e2e8f0" strokeWidth={sw} strokeLinecap="round" />
+        {/* Fill */}
+        {filled && <path d={filled} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" />}
+        {/* Valor */}
+        <text x={cx} y={cy - 4} textAnchor="middle" fontSize={W * 0.2} fontWeight="700"
+          fill={color} fontFamily="Inter, sans-serif">
+          {pct != null ? `${pct}%` : "—"}
+        </text>
+        <text x={cx} y={cy + W * 0.12} textAnchor="middle" fontSize={W * 0.09}
+          fill="#94a3b8" fontFamily="Inter, sans-serif">
+          Carga de batería
+        </text>
+      </svg>
+    </div>
+  )
+}
+
 function MetricCard({ icon: Icon, label, value, unit, color = "#3F687A", bg = "#e8f4f7" }) {
   return (
     <div className="metric-card">
@@ -207,14 +248,7 @@ const InstalacionDetalle = () => {
 
       {/* Metrics row */}
       <div className="metrics-grid">
-        <MetricCard
-          icon={Battery}
-          label="Batería"
-          value={bateria?.porcentaje_carga ?? null}
-          unit="%"
-          color={bateria ? (bateria.porcentaje_carga < 20 ? "#dc2626" : bateria.porcentaje_carga < 50 ? "#d97706" : "#16a34a") : "#9ca3af"}
-          bg={bateria ? (bateria.porcentaje_carga < 20 ? "#fef2f2" : "#f0fdf4") : "#f8fafc"}
-        />
+        <BatteryGauge pct={bateria?.porcentaje_carga ?? null} />
         <MetricCard icon={Sun} label="Solar hoy" value={consumo_hoy.solar} unit="kWh" color="#f59e0b" bg="#fffbeb" />
         <MetricCard icon={PlugZap} label="Eléctrica hoy" value={consumo_hoy.electrica} unit="kWh" color="#6366f1" bg="#eef2ff" />
         <MetricCard icon={DollarSign} label="Costo hoy" value={consumo_hoy.costo} unit="COP" color="#059669" bg="#f0fdf4" />

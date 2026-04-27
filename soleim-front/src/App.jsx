@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom"
 import { AuthProvider } from "./context/AuthContext"
 import { ToastProvider } from "./context/ToastContext"
+import ErrorBoundary from "./components/ErrorBoundary"
 import PrivateRoute from "./components/PrivateRoute"
 import Layout from "./components/Layout"
 import Dashboard from "./components/Dashboard"
@@ -17,6 +18,7 @@ import NotFound from "./pages/NotFound"
 
 function App() {
   return (
+    <ErrorBoundary>
     <AuthProvider>
       <ToastProvider>
         <Router>
@@ -47,6 +49,7 @@ function App() {
         </Router>
       </ToastProvider>
     </AuthProvider>
+    </ErrorBoundary>
   )
 }
 

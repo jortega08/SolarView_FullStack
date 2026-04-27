@@ -6,25 +6,40 @@ export const getAuthHeaders = () => {
   return token ? { ...base, 'Authorization': `Bearer ${token}` } : base
 }
 
+/**
+ * Wrapper de fetch que detecta respuestas 401 y despacha
+ * el evento global 'solein:session-expired' para que el Layout
+ * cierre la sesión limpiamente y redirija al login.
+ */
+const authFetch = async (url, options = {}) => {
+  const { headers: customHeaders, ...rest } = options
+  const response = await fetch(url, {
+    headers: { ...getAuthHeaders(), ...customHeaders },
+    ...rest,
+  })
+  if (response.status === 401) {
+    window.dispatchEvent(new CustomEvent('solein:session-expired'))
+    throw new Error('SESSION_EXPIRED')
+  }
+  return response
+}
+
 // ── Empresa / Instalaciones ──────────────────────────────────────────────────
 
 export const fetchPanelEmpresa = async (empresaId = null) => {
   const params = new URLSearchParams()
   if (empresaId) params.append('empresa_id', empresaId)
-  const response = await fetch(
-    `${API_BASE_URL}/empresa/panel/?${params}`,
-    { headers: getAuthHeaders() }
-  )
+  const response = await authFetch(`${API_BASE_URL}/empresa/panel/?${params}`)
   return response.json()
 }
 
 export const fetchInstalaciones = async () => {
-  const response = await fetch(`${API_BASE_URL}/empresa/instalaciones/`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/empresa/instalaciones/`)
   return response.json()
 }
 
 export const fetchDetalleInstalacion = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/empresa/instalacion/${id}/`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/empresa/instalacion/${id}/`)
   return response.json()
 }
 
@@ -32,41 +47,37 @@ export const fetchDetalleInstalacion = async (id) => {
 
 export const fetchActivities = async ({ periodo = "year", startDate, endDate, instalacionId } = {}) => {
   const params = new URLSearchParams()
-  if (periodo) params.append("periodo", periodo)
-  if (startDate) params.append("start_date", startDate)
-  if (endDate) params.append("end_date", endDate)
+  if (periodo)       params.append("periodo", periodo)
+  if (startDate)     params.append("start_date", startDate)
+  if (endDate)       params.append("end_date", endDate)
   if (instalacionId) params.append("instalacion_id", instalacionId)
-
-  const response = await fetch(
-    `${API_BASE_URL}/analitica/actividades/?${params}`,
-    { headers: getAuthHeaders() }
-  )
+  const response = await authFetch(`${API_BASE_URL}/analitica/actividades/?${params}`)
   const data = await response.json()
   return data.data || data
 }
 
 export const fetchTendencia = async (instalacionId, dias = 7) => {
   const params = new URLSearchParams({ instalacion_id: instalacionId, dias })
-  const response = await fetch(`${API_BASE_URL}/analitica/tendencia/?${params}`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/analitica/tendencia/?${params}`)
   return response.json()
 }
 
 export const fetchComparativa = async (empresaId) => {
   const params = new URLSearchParams({ empresa_id: empresaId })
-  const response = await fetch(`${API_BASE_URL}/analitica/comparativa/?${params}`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/analitica/comparativa/?${params}`)
   return response.json()
 }
 
 export const fetchAutonomia = async (instalacionId) => {
   const params = new URLSearchParams({ instalacion_id: instalacionId })
-  const response = await fetch(`${API_BASE_URL}/analitica/autonomia/?${params}`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/analitica/autonomia/?${params}`)
   return response.json()
 }
 
 export const fetchBatteryStatus = async (instalacionId = null) => {
   const params = new URLSearchParams()
   if (instalacionId) params.append('instalacion_id', instalacionId)
-  const response = await fetch(`${API_BASE_URL}/analitica/bateria/?${params}`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/analitica/bateria/?${params}`)
   const data = await response.json()
   return data.data
 }
@@ -76,33 +87,27 @@ export const fetchBatteryStatus = async (instalacionId = null) => {
 export const fetchUltimasAlertas = async (instalacionId = null) => {
   const params = new URLSearchParams()
   if (instalacionId) params.append("instalacion_id", instalacionId)
-  const response = await fetch(`${API_BASE_URL}/alertas/ultimas/?${params}`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/alertas/ultimas/?${params}`)
   return response.json()
 }
 
 export const resolverAlerta = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/alertas/alertas/${id}/resolver/`, {
-    method: 'POST',
-    headers: getAuthHeaders(),
-  })
+  const response = await authFetch(`${API_BASE_URL}/alertas/alertas/${id}/resolver/`, { method: 'POST' })
   return response.json()
 }
 
 export const getAlertas = async (filters = {}) => {
   const params = new URLSearchParams(filters)
-  const response = await fetch(`${API_BASE_URL}/alertas/alertas/?${params}`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/alertas/alertas/?${params}`)
   return response.json()
 }
 
 // ── Reportes CSV ─────────────────────────────────────────────────────────────
 
 export const descargarReporteConsumo = (instalacionId, dias = 30) => {
-  const token = localStorage.getItem('soleim_token')
   const params = new URLSearchParams({ instalacion_id: instalacionId, dias })
-  const url = `${API_BASE_URL}/empresa/reporte/consumo/?${params}`
   const a = document.createElement('a')
-  a.href = url
-  // Token en query param solo para descarga directa; el backend usa AllowAny + check propio
+  a.href = `${API_BASE_URL}/empresa/reporte/consumo/?${params}`
   a.download = ''
   document.body.appendChild(a)
   a.click()
@@ -111,57 +116,52 @@ export const descargarReporteConsumo = (instalacionId, dias = 30) => {
 
 export const descargarReporteAlertas = (instalacionId, dias = 30) => {
   const params = new URLSearchParams({ instalacion_id: instalacionId, dias })
-  const url = `${API_BASE_URL}/empresa/reporte/alertas/?${params}`
   const a = document.createElement('a')
-  a.href = url
+  a.href = `${API_BASE_URL}/empresa/reporte/alertas/?${params}`
   a.download = ''
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
 }
 
-// ── Usuarios / Domicilios (legacy, mantener para páginas aún activas) ─────────
+// ── Usuarios ──────────────────────────────────────────────────────────────────
 
 export const getUsers = async () => {
-  const response = await fetch(`${API_BASE_URL}/core/usuarios/`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/core/usuarios/`)
   return response.json()
 }
 
 export const createUser = async (userData) => {
-  const response = await fetch(`${API_BASE_URL}/core/usuarios/`, {
+  const response = await authFetch(`${API_BASE_URL}/core/usuarios/`, {
     method: "POST",
-    headers: getAuthHeaders(),
     body: JSON.stringify(userData),
   })
   return response.json()
 }
 
 export const updateUser = async (id, userData) => {
-  const response = await fetch(`${API_BASE_URL}/core/usuarios/${id}/`, {
+  const response = await authFetch(`${API_BASE_URL}/core/usuarios/${id}/`, {
     method: "PUT",
-    headers: getAuthHeaders(),
     body: JSON.stringify(userData),
   })
   return response.json()
 }
 
 export const deleteUser = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/core/usuarios/${id}/`, {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-  })
+  const response = await authFetch(`${API_BASE_URL}/core/usuarios/${id}/`, { method: "DELETE" })
   return response.ok
 }
 
+// ── Domicilios ────────────────────────────────────────────────────────────────
+
 export const getDomicilios = async () => {
-  const response = await fetch(`${API_BASE_URL}/core/domicilios/`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/core/domicilios/`)
   return response.json()
 }
 
 export const createDomicilio = async ({ usuario_id, ciudad_id }) => {
-  const response = await fetch(`${API_BASE_URL}/core/domicilios/`, {
+  const response = await authFetch(`${API_BASE_URL}/core/domicilios/`, {
     method: "POST",
-    headers: getAuthHeaders(),
     body: JSON.stringify({ usuario_id, ciudad_id }),
   })
   if (!response.ok) throw new Error("Error al crear domicilio")
@@ -169,30 +169,29 @@ export const createDomicilio = async ({ usuario_id, ciudad_id }) => {
 }
 
 export const deleteDomicilio = async (id) => {
-  const response = await fetch(`${API_BASE_URL}/core/domicilios/${id}/`, {
-    method: "DELETE",
-    headers: getAuthHeaders(),
-  })
+  const response = await authFetch(`${API_BASE_URL}/core/domicilios/${id}/`, { method: "DELETE" })
   return response.ok
 }
 
 export const getPaises = async () => {
-  const response = await fetch(`${API_BASE_URL}/core/paises/`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/core/paises/`)
   return response.json()
 }
 
 export const getEstados = async (paisId) => {
-  const response = await fetch(`${API_BASE_URL}/core/estados/?pais_id=${paisId}`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/core/estados/?pais_id=${paisId}`)
   return response.json()
 }
 
 export const getCiudades = async (estadoId) => {
-  const response = await fetch(`${API_BASE_URL}/core/ciudades/?estado_id=${estadoId}`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/core/ciudades/?estado_id=${estadoId}`)
   return response.json()
 }
 
+// ── Misc ──────────────────────────────────────────────────────────────────────
+
 export const getTiposAlerta = async () => {
-  const response = await fetch(`${API_BASE_URL}/alertas/tipos-alerta/`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/alertas/tipos-alerta/`)
   return response.json()
 }
 
@@ -201,7 +200,7 @@ export const fetchFacturaMensual = async ({ domicilioId, mes, ano }) => {
   params.append("domicilio_id", domicilioId)
   params.append("mes", mes)
   params.append("ano", ano)
-  const response = await fetch(`${API_BASE_URL}/factura/mensual/?${params}`, { headers: getAuthHeaders() })
+  const response = await authFetch(`${API_BASE_URL}/factura/mensual/?${params}`)
   const data = await response.json()
   if (data.success !== false) return data
   throw new Error(data.error || "Error generando factura")

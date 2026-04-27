@@ -24,12 +24,14 @@ export default function Users() {
   const toast   = useToast()
   const confirm = useConfirm()
 
-  const [users, setUsers]       = useState([])
-  const [loading, setLoading]   = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [deleting, setDeleting] = useState(null)
-  const [formData, setFormData] = useState({ nombre: "", email: "", contrasena: "", rol: "user" })
-  const [formErr, setFormErr]   = useState("")
+  const [users,      setUsers]      = useState([])
+  const [loading,    setLoading]    = useState(true)
+  const [showForm,   setShowForm]   = useState(false)
+  const [deleting,   setDeleting]   = useState(null)
+  const [updatingRol,setUpdatingRol]= useState(null)
+  const [search,     setSearch]     = useState("")
+  const [formData,   setFormData]   = useState({ nombre: "", email: "", contrasena: "", rol: "user" })
+  const [formErr,    setFormErr]    = useState("")
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => { fetchUsers() }, [])
@@ -83,6 +85,26 @@ export default function Users() {
     }
   }
 
+  const handleRolChange = async (id, nombre, newRol) => {
+    setUpdatingRol(id)
+    try {
+      await api.updateUser(id, { rol: newRol })
+      setUsers(prev => prev.map(u => u.idusuario === id ? { ...u, rol: newRol } : u))
+      toast(`Rol de "${nombre}" actualizado.`, "success")
+    } catch {
+      toast("No se pudo actualizar el rol.", "error")
+    } finally {
+      setUpdatingRol(null)
+    }
+  }
+
+  const filteredUsers = search.trim()
+    ? users.filter(u =>
+        u.nombre.toLowerCase().includes(search.toLowerCase()) ||
+        u.email.toLowerCase().includes(search.toLowerCase())
+      )
+    : users
+
   const avatarUrl = (name) =>
     `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1E2F45&color=E0B63D&bold=true&size=64`
 
@@ -99,7 +121,7 @@ export default function Users() {
             </h1>
           </div>
           <p style={{ fontSize: 13, color: "var(--solein-text-muted)", margin: 0 }}>
-            {loading ? "Cargando..." : `${users.length} usuario${users.length !== 1 ? "s" : ""} registrado${users.length !== 1 ? "s" : ""}`}
+            {loading ? "Cargando..." : `${filteredUsers.length}${search ? ` de ${users.length}` : ""} usuario${users.length !== 1 ? "s" : ""}`}
           </p>
         </div>
         <button
@@ -117,6 +139,26 @@ export default function Users() {
           {showForm ? <><X size={15}/> Cancelar</> : <><UserPlus size={15}/> Nuevo usuario</>}
         </button>
       </div>
+
+      {/* Buscador */}
+      {!loading && users.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <input
+            type="text"
+            placeholder="Buscar por nombre o email…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              border: "1px solid var(--solein-border)", borderRadius: "var(--radius-md)",
+              padding: "8px 14px", fontSize: 13, fontFamily: "inherit",
+              color: "var(--solein-navy)", background: "var(--solein-white)",
+              outline: "none", width: 280, transition: "border-color .2s",
+            }}
+            onFocus={e => e.target.style.borderColor = "var(--solein-teal)"}
+            onBlur={e => e.target.style.borderColor = "var(--solein-border)"}
+          />
+        </div>
+      )}
 
       {/* Form */}
       {showForm && (
@@ -224,14 +266,20 @@ export default function Users() {
                   </div>
                 </td>
               </tr>
+            ) : filteredUsers.length === 0 ? (
+              <tr>
+                <td colSpan={5} style={{ padding: "32px 20px", textAlign: "center", color: "var(--solein-text-muted)", fontSize: 13 }}>
+                  Sin resultados para <strong>"{search}"</strong>
+                </td>
+              </tr>
             ) : (
-              users.map((u, idx) => {
+              filteredUsers.map((u, idx) => {
                 const rol = ROL_CONFIG[u.rol] || ROL_CONFIG.user
                 return (
                   <tr
                     key={u.idusuario}
                     style={{
-                      borderBottom: idx < users.length - 1 ? "1px solid var(--solein-border)" : "none",
+                      borderBottom: idx < filteredUsers.length - 1 ? "1px solid var(--solein-border)" : "none",
                       transition: "background .15s",
                     }}
                     onMouseEnter={e => e.currentTarget.style.background = "var(--solein-bg)"}
@@ -249,16 +297,24 @@ export default function Users() {
                       </div>
                     </td>
                     <td style={{ padding: "14px 16px", fontSize: 13, color: "var(--solein-text-muted)" }}>{u.email}</td>
+                    {/* Rol — selector inline */}
                     <td style={{ padding: "14px 16px" }}>
-                      <span style={{
-                        display: "inline-flex", alignItems: "center", gap: 5,
-                        background: rol.bg, color: rol.color,
-                        borderRadius: 20, padding: "3px 10px",
-                        fontSize: 12, fontWeight: 600,
-                      }}>
-                        <Shield size={11} />
-                        {rol.label}
-                      </span>
+                      <select
+                        value={u.rol}
+                        disabled={updatingRol === u.idusuario}
+                        onChange={e => handleRolChange(u.idusuario, u.nombre, e.target.value)}
+                        style={{
+                          background: rol.bg, color: rol.color,
+                          border: `1px solid ${u.rol === "admin" ? "var(--solein-navy)" : "var(--solein-teal)"}`,
+                          borderRadius: 20, padding: "3px 10px",
+                          fontSize: 12, fontWeight: 600, cursor: "pointer",
+                          fontFamily: "inherit", outline: "none",
+                          opacity: updatingRol === u.idusuario ? .6 : 1,
+                        }}
+                      >
+                        <option value="user">Usuario</option>
+                        <option value="admin">Administrador</option>
+                      </select>
                     </td>
                     <td style={{ padding: "14px 16px", fontSize: 13, color: "var(--solein-text-muted)" }}>
                       {new Date(u.fecha_registro).toLocaleDateString("es-CO", { day: "2-digit", month: "short", year: "numeric" })}

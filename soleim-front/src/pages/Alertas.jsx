@@ -1,7 +1,16 @@
 import { useState, useEffect } from "react"
-import { AlertTriangle, CheckCircle, XCircle, Clock, Filter, RefreshCw } from "lucide-react"
+import { AlertTriangle, CheckCircle, XCircle, Clock, RefreshCw, CheckCheck } from "lucide-react"
 import api from "../services/api"
+import { useToast, useConfirm } from "../context/ToastContext"
 import usePageTitle from "../hooks/usePageTitle"
+
+const SEV_TABS = [
+  { value: "todas",   label: "Todas" },
+  { value: "critica", label: "Crítica" },
+  { value: "alta",    label: "Alta" },
+  { value: "media",   label: "Media" },
+  { value: "baja",    label: "Baja" },
+]
 
 const SEVERIDAD = {
   critica: { label: "Crítica",     bg: "#fef2f2", color: "#dc2626", border: "#fecaca" },
@@ -112,10 +121,15 @@ function AlertCard({ alerta, onResolver }) {
 
 export default function Alertas() {
   usePageTitle("Alertas")
-  const [alertas, setAlertas]     = useState([])
-  const [loading, setLoading]     = useState(true)
+  const toast   = useToast()
+  const confirm = useConfirm()
+
+  const [alertas,    setAlertas]    = useState([])
+  const [loading,    setLoading]    = useState(true)
   const [refreshing, setRefreshing] = useState(false)
-  const [filter, setFilter]       = useState("todas")
+  const [filter,     setFilter]     = useState("todas")
+  const [sevFilter,  setSevFilter]  = useState("todas")
+  const [resolving,  setResolving]  = useState(false)
 
   const fetchData = async (silent = false) => {
     if (!silent) setLoading(true)
@@ -138,7 +152,29 @@ export default function Alertas() {
     setAlertas(prev => prev.map(a => a.idalerta === id ? { ...a, estado: "resuelta" } : a))
   }
 
-  const filtered = alertas.filter(a => filter === "todas" || a.estado === filter)
+  const handleResolverTodas = async () => {
+    const activas = alertas.filter(a => a.estado === "activa")
+    const ok = await confirm({
+      title: "¿Resolver todas las alertas activas?",
+      message: `Se marcarán ${activas.length} alerta${activas.length !== 1 ? "s" : ""} como resueltas.`,
+      confirmLabel: "Resolver todas",
+    })
+    if (!ok) return
+    setResolving(true)
+    try {
+      await Promise.all(activas.map(a => api.resolverAlerta(a.idalerta)))
+      setAlertas(prev => prev.map(a => a.estado === "activa" ? { ...a, estado: "resuelta" } : a))
+      toast(`${activas.length} alerta${activas.length !== 1 ? "s" : ""} resueltas.`, "success")
+    } catch {
+      toast("Ocurrió un error al resolver las alertas.", "error")
+    } finally {
+      setResolving(false)
+    }
+  }
+
+  const filtered = alertas
+    .filter(a => filter    === "todas" || a.estado    === filter)
+    .filter(a => sevFilter === "todas" || a.severidad === sevFilter)
 
   const counts = {
     todas:     alertas.length,
@@ -146,6 +182,9 @@ export default function Alertas() {
     resuelta:  alertas.filter(a => a.estado === "resuelta").length,
     cancelada: alertas.filter(a => a.estado === "cancelada").length,
   }
+  const sevCounts = Object.fromEntries(
+    ["critica","alta","media","baja"].map(s => [s, alertas.filter(a => a.severidad === s).length])
+  )
 
   return (
     <div style={{ padding: "32px 36px", width: "100%" }}>
@@ -163,23 +202,43 @@ export default function Alertas() {
             {loading ? "Cargando alertas..." : `${counts.activa} activa${counts.activa !== 1 ? "s" : ""} · ${counts.resuelta} resuelta${counts.resuelta !== 1 ? "s" : ""}`}
           </p>
         </div>
-        <button
-          onClick={() => fetchData(true)}
-          disabled={refreshing}
-          title="Actualizar"
-          style={{
-            display: "flex", alignItems: "center", gap: 6,
-            background: "var(--solein-white)", border: "1px solid var(--solein-border)",
-            borderRadius: "var(--radius-md)", padding: "8px 14px",
-            fontSize: 13, fontWeight: 500, color: "var(--solein-text-muted)",
-            cursor: "pointer", fontFamily: "inherit", transition: "all .2s",
-          }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--solein-teal)"; e.currentTarget.style.color = "var(--solein-teal)" }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--solein-border)"; e.currentTarget.style.color = "var(--solein-text-muted)" }}
-        >
-          <RefreshCw size={14} style={{ animation: refreshing ? "spin .7s linear infinite" : "none" }} />
-          Actualizar
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          {/* Resolver todas */}
+          {counts.activa > 0 && (
+            <button
+              onClick={handleResolverTodas}
+              disabled={resolving}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                background: "#f0fdf4", border: "1px solid #bbf7d0",
+                borderRadius: "var(--radius-md)", padding: "8px 14px",
+                fontSize: 13, fontWeight: 600, color: "var(--solein-green)",
+                cursor: resolving ? "not-allowed" : "pointer",
+                opacity: resolving ? .7 : 1, fontFamily: "inherit",
+              }}
+            >
+              <CheckCheck size={14} />
+              {resolving ? "Resolviendo…" : `Resolver todas (${counts.activa})`}
+            </button>
+          )}
+          <button
+            onClick={() => fetchData(true)}
+            disabled={refreshing}
+            title="Actualizar"
+            style={{
+              display: "flex", alignItems: "center", gap: 6,
+              background: "var(--solein-white)", border: "1px solid var(--solein-border)",
+              borderRadius: "var(--radius-md)", padding: "8px 14px",
+              fontSize: 13, fontWeight: 500, color: "var(--solein-text-muted)",
+              cursor: "pointer", fontFamily: "inherit", transition: "all .2s",
+            }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = "var(--solein-teal)"; e.currentTarget.style.color = "var(--solein-teal)" }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--solein-border)"; e.currentTarget.style.color = "var(--solein-text-muted)" }}
+          >
+            <RefreshCw size={14} style={{ animation: refreshing ? "spin .7s linear infinite" : "none" }} />
+            Actualizar
+          </button>
+        </div>
       </div>
 
       {/* Tabs de filtro */}
@@ -214,6 +273,35 @@ export default function Alertas() {
             )}
           </button>
         ))}
+      </div>
+
+      {/* Filtro por severidad */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
+        {SEV_TABS.map(tab => {
+          const sev = SEVERIDAD[tab.value]
+          const count = tab.value === "todas" ? alertas.length : (sevCounts[tab.value] ?? 0)
+          const active = sevFilter === tab.value
+          return (
+            <button
+              key={tab.value}
+              onClick={() => setSevFilter(tab.value)}
+              style={{
+                display: "flex", alignItems: "center", gap: 5,
+                padding: "5px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600,
+                border: `1px solid ${active && sev ? sev.border : "var(--solein-border)"}`,
+                background: active && sev ? sev.bg : "var(--solein-white)",
+                color: active && sev ? sev.color : active ? "var(--solein-navy)" : "var(--solein-text-muted)",
+                cursor: "pointer", transition: "all .15s", fontFamily: "inherit",
+              }}
+            >
+              {tab.value !== "todas" && sev && (
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: sev.color, flexShrink: 0 }} />
+              )}
+              {tab.label}
+              {count > 0 && <span style={{ opacity: .7 }}>{count}</span>}
+            </button>
+          )
+        })}
       </div>
 
       {/* Lista */}
