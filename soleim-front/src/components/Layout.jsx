@@ -257,7 +257,7 @@ function Topbar({ user, alertBadge, recentAlerts, onLogout, onToggleSidebar, isD
                 </div>
               ) : (
                 <>
-                  <div style={{ maxHeight: 260, overflowY: "auto" }}>
+                  <div style={{ maxHeight: 260, overflowY: "auto", background: "var(--solein-white)" }}>
                     {recentAlerts.map((a, i) => (
                       <div
                         key={a.idalerta}
@@ -266,10 +266,11 @@ function Topbar({ user, alertBadge, recentAlerts, onLogout, onToggleSidebar, isD
                           borderBottom: i < recentAlerts.length - 1 ? "1px solid var(--solein-border)" : "none",
                           display: "flex", gap: 10, alignItems: "flex-start",
                           cursor: "pointer", transition: "background .15s",
+                          background: "var(--solein-white)",
                         }}
                         onClick={() => { setBellOpen(false); navigate("/alertas") }}
                         onMouseEnter={e => e.currentTarget.style.background = "var(--solein-bg)"}
-                        onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+                        onMouseLeave={e => e.currentTarget.style.background = "var(--solein-white)"}
                       >
                         <span style={{
                           width: 8, height: 8, borderRadius: "50%",

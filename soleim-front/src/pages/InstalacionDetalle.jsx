@@ -16,8 +16,8 @@ import "../styles/InstalacionDetalle.css"
 /* ─── Config ──────────────────────────────────────────────────────────────── */
 
 const SEVERIDAD_CONFIG = {
-  critica: { color: "var(--solein-red)",  bg: "rgba(220,38,38,.08)", label: "Crítica" },
-  alta:    { color: "#f97316",            bg: "#fff7ed",             label: "Alta"    },
+  critica: { color: "var(--solein-red)",  bg: "rgba(220,38,38,.08)",  label: "Crítica" },
+  alta:    { color: "#f97316",            bg: "rgba(249,115,22,.10)", label: "Alta"    },
   media:   { color: "var(--solein-gold)", bg: "var(--solein-gold-bg)", label: "Media" },
   baja:    { color: "var(--solein-gold)", bg: "var(--solein-gold-bg)", label: "Baja"  },
 }

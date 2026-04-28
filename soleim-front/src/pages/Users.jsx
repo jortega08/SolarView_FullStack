@@ -5,7 +5,7 @@ import { useToast, useConfirm } from "../context/ToastContext"
 import usePageTitle from "../hooks/usePageTitle"
 
 const ROL_CONFIG = {
-  admin: { label: "Administrador", bg: "var(--solein-navy)", color: "#fff" },
+  admin: { label: "Administrador", bg: "var(--btn-navy-bg)", color: "#fff" },
   user:  { label: "Usuario",       bg: "var(--solein-teal-bg)", color: "var(--solein-teal)" },
 }
 
@@ -128,13 +128,15 @@ export default function Users() {
           onClick={() => { setShowForm(v => !v); setFormErr("") }}
           style={{
             display: "flex", alignItems: "center", gap: 8,
-            background: showForm ? "var(--solein-bg)" : "var(--solein-navy)",
+            background: showForm ? "var(--solein-bg)" : "var(--btn-navy-bg)",
             color: showForm ? "var(--solein-text-muted)" : "#fff",
             border: showForm ? "1px solid var(--solein-border)" : "none",
             borderRadius: "var(--radius-md)", padding: "9px 16px",
             fontSize: 13, fontWeight: 600, cursor: "pointer",
             transition: "all .2s", fontFamily: "inherit",
           }}
+          onMouseEnter={e => { if (!showForm) e.currentTarget.style.background = "var(--btn-navy-hover)" }}
+          onMouseLeave={e => { if (!showForm) e.currentTarget.style.background = "var(--btn-navy-bg)" }}
         >
           {showForm ? <><X size={15}/> Cancelar</> : <><UserPlus size={15}/> Nuevo usuario</>}
         </button>
@@ -228,7 +230,7 @@ export default function Users() {
                 disabled={submitting}
                 style={{
                   display: "flex", alignItems: "center", gap: 8,
-                  background: "var(--solein-navy)", color: "#fff",
+                  background: "var(--btn-navy-bg)", color: "#fff",
                   border: "none", borderRadius: "var(--radius-md)", padding: "10px 20px",
                   fontSize: 14, fontWeight: 600, cursor: submitting ? "not-allowed" : "pointer",
                   opacity: submitting ? .7 : 1, fontFamily: "inherit",
@@ -305,7 +307,7 @@ export default function Users() {
                         onChange={e => handleRolChange(u.idusuario, u.nombre, e.target.value)}
                         style={{
                           background: rol.bg, color: rol.color,
-                          border: `1px solid ${u.rol === "admin" ? "var(--solein-navy)" : "var(--solein-teal)"}`,
+                          border: `1px solid ${u.rol === "admin" ? "var(--btn-navy-bg)" : "var(--solein-teal)"}`,
                           borderRadius: 20, padding: "3px 10px",
                           fontSize: 12, fontWeight: 600, cursor: "pointer",
                           fontFamily: "inherit", outline: "none",

@@ -10,10 +10,10 @@ import usePageTitle from "../hooks/usePageTitle"
 
 /* ── Configuración de severidad ───────────────────────────────────────────── */
 const SEVERIDAD = {
-  critica: { label: "Crítica", bg: "#fef2f2", color: "#dc2626", border: "#fecaca", icon: AlertOctagon  },
-  alta:    { label: "Alta",    bg: "#fff7ed", color: "#ea580c", border: "#fed7aa", icon: AlertTriangle },
-  media:   { label: "Media",   bg: "#fffbeb", color: "#d97706", border: "#fde68a", icon: AlertCircle   },
-  baja:    { label: "Baja",    bg: "#f7fee7", color: "#65a30d", border: "#bbf7d0", icon: Info          },
+  critica: { label: "Crítica", bg: "rgba(220,38,38,.10)",  color: "#dc2626", border: "rgba(220,38,38,.25)",  icon: AlertOctagon  },
+  alta:    { label: "Alta",    bg: "rgba(249,115,22,.10)", color: "#ea580c", border: "rgba(249,115,22,.25)", icon: AlertTriangle },
+  media:   { label: "Media",   bg: "rgba(217,119,6,.10)",  color: "#d97706", border: "rgba(217,119,6,.25)",  icon: AlertCircle   },
+  baja:    { label: "Baja",    bg: "rgba(101,163,13,.10)", color: "#65a30d", border: "rgba(101,163,13,.25)", icon: Info          },
 }
 
 const SEV_TABS = [
@@ -174,8 +174,8 @@ function AlertCard({ alerta, onResolver }) {
             {isResolved && (
               <span style={{
                 display: "flex", alignItems: "center", gap: 4,
-                background: "#f0fdf4", color: "#16a34a",
-                border: "1px solid #bbf7d0",
+                background: "rgba(22,163,74,.10)", color: "#16a34a",
+                border: "1px solid rgba(22,163,74,.30)",
                 borderRadius: 20, padding: "2px 10px", fontSize: 10.5, fontWeight: 600,
               }}>
                 <CheckCircle size={11} /> Resuelta
@@ -238,14 +238,14 @@ function AlertCard({ alerta, onResolver }) {
               style={{
                 display: "flex", alignItems: "center", gap: 6,
                 background: "var(--solein-white)", color: "#16a34a",
-                border: "1px solid #bbf7d0", borderRadius: "var(--radius-sm)",
+                border: "1px solid rgba(22,163,74,.30)", borderRadius: "var(--radius-sm)",
                 padding: "5px 14px", fontSize: 12, fontWeight: 600,
                 cursor: resolving ? "not-allowed" : "pointer",
                 opacity: resolving ? .65 : 1, fontFamily: "inherit",
                 transition: "all .15s", boxShadow: "0 1px 3px rgba(0,0,0,.06)",
               }}
-              onMouseEnter={e => { if (!resolving) { e.currentTarget.style.background = "#f0fdf4"; e.currentTarget.style.borderColor = "#86efac" } }}
-              onMouseLeave={e => { e.currentTarget.style.background = "var(--solein-white)"; e.currentTarget.style.borderColor = "#bbf7d0" }}
+              onMouseEnter={e => { if (!resolving) { e.currentTarget.style.background = "rgba(22,163,74,.10)"; e.currentTarget.style.borderColor = "rgba(22,163,74,.40)" } }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--solein-white)"; e.currentTarget.style.borderColor = "rgba(22,163,74,.30)" }}
             >
               <CheckCircle size={13} />
               {resolving ? "Resolviendo..." : "Marcar resuelta"}
@@ -390,14 +390,14 @@ export default function Alertas() {
               disabled={resolving}
               style={{
                 display: "flex", alignItems: "center", gap: 6,
-                background: "var(--solein-navy)", border: "none",
+                background: "var(--btn-navy-bg)", border: "none",
                 borderRadius: "var(--radius-md)", padding: "9px 16px",
                 fontSize: 13, fontWeight: 600, color: "#fff",
                 cursor: resolving ? "not-allowed" : "pointer",
                 opacity: resolving ? .7 : 1, fontFamily: "inherit", transition: "all .15s",
               }}
-              onMouseEnter={e => { if (!resolving) e.currentTarget.style.background = "var(--solein-navy-hover)" }}
-              onMouseLeave={e => e.currentTarget.style.background = "var(--solein-navy)"}
+              onMouseEnter={e => { if (!resolving) e.currentTarget.style.background = "var(--btn-navy-hover)" }}
+              onMouseLeave={e => { e.currentTarget.style.background = "var(--btn-navy-bg)" }}
             >
               <CheckCheck size={14} />
               {resolving ? "Resolviendo…" : `Resolver todas (${counts.activa})`}
@@ -430,7 +430,7 @@ export default function Alertas() {
           count={sevActiveCounts.critica}
           label="Críticas activas"
           description="Requieren atención inmediata"
-          color="#dc2626" bg="#fef2f2" border="#fecaca"
+          color="#dc2626" bg="rgba(220,38,38,.10)" border="rgba(220,38,38,.25)"
           active={sevFilter === "critica" && filter === "activa"}
           onClick={() => {
             setSevFilter(v => v === "critica" ? "todas" : "critica")
@@ -442,7 +442,7 @@ export default function Alertas() {
           count={sevActiveCounts.alta}
           label="Altas activas"
           description="Atención prioritaria"
-          color="#ea580c" bg="#fff7ed" border="#fed7aa"
+          color="#ea580c" bg="rgba(249,115,22,.10)" border="rgba(249,115,22,.25)"
           active={sevFilter === "alta" && filter === "activa"}
           onClick={() => {
             setSevFilter(v => v === "alta" ? "todas" : "alta")
@@ -454,7 +454,7 @@ export default function Alertas() {
           count={sevActiveCounts.media + sevActiveCounts.baja}
           label="Medias / Bajas"
           description="Atención normal"
-          color="#d97706" bg="#fffbeb" border="#fde68a"
+          color="#d97706" bg="rgba(217,119,6,.10)" border="rgba(217,119,6,.25)"
           active={sevFilter === "media" && filter === "activa"}
           onClick={() => {
             setSevFilter(v => v === "media" ? "todas" : "media")
@@ -466,7 +466,7 @@ export default function Alertas() {
           count={counts.resuelta}
           label="Resueltas"
           description="Total en el período"
-          color="#16a34a" bg="#f0fdf4" border="#bbf7d0"
+          color="#16a34a" bg="rgba(22,163,74,.10)" border="rgba(22,163,74,.25)"
           active={filter === "resuelta"}
           onClick={() => {
             setFilter(v => v === "resuelta" ? "todas" : "resuelta")
@@ -729,10 +729,10 @@ export default function Alertas() {
           border: 1.5px solid var(--solein-border);
           background: var(--solein-white);
         }
-        .alert-card--critica { background: #fef2f2; border-color: #fecaca; }
-        .alert-card--alta    { background: #fff7ed; border-color: #fed7aa; }
-        .alert-card--media   { background: #fffbeb; border-color: #fde68a; }
-        .alert-card--baja    { background: #f7fee7; border-color: #bbf7d0; }
+        .alert-card--critica { background: rgba(220,38,38,.08);  border-color: rgba(220,38,38,.25);  }
+        .alert-card--alta    { background: rgba(249,115,22,.08); border-color: rgba(249,115,22,.25); }
+        .alert-card--media   { background: rgba(217,119,6,.08);  border-color: rgba(217,119,6,.25);  }
+        .alert-card--baja    { background: rgba(101,163,13,.08); border-color: rgba(101,163,13,.25); }
         .alert-card--inactive { background: var(--solein-white) !important; border-color: var(--solein-border) !important; opacity: .72; }
 
         [data-theme="dark"] .alert-card--critica { background: #2c1010; border-color: #7f1d1d; }

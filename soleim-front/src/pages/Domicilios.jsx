@@ -32,8 +32,8 @@ function SelectField({ label, value, onChange, disabled, children, placeholder }
             width: "100%",
             border: "1.5px solid var(--solein-border)", borderRadius: "var(--radius-md)",
             padding: "9px 32px 9px 12px", fontSize: 14, fontFamily: "inherit",
-            color: value ? "var(--solein-navy)" : "var(--solein-text-muted)",
-            outline: "none", background: disabled ? "#f8fafc" : "var(--solein-bg)",
+            color: value ? "var(--solein-text)" : "var(--solein-text-muted)",
+            outline: "none", background: disabled ? "var(--solein-border)" : "var(--solein-bg)",
             cursor: disabled ? "not-allowed" : "pointer",
             appearance: "none", transition: "border-color .2s",
           }}
@@ -175,13 +175,15 @@ export default function Domicilios() {
           onClick={() => showForm ? cancelForm() : setShowForm(true)}
           style={{
             display: "flex", alignItems: "center", gap: 8,
-            background: showForm ? "var(--solein-bg)" : "var(--solein-navy)",
+            background: showForm ? "var(--solein-bg)" : "var(--btn-navy-bg)",
             color: showForm ? "var(--solein-text-muted)" : "#fff",
             border: showForm ? "1px solid var(--solein-border)" : "none",
             borderRadius: "var(--radius-md)", padding: "9px 16px",
             fontSize: 13, fontWeight: 600, cursor: "pointer",
             transition: "all .2s", fontFamily: "inherit",
           }}
+          onMouseEnter={e => { if (!showForm) e.currentTarget.style.background = "var(--btn-navy-hover)" }}
+          onMouseLeave={e => { if (!showForm) e.currentTarget.style.background = "var(--btn-navy-bg)" }}
         >
           {showForm ? <><X size={15} /> Cancelar</> : <><Plus size={15} /> Nuevo domicilio</>}
         </button>
@@ -261,7 +263,7 @@ export default function Domicilios() {
                 disabled={submitting || !formData.ciudad_id}
                 style={{
                   display: "flex", alignItems: "center", gap: 8,
-                  background: "var(--solein-navy)", color: "#fff",
+                  background: "var(--btn-navy-bg)", color: "#fff",
                   border: "none", borderRadius: "var(--radius-md)", padding: "10px 20px",
                   fontSize: 14, fontWeight: 600,
                   cursor: (submitting || !formData.ciudad_id) ? "not-allowed" : "pointer",
