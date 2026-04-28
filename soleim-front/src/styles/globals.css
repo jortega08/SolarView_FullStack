@@ -1,0 +1,178 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+@theme {
+  /* Tipografía */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+
+  /* Paleta principal */
+  --color-primary-50: #eff6ff;
+  --color-primary-100: #dbeafe;
+  --color-primary-200: #bfdbfe;
+  --color-primary-300: #93c5fd;
+  --color-primary-400: #60a5fa;
+  --color-primary-500: #3b82f6;
+  --color-primary-600: #2563eb;
+  --color-primary-700: #1d4ed8;
+  --color-primary-800: #1e40af;
+  --color-primary-900: #1e3a8a;
+  --color-primary-950: #172554;
+
+  /* Energy green/teal */
+  --color-energy-50: #f0fdf4;
+  --color-energy-100: #dcfce7;
+  --color-energy-200: #bbf7d0;
+  --color-energy-400: #4ade80;
+  --color-energy-500: #22c55e;
+  --color-energy-600: #16a34a;
+  --color-energy-700: #15803d;
+
+  /* Solar amber */
+  --color-solar-50: #fffbeb;
+  --color-solar-100: #fef3c7;
+  --color-solar-200: #fde68a;
+  --color-solar-400: #fbbf24;
+  --color-solar-500: #f59e0b;
+  --color-solar-600: #d97706;
+  --color-solar-700: #b45309;
+
+  /* Danger red */
+  --color-danger-50: #fff1f2;
+  --color-danger-100: #ffe4e6;
+  --color-danger-400: #fb7185;
+  --color-danger-500: #ef4444;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  /* Warning orange */
+  --color-warning-50: #fff7ed;
+  --color-warning-100: #ffedd5;
+  --color-warning-400: #fb923c;
+  --color-warning-500: #f97316;
+  --color-warning-600: #ea580c;
+
+  /* SLA / Security purple */
+  --color-sla-50: #faf5ff;
+  --color-sla-100: #f3e8ff;
+  --color-sla-400: #c084fc;
+  --color-sla-500: #a855f7;
+  --color-sla-600: #9333ea;
+  --color-sla-700: #7e22ce;
+
+  /* Neutrals */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #f8fafc;
+  --color-neutral-100: #f1f5f9;
+  --color-neutral-200: #e2e8f0;
+  --color-neutral-300: #cbd5e1;
+  --color-neutral-400: #94a3b8;
+  --color-neutral-500: #64748b;
+  --color-neutral-600: #475569;
+  --color-neutral-700: #334155;
+  --color-neutral-800: #1e293b;
+  --color-neutral-900: #0f172a;
+  --color-neutral-950: #020617;
+
+  /* Semantic tokens */
+  --color-background: var(--color-neutral-50);
+  --color-surface: var(--color-neutral-0);
+  --color-surface-raised: var(--color-neutral-0);
+  --color-border: var(--color-neutral-200);
+  --color-border-strong: var(--color-neutral-300);
+  --color-text-primary: var(--color-neutral-900);
+  --color-text-secondary: var(--color-neutral-500);
+  --color-text-muted: var(--color-neutral-400);
+  --color-text-inverse: var(--color-neutral-0);
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.04);
+  --shadow-card-hover: 0 4px 12px 0 rgb(0 0 0 / 0.10), 0 2px 4px -1px rgb(0 0 0 / 0.06);
+  --shadow-overlay: 0 10px 40px -5px rgb(0 0 0 / 0.15), 0 4px 16px -3px rgb(0 0 0 / 0.08);
+
+  /* Border radii */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+  --radius-full: 9999px;
+
+  /* Sidebar */
+  --sidebar-width: 232px;
+  --sidebar-collapsed-width: 64px;
+  --header-height: 60px;
+}
+
+/* CSS variables for shadcn/ui compatibility */
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 221.2 83.2% 53.3%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96.1%;
+  --accent-foreground: 222.2 47.4% 11.2%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 221.2 83.2% 53.3%;
+  --radius: 0.5rem;
+  --chart-1: 221.2 83.2% 53.3%;
+  --chart-2: 142.1 76.2% 36.3%;
+  --chart-3: 43.3 96.4% 56.3%;
+  --chart-4: 0 84.2% 60.2%;
+  --chart-5: 271.5 81.3% 55.9%;
+}
+
+* {
+  box-sizing: border-box;
+  border-color: hsl(var(--border));
+}
+
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-text-primary);
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Tipografía numérica tabular */
+.tabular,
+.kpi-value,
+.metric-value,
+.telemetry-value {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* Scrollbar sutil */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-300);
+  border-radius: var(--radius-full);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-neutral-400);
+}
