@@ -4,7 +4,7 @@
 # Jobs:
 #   lint    — ruff + black check (fast, no services)
 #   test    — pytest with Postgres + Redis service containers
-#   migrate — checks migrations are consistent (no missing/unapplied)
+#   migrate — applies migrations and checks model changes
 #
 # Triggered on: push to main/develop, PRs to main
 ##############################################################################
@@ -22,7 +22,6 @@ env:
   PYTHONUNBUFFERED: 1
 
 jobs:
-
   # --------------------------------------------------------------------------
   # Linting — no services needed, runs fast
   # --------------------------------------------------------------------------
@@ -39,7 +38,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
           cache: pip
           cache-dependency-path: soleimapp/requirements.txt
 
@@ -89,7 +88,7 @@ jobs:
 
     env:
       SECRET_KEY: ci-insecure-secret-key-not-for-production
-      DEBUG: 'True'
+      DEBUG: "True"
       POSTGRES_DB: soleim_test
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -98,8 +97,8 @@ jobs:
       REDIS_URL: redis://localhost:6379/0
       CELERY_BROKER_URL: redis://localhost:6379/1
       CELERY_RESULT_BACKEND: redis://localhost:6379/1
-      IOT_SHARED_SECRET: ''
-      IOT_BUFFER_ENABLED: 'False'
+      IOT_SHARED_SECRET: ""
+      IOT_BUFFER_ENABLED: "False"
 
     steps:
       - uses: actions/checkout@v4
@@ -107,7 +106,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
           cache: pip
           cache-dependency-path: soleimapp/requirements.txt
 
@@ -161,7 +160,7 @@ jobs:
 
     env:
       SECRET_KEY: ci-insecure-check
-      DEBUG: 'True'
+      DEBUG: "True"
       POSTGRES_DB: soleim_test
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
@@ -177,15 +176,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
           cache: pip
           cache-dependency-path: soleimapp/requirements.txt
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Check for missing migrations
-        run: python manage.py migrate --check --noinput
+      - name: Apply migrations
+        run: python manage.py migrate --noinput
 
-      - name: Detect unapplied changes
+      - name: Detect model changes without migrations
         run: python manage.py makemigrations --check --dry-run --noinput
