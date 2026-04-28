@@ -44,13 +44,43 @@ class UsuarioCreateSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
+class _PaisNestedSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Pais
+        fields = ['idpais', 'nombre']
+
+
+class _EstadoNestedSerializer(serializers.ModelSerializer):
+    pais = _PaisNestedSerializer(read_only=True)
+
+    class Meta:
+        model = Estado
+        fields = ['idestado', 'nombre', 'pais']
+
+
+class _CiudadNestedSerializer(serializers.ModelSerializer):
+    estado = _EstadoNestedSerializer(read_only=True)
+
+    class Meta:
+        model = Ciudad
+        fields = ['idciudad', 'nombre', 'estado']
+
+
 class DomicilioSerializer(serializers.ModelSerializer):
-    usuario_nombre = serializers.CharField(source='usuario.nombre', read_only=True)
-    ciudad_nombre = serializers.CharField(source='ciudad.nombre', read_only=True)
+    usuario = UsuarioSerializer(read_only=True)
+    ciudad  = _CiudadNestedSerializer(read_only=True)
+
+    # campos de escritura para recibir IDs del frontend
+    usuario_id = serializers.PrimaryKeyRelatedField(
+        queryset=Usuario.objects.all(), source='usuario', write_only=True
+    )
+    ciudad_id = serializers.PrimaryKeyRelatedField(
+        queryset=Ciudad.objects.all(), source='ciudad', write_only=True
+    )
 
     class Meta:
         model = Domicilio
-        fields = ['iddomicilio', 'ciudad', 'usuario', 'usuario_nombre', 'ciudad_nombre']
+        fields = ['iddomicilio', 'usuario', 'ciudad', 'usuario_id', 'ciudad_id']
 
 
 class EmpresaSerializer(serializers.ModelSerializer):

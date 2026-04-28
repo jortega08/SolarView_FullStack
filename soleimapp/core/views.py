@@ -76,7 +76,10 @@ class UsuarioViewSet(viewsets.ModelViewSet):
 
 
 class DomicilioViewSet(viewsets.ModelViewSet):
-    queryset = Domicilio.objects.select_related('usuario', 'ciudad').all()
+    queryset = Domicilio.objects.select_related(
+        'usuario',
+        'ciudad__estado__pais',
+    ).all()
     serializer_class = DomicilioSerializer
     permission_classes = [AllowAny]
     pagination_class = None
