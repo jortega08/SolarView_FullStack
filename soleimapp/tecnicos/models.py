@@ -4,15 +4,16 @@ from django.db.models import Count, Q
 
 class Especialidad(models.Model):
     """Catálogo de especialidades técnicas (paneles, baterías, inversores, etc.)."""
+
     idespecialidad = models.AutoField(primary_key=True)
     nombre = models.CharField(max_length=64, unique=True)
     descripcion = models.CharField(max_length=255, blank=True)
 
     class Meta:
-        db_table = 'especialidad'
-        ordering = ['nombre']
-        verbose_name = 'Especialidad'
-        verbose_name_plural = 'Especialidades'
+        db_table = "especialidad"
+        ordering = ["nombre"]
+        verbose_name = "Especialidad"
+        verbose_name_plural = "Especialidades"
 
     def __str__(self):
         return self.nombre
@@ -38,11 +39,13 @@ class PerfilTecnicoManager(models.Manager):
 
         return qs.annotate(
             carga=Count(
-                'usuario__ordenes_asignadas',
-                filter=Q(usuario__ordenes_asignadas__estado__in=['asignada', 'en_progreso']),
+                "usuario__ordenes_asignadas",
+                filter=Q(
+                    usuario__ordenes_asignadas__estado__in=["asignada", "en_progreso"]
+                ),
                 distinct=True,
             )
-        ).order_by('carga', 'usuario__nombre')
+        ).order_by("carga", "usuario__nombre")
 
 
 class PerfilTecnico(models.Model):
@@ -50,33 +53,34 @@ class PerfilTecnico(models.Model):
     Perfil de un técnico de campo. Extiende `core.Usuario` 1:1.
     Un usuario sólo puede tener un perfil de técnico, y siempre pertenece a una empresa.
     """
+
     idperfil = models.AutoField(primary_key=True)
     usuario = models.OneToOneField(
-        'core.Usuario',
+        "core.Usuario",
         on_delete=models.CASCADE,
-        related_name='perfil_tecnico',
+        related_name="perfil_tecnico",
     )
     empresa = models.ForeignKey(
-        'core.Empresa',
+        "core.Empresa",
         on_delete=models.CASCADE,
-        related_name='tecnicos',
+        related_name="tecnicos",
     )
     cedula = models.CharField(max_length=32, unique=True)
     telefono = models.CharField(max_length=32, blank=True)
     especialidades = models.ManyToManyField(
         Especialidad,
-        related_name='tecnicos',
+        related_name="tecnicos",
         blank=True,
     )
     zonas = models.ManyToManyField(
-        'core.Ciudad',
-        related_name='tecnicos',
+        "core.Ciudad",
+        related_name="tecnicos",
         blank=True,
-        help_text='Ciudades donde el técnico puede ser despachado.',
+        help_text="Ciudades donde el técnico puede ser despachado.",
     )
     disponible = models.BooleanField(
         default=True,
-        help_text='Si el técnico está disponible para nuevas asignaciones.',
+        help_text="Si el técnico está disponible para nuevas asignaciones.",
     )
     licencia_vence = models.DateField(null=True, blank=True)
     notas = models.TextField(blank=True)
@@ -86,12 +90,12 @@ class PerfilTecnico(models.Model):
     objects = PerfilTecnicoManager()
 
     class Meta:
-        db_table = 'perfil_tecnico'
-        verbose_name = 'Perfil de técnico'
-        verbose_name_plural = 'Perfiles de técnico'
+        db_table = "perfil_tecnico"
+        verbose_name = "Perfil de técnico"
+        verbose_name_plural = "Perfiles de técnico"
         indexes = [
-            models.Index(fields=['empresa', 'disponible'], name='perfil_emp_disp_idx'),
+            models.Index(fields=["empresa", "disponible"], name="perfil_emp_disp_idx"),
         ]
 
     def __str__(self):
-        return f'{self.usuario.nombre} ({self.empresa.nombre})'
+        return f"{self.usuario.nombre} ({self.empresa.nombre})"

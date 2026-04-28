@@ -1,17 +1,17 @@
 from django.db import models
 
-
 CANALES = (
-    ('in_app', 'In-app'),
-    ('email', 'Email'),
-    ('sms', 'SMS'),
-    ('push', 'Push'),
-    ('webhook', 'Webhook'),
+    ("in_app", "In-app"),
+    ("email", "Email"),
+    ("sms", "SMS"),
+    ("push", "Push"),
+    ("webhook", "Webhook"),
 )
 
 
 class PlantillaNotificacion(models.Model):
     """Plantilla reutilizable de notificación, indexada por `clave`."""
+
     idplantilla = models.AutoField(primary_key=True)
     clave = models.CharField(max_length=64, unique=True)
     asunto = models.CharField(max_length=255)
@@ -28,9 +28,9 @@ class PlantillaNotificacion(models.Model):
     actualizado_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        db_table = 'plantilla_notificacion'
-        verbose_name = 'Plantilla de notificación'
-        verbose_name_plural = 'Plantillas de notificación'
+        db_table = "plantilla_notificacion"
+        verbose_name = "Plantilla de notificación"
+        verbose_name_plural = "Plantillas de notificación"
 
     def __str__(self):
         return self.clave
@@ -38,30 +38,32 @@ class PlantillaNotificacion(models.Model):
 
 class Notificacion(models.Model):
     """Notificación individual enviada (o pendiente de envío) a un usuario."""
+
     ESTADOS = (
-        ('pendiente', 'Pendiente'),
-        ('enviada', 'Enviada'),
-        ('fallida', 'Fallida'),
-        ('leida', 'Leída'),
+        ("pendiente", "Pendiente"),
+        ("enviada", "Enviada"),
+        ("fallida", "Fallida"),
+        ("leida", "Leída"),
     )
 
     idnotificacion = models.AutoField(primary_key=True)
     usuario = models.ForeignKey(
-        'core.Usuario',
+        "core.Usuario",
         on_delete=models.CASCADE,
-        related_name='notificaciones',
+        related_name="notificaciones",
     )
-    canal = models.CharField(max_length=12, choices=CANALES, default='in_app')
+    canal = models.CharField(max_length=12, choices=CANALES, default="in_app")
     plantilla = models.ForeignKey(
         PlantillaNotificacion,
         on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='notificaciones',
+        null=True,
+        blank=True,
+        related_name="notificaciones",
     )
     asunto = models.CharField(max_length=255)
     cuerpo = models.TextField()
     enlace = models.URLField(blank=True)
-    estado = models.CharField(max_length=12, choices=ESTADOS, default='pendiente')
+    estado = models.CharField(max_length=12, choices=ESTADOS, default="pendiente")
     intentos = models.IntegerField(default=0)
     metadata = models.JSONField(default=dict, blank=True)
 
@@ -70,14 +72,16 @@ class Notificacion(models.Model):
     leida_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        db_table = 'notificacion'
-        verbose_name = 'Notificación'
-        verbose_name_plural = 'Notificaciones'
-        ordering = ['-creada_at']
+        db_table = "notificacion"
+        verbose_name = "Notificación"
+        verbose_name_plural = "Notificaciones"
+        ordering = ["-creada_at"]
         indexes = [
-            models.Index(fields=['usuario', 'estado', '-creada_at'], name='notif_usr_est_idx'),
-            models.Index(fields=['canal', 'estado'], name='notif_canal_est_idx'),
+            models.Index(
+                fields=["usuario", "estado", "-creada_at"], name="notif_usr_est_idx"
+            ),
+            models.Index(fields=["canal", "estado"], name="notif_canal_est_idx"),
         ]
 
     def __str__(self):
-        return f'#{self.idnotificacion} {self.canal} → {self.usuario_id}'
+        return f"#{self.idnotificacion} {self.canal} → {self.usuario_id}"

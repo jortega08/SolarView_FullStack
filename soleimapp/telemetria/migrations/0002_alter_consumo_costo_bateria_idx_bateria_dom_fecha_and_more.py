@@ -6,34 +6,43 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0002_alter_usuario_contrasena'),
-        ('telemetria', '0001_initial'),
+        ("core", "0002_alter_usuario_contrasena"),
+        ("telemetria", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='consumo',
-            name='costo',
-            field=models.FloatField(help_text='Costo en moneda local del kwH'),
+            model_name="consumo",
+            name="costo",
+            field=models.FloatField(help_text="Costo en moneda local del kwH"),
         ),
         migrations.AddIndex(
-            model_name='bateria',
-            index=models.Index(fields=['domicilio', 'fecha_registro'], name='idx_bateria_dom_fecha'),
+            model_name="bateria",
+            index=models.Index(
+                fields=["domicilio", "fecha_registro"], name="idx_bateria_dom_fecha"
+            ),
         ),
         migrations.AddIndex(
-            model_name='bateria',
-            index=models.Index(fields=['-fecha_registro'], name='idx_bateria_fecha_desc'),
+            model_name="bateria",
+            index=models.Index(
+                fields=["-fecha_registro"], name="idx_bateria_fecha_desc"
+            ),
         ),
         migrations.AddIndex(
-            model_name='consumo',
-            index=models.Index(fields=['domicilio', 'fecha'], name='idx_consumo_dom_fecha'),
+            model_name="consumo",
+            index=models.Index(
+                fields=["domicilio", "fecha"], name="idx_consumo_dom_fecha"
+            ),
         ),
         migrations.AddIndex(
-            model_name='consumo',
-            index=models.Index(fields=['domicilio', 'fuente', 'fecha'], name='idx_consumo_dom_fuente_fecha'),
+            model_name="consumo",
+            index=models.Index(
+                fields=["domicilio", "fuente", "fecha"],
+                name="idx_consumo_dom_fuente_fecha",
+            ),
         ),
         migrations.AddIndex(
-            model_name='consumo',
-            index=models.Index(fields=['fecha'], name='idx_consumo_fecha'),
+            model_name="consumo",
+            index=models.Index(fields=["fecha"], name="idx_consumo_fecha"),
         ),
     ]

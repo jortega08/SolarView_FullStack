@@ -9,39 +9,68 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('core', '0001_initial'),
+        ("core", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Puntaje',
+            name="Puntaje",
             fields=[
-                ('idpuntaje', models.AutoField(primary_key=True, serialize=False)),
-                ('puntos', models.IntegerField(default=0)),
-                ('ultima_actualizacion', models.DateTimeField(auto_now=True)),
-                ('nivel', models.CharField(choices=[('basico', 'Basico'), ('intermedio', 'Intermedio'), ('experto', 'Experto'), ('maestro', 'Maestro')], default='basico', max_length=12)),
-                ('domicilio', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='puntajes', to='core.domicilio')),
+                ("idpuntaje", models.AutoField(primary_key=True, serialize=False)),
+                ("puntos", models.IntegerField(default=0)),
+                ("ultima_actualizacion", models.DateTimeField(auto_now=True)),
+                (
+                    "nivel",
+                    models.CharField(
+                        choices=[
+                            ("basico", "Basico"),
+                            ("intermedio", "Intermedio"),
+                            ("experto", "Experto"),
+                            ("maestro", "Maestro"),
+                        ],
+                        default="basico",
+                        max_length=12,
+                    ),
+                ),
+                (
+                    "domicilio",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="puntajes",
+                        to="core.domicilio",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Puntaje',
-                'verbose_name_plural': 'Puntajes',
-                'db_table': 'puntaje',
-                'ordering': ['-puntos'],
+                "verbose_name": "Puntaje",
+                "verbose_name_plural": "Puntajes",
+                "db_table": "puntaje",
+                "ordering": ["-puntos"],
             },
         ),
         migrations.CreateModel(
-            name='Recomendacion',
+            name="Recomendacion",
             fields=[
-                ('idrecomendacion', models.AutoField(primary_key=True, serialize=False)),
-                ('mensaje', models.CharField(max_length=255)),
-                ('fecha_publicacion', models.DateTimeField(auto_now_add=True)),
-                ('domicilio', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='recomendaciones', to='core.domicilio')),
+                (
+                    "idrecomendacion",
+                    models.AutoField(primary_key=True, serialize=False),
+                ),
+                ("mensaje", models.CharField(max_length=255)),
+                ("fecha_publicacion", models.DateTimeField(auto_now_add=True)),
+                (
+                    "domicilio",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="recomendaciones",
+                        to="core.domicilio",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Recomendacion',
-                'verbose_name_plural': 'Recomendaciones',
-                'db_table': 'recomendacion',
-                'ordering': ['-fecha_publicacion'],
+                "verbose_name": "Recomendacion",
+                "verbose_name_plural": "Recomendaciones",
+                "db_table": "recomendacion",
+                "ordering": ["-fecha_publicacion"],
             },
         ),
     ]

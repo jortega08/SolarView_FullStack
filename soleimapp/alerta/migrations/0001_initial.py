@@ -7,36 +7,46 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Alerta',
+            name="Alerta",
             fields=[
-                ('idalerta', models.AutoField(primary_key=True, serialize=False)),
-                ('mensaje', models.CharField(max_length=255)),
-                ('fecha', models.DateTimeField(auto_now_add=True)),
-                ('estado', models.CharField(choices=[('activa', 'Activa'), ('resuelta', 'Resuelta'), ('cancelada', 'Cancelada')], default='activa', max_length=10)),
+                ("idalerta", models.AutoField(primary_key=True, serialize=False)),
+                ("mensaje", models.CharField(max_length=255)),
+                ("fecha", models.DateTimeField(auto_now_add=True)),
+                (
+                    "estado",
+                    models.CharField(
+                        choices=[
+                            ("activa", "Activa"),
+                            ("resuelta", "Resuelta"),
+                            ("cancelada", "Cancelada"),
+                        ],
+                        default="activa",
+                        max_length=10,
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Alerta',
-                'verbose_name_plural': 'Alertas',
-                'db_table': 'alerta',
-                'ordering': ['-fecha'],
+                "verbose_name": "Alerta",
+                "verbose_name_plural": "Alertas",
+                "db_table": "alerta",
+                "ordering": ["-fecha"],
             },
         ),
         migrations.CreateModel(
-            name='TipoAlerta',
+            name="TipoAlerta",
             fields=[
-                ('idtipoalerta', models.AutoField(primary_key=True, serialize=False)),
-                ('nombre', models.CharField(max_length=64)),
-                ('descripcion', models.CharField(max_length=255)),
+                ("idtipoalerta", models.AutoField(primary_key=True, serialize=False)),
+                ("nombre", models.CharField(max_length=64)),
+                ("descripcion", models.CharField(max_length=255)),
             ],
             options={
-                'verbose_name': 'Tipo de Alerta',
-                'verbose_name_plural': 'Tipos de Alerta',
-                'db_table': 'tipoalerta',
+                "verbose_name": "Tipo de Alerta",
+                "verbose_name_plural": "Tipos de Alerta",
+                "db_table": "tipoalerta",
             },
         ),
     ]

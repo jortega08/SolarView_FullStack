@@ -20,14 +20,16 @@ class EspecialidadViewSet(viewsets.ModelViewSet):
     Catálogo de especialidades.
     Lectura para todos los autenticados; mutaciones sólo admin global.
     """
+
     queryset = Especialidad.objects.all()
     serializer_class = EspecialidadSerializer
     permission_classes = [IsAuthenticated, IsActiveUser]
     pagination_class = None
 
     def get_permissions(self):
-        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+        if self.action in ("create", "update", "partial_update", "destroy"):
             from core.permissions import IsAdminGlobal
+
             return [IsAuthenticated(), IsActiveUser(), IsAdminGlobal()]
         return super().get_permissions()
 
@@ -43,26 +45,24 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
     - el resto sólo ve su propio perfil (si es técnico).
     Las mutaciones (create/update/destroy) están reservadas a admin global y admin_empresa.
     """
+
     serializer_class = PerfilTecnicoSerializer
     permission_classes = [IsAuthenticated, IsActiveUser]
     filter_backends = [DjangoFilterBackend]
-    filterset_fields = ['empresa', 'disponible']
+    filterset_fields = ["empresa", "disponible"]
 
     def get_queryset(self):
         user = self.request.user
-        qs = (
-            PerfilTecnico.objects
-            .select_related('usuario', 'empresa')
-            .prefetch_related('especialidades', 'zonas')
-        )
-        if user.rol == 'admin':
+        qs = PerfilTecnico.objects.select_related(
+            "usuario", "empresa"
+        ).prefetch_related("especialidades", "zonas")
+        if user.rol == "admin":
             return qs
 
         # Empresas donde el usuario tiene rol 'admin_empresa'
         empresas_admin = (
-            RolInstalacion.objects
-            .filter(usuario=user, rol='admin_empresa')
-            .values_list('instalacion__empresa_id', flat=True)
+            RolInstalacion.objects.filter(usuario=user, rol="admin_empresa")
+            .values_list("instalacion__empresa_id", flat=True)
             .distinct()
         )
         if empresas_admin:
@@ -72,9 +72,8 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
         return qs.filter(usuario=user)
 
     def get_permissions(self):
-        if self.action in ('create', 'update', 'partial_update', 'destroy'):
+        if self.action in ("create", "update", "partial_update", "destroy"):
             # Sólo admin global o admin_empresa pueden mutar
-            from core.permissions import IsAdminGlobal
             from rest_framework.permissions import BasePermission
 
             class IsAdminGlobalOrEmpresa(BasePermission):
@@ -82,56 +81,62 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
                     user = request.user
                     if not (user and user.is_authenticated):
                         return False
-                    if user.rol == 'admin':
+                    if user.rol == "admin":
                         return True
                     return RolInstalacion.objects.filter(
-                        usuario=user, rol='admin_empresa'
+                        usuario=user, rol="admin_empresa"
                     ).exists()
 
             return [IsAuthenticated(), IsActiveUser(), IsAdminGlobalOrEmpresa()]
         return super().get_permissions()
 
-    @action(detail=False, methods=['get'], url_path='disponibles')
+    @action(detail=False, methods=["get"], url_path="disponibles")
     def disponibles(self, request):
         """
         Lista técnicos disponibles ordenados por carga.
         Query params: ?ciudad=<idciudad>&especialidad=<idespecialidad>&empresa=<idempresa>
         """
-        ciudad_id = request.query_params.get('ciudad')
-        especialidad_id = request.query_params.get('especialidad')
-        empresa_id = request.query_params.get('empresa')
+        ciudad_id = request.query_params.get("ciudad")
+        especialidad_id = request.query_params.get("especialidad")
+        empresa_id = request.query_params.get("empresa")
 
         if not ciudad_id:
             return Response(
-                {'error': 'Parámetro `ciudad` (id) es requerido.'},
+                {"error": "Parámetro `ciudad` (id) es requerido."},
                 status=400,
             )
         try:
             ciudad = Ciudad.objects.get(idciudad=ciudad_id)
         except Ciudad.DoesNotExist:
-            return Response({'error': 'Ciudad no encontrada.'}, status=404)
+            return Response({"error": "Ciudad no encontrada."}, status=404)
 
         especialidad = None
         if especialidad_id:
-            especialidad = Especialidad.objects.filter(idespecialidad=especialidad_id).first()
+            especialidad = Especialidad.objects.filter(
+                idespecialidad=especialidad_id
+            ).first()
 
         empresa = None
         if empresa_id:
             from core.models import Empresa
+
             empresa = Empresa.objects.filter(idempresa=empresa_id).first()
 
         # Restringir el alcance al tenant del usuario, igual que en get_queryset
         qs = PerfilTecnico.objects.disponibles_en_zona(
-            ciudad, especialidad=especialidad, empresa=empresa,
+            ciudad,
+            especialidad=especialidad,
+            empresa=empresa,
         )
-        if request.user.rol != 'admin':
+        if request.user.rol != "admin":
             empresas_visibles = list(
-                RolInstalacion.objects
-                .filter(usuario=request.user, rol__in=['admin_empresa', 'operador'])
-                .values_list('instalacion__empresa_id', flat=True)
+                RolInstalacion.objects.filter(
+                    usuario=request.user, rol__in=["admin_empresa", "operador"]
+                )
+                .values_list("instalacion__empresa_id", flat=True)
                 .distinct()
             )
             qs = qs.filter(empresa_id__in=empresas_visibles)
 
         data = PerfilTecnicoLigeroSerializer(qs, many=True).data
-        return Response({'count': len(data), 'results': data})
+        return Response({"count": len(data), "results": data})

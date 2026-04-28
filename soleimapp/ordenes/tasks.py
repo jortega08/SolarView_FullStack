@@ -7,6 +7,7 @@ Tasks Celery del flujo operativo:
 - verificar_sla_ordenes()                    → cada hora: marca SLA vencido y notifica
 - recordatorio_mantenimientos_diario()       → cada día 08:00: notifica al técnico
 """
+
 import json
 import logging
 from datetime import timedelta
@@ -15,20 +16,22 @@ from celery import shared_task
 from django.db.models import Count, Q
 from django.utils import timezone
 
-logger = logging.getLogger('soleim')
+logger = logging.getLogger("soleim")
 
 
 # ---------------------------------------------------------------------------
 # Helpers internos
 # ---------------------------------------------------------------------------
 
+
 def _notificar_safe(**kwargs):
     """Wrapper que ignora errores si la app `notificaciones` aún no está cargada."""
     try:
         from notificaciones.api import notificar
+
         notificar(**kwargs)
     except Exception:
-        logger.exception('No se pudo crear notificación: %s', kwargs)
+        logger.exception("No se pudo crear notificación: %s", kwargs)
 
 
 def _buscar_y_asignar_tecnico(orden):
@@ -40,26 +43,28 @@ def _buscar_y_asignar_tecnico(orden):
 
     if not orden.instalacion.ciudad_id:
         logger.warning(
-            'Orden %s en instalación %s sin ciudad: no se puede auto-asignar.',
-            orden.codigo, orden.instalacion_id,
+            "Orden %s en instalación %s sin ciudad: no se puede auto-asignar.",
+            orden.codigo,
+            orden.instalacion_id,
         )
         return False
 
     candidatos = (
-        PerfilTecnico.objects
-        .filter(
+        PerfilTecnico.objects.filter(
             empresa_id=orden.instalacion.empresa_id,
             disponible=True,
             zonas=orden.instalacion.ciudad_id,
         )
         .annotate(
             carga=Count(
-                'usuario__ordenes_asignadas',
-                filter=Q(usuario__ordenes_asignadas__estado__in=['asignada', 'en_progreso']),
+                "usuario__ordenes_asignadas",
+                filter=Q(
+                    usuario__ordenes_asignadas__estado__in=["asignada", "en_progreso"]
+                ),
                 distinct=True,
             )
         )
-        .order_by('carga', 'usuario__nombre')
+        .order_by("carga", "usuario__nombre")
     )
 
     perfil = candidatos.first()
@@ -67,19 +72,25 @@ def _buscar_y_asignar_tecnico(orden):
         return False
 
     orden.asignado_a_id = perfil.usuario_id
-    orden.estado = 'asignada'
+    orden.estado = "asignada"
     orden.asignada_at = timezone.now()
-    orden.save(update_fields=['asignado_a', 'estado', 'asignada_at'])
+    orden.save(update_fields=["asignado_a", "estado", "asignada_at"])
 
     _notificar_safe(
         usuario_id=perfil.usuario_id,
-        canal='in_app',
-        plantilla='orden_asignada',
-        context={'codigo': orden.codigo, 'titulo': orden.titulo, 'orden_id': orden.idorden},
+        canal="in_app",
+        plantilla="orden_asignada",
+        context={
+            "codigo": orden.codigo,
+            "titulo": orden.titulo,
+            "orden_id": orden.idorden,
+        },
     )
     logger.info(
-        'Auto-asignada %s → técnico %s (carga previa=%s)',
-        orden.codigo, perfil.usuario_id, perfil.carga,
+        "Auto-asignada %s → técnico %s (carga previa=%s)",
+        orden.codigo,
+        perfil.usuario_id,
+        perfil.carga,
     )
     return True
 
@@ -87,6 +98,7 @@ def _buscar_y_asignar_tecnico(orden):
 # ---------------------------------------------------------------------------
 # Tasks principales
 # ---------------------------------------------------------------------------
+
 
 @shared_task(bind=True, max_retries=3)
 def crear_orden_para_alerta(self, alerta_id):
@@ -100,46 +112,44 @@ def crear_orden_para_alerta(self, alerta_id):
     from .models import OrdenTrabajo
 
     try:
-        alerta = (
-            Alerta.objects
-            .select_related('instalacion__empresa', 'instalacion__ciudad')
-            .get(idalerta=alerta_id)
-        )
+        alerta = Alerta.objects.select_related(
+            "instalacion__empresa", "instalacion__ciudad"
+        ).get(idalerta=alerta_id)
     except Alerta.DoesNotExist:
-        logger.warning('crear_orden_para_alerta: alerta %s no existe', alerta_id)
+        logger.warning("crear_orden_para_alerta: alerta %s no existe", alerta_id)
         return
 
     # Idempotencia
     if alerta.ordenes.exists():
-        logger.info('Alerta %s ya tiene orden; skip.', alerta_id)
+        logger.info("Alerta %s ya tiene orden; skip.", alerta_id)
         return
     if not alerta.instalacion_id:
-        logger.warning('Alerta %s sin instalación; skip.', alerta_id)
+        logger.warning("Alerta %s sin instalación; skip.", alerta_id)
         return
 
     # SLA según contrato si existe
-    contrato = getattr(alerta.instalacion, 'contrato', None)
+    contrato = getattr(alerta.instalacion, "contrato", None)
     sla = contrato.horas_respuesta if contrato and contrato.activo else 24
 
-    prioridad = 'urgente' if alerta.severidad == 'critica' else 'alta'
+    prioridad = "urgente" if alerta.severidad == "critica" else "alta"
 
     try:
         orden = OrdenTrabajo.objects.create(
             instalacion=alerta.instalacion,
             alerta=alerta,
-            tipo='correctivo',
+            tipo="correctivo",
             prioridad=prioridad,
-            estado='abierta',
-            titulo=f'[{alerta.severidad.upper()}] {alerta.mensaje[:80]}',
+            estado="abierta",
+            titulo=f"[{alerta.severidad.upper()}] {alerta.mensaje[:80]}",
             descripcion=alerta.causa_probable or alerta.mensaje,
             sla_objetivo_horas=sla,
             creado_por=system_user(),
         )
     except Exception as exc:
-        logger.exception('Error creando orden desde alerta %s', alerta_id)
+        logger.exception("Error creando orden desde alerta %s", alerta_id)
         raise self.retry(exc=exc, countdown=10)
 
-    logger.info('Orden %s creada desde alerta %s', orden.codigo, alerta_id)
+    logger.info("Orden %s creada desde alerta %s", orden.codigo, alerta_id)
 
     # Disparar auto-asignación en otra task (no bloqueante)
     auto_asignar_orden.delay(orden.idorden)
@@ -153,34 +163,41 @@ def auto_asignar_orden(self, orden_id):
     from .models import OrdenTrabajo
 
     try:
-        orden = (
-            OrdenTrabajo.objects
-            .select_related('instalacion__empresa', 'instalacion__ciudad')
-            .get(idorden=orden_id)
-        )
+        orden = OrdenTrabajo.objects.select_related(
+            "instalacion__empresa", "instalacion__ciudad"
+        ).get(idorden=orden_id)
     except OrdenTrabajo.DoesNotExist:
         return
 
-    if orden.estado != 'abierta':
+    if orden.estado != "abierta":
         return
 
     if _buscar_y_asignar_tecnico(orden):
         return
 
     # Sin técnicos disponibles → notificar a los admin_empresa de la instalación
-    admins = RolInstalacion.objects.filter(
-        instalacion=orden.instalacion, rol='admin_empresa'
-    ).values_list('usuario_id', flat=True).distinct()
+    admins = (
+        RolInstalacion.objects.filter(
+            instalacion=orden.instalacion, rol="admin_empresa"
+        )
+        .values_list("usuario_id", flat=True)
+        .distinct()
+    )
     for uid in admins:
         _notificar_safe(
             usuario_id=uid,
-            canal='email',
-            plantilla='orden_sin_tecnico',
-            context={'codigo': orden.codigo, 'titulo': orden.titulo, 'orden_id': orden.idorden},
+            canal="email",
+            plantilla="orden_sin_tecnico",
+            context={
+                "codigo": orden.codigo,
+                "titulo": orden.titulo,
+                "orden_id": orden.idorden,
+            },
         )
     logger.warning(
-        'Orden %s sin técnico disponible. Notificados %d admin(s) de empresa.',
-        orden.codigo, len(list(admins)),
+        "Orden %s sin técnico disponible. Notificados %d admin(s) de empresa.",
+        orden.codigo,
+        len(list(admins)),
     )
 
 
@@ -203,21 +220,20 @@ def generar_mantenimientos_preventivos():
     ventana = hoy + timedelta(days=7)
     creados = 0
 
-    instalaciones = (
-        Instalacion.objects
-        .filter(estado='activa')
-        .select_related('contrato')
+    instalaciones = Instalacion.objects.filter(estado="activa").select_related(
+        "contrato"
     )
 
     for inst in instalaciones:
-        contrato = getattr(inst, 'contrato', None)
+        contrato = getattr(inst, "contrato", None)
         if not contrato or not contrato.activo:
             continue
 
         plan = (
-            PlanMantenimiento.objects
-            .filter(tipo_sistema=inst.tipo_sistema, activo=True)
-            .order_by('frecuencia_dias')
+            PlanMantenimiento.objects.filter(
+                tipo_sistema=inst.tipo_sistema, activo=True
+            )
+            .order_by("frecuencia_dias")
             .first()
         )
         if not plan:
@@ -231,7 +247,7 @@ def generar_mantenimientos_preventivos():
         if Mantenimiento.objects.filter(
             instalacion=inst,
             fecha_programada=proxima,
-            estado__in=['programado', 'en_proceso'],
+            estado__in=["programado", "en_proceso"],
         ).exists():
             continue
 
@@ -239,30 +255,32 @@ def generar_mantenimientos_preventivos():
             instalacion=inst,
             plan=plan,
             fecha_programada=proxima,
-            estado='programado',
+            estado="programado",
         )
         ot = OrdenTrabajo.objects.create(
             instalacion=inst,
             mantenimiento=m,
-            tipo='preventivo',
-            prioridad='media',
-            estado='abierta',
-            titulo=f'Mantenimiento preventivo: {plan.nombre}',
+            tipo="preventivo",
+            prioridad="media",
+            estado="abierta",
+            titulo=f"Mantenimiento preventivo: {plan.nombre}",
             descripcion=json.dumps(plan.checklist, ensure_ascii=False),
             sla_objetivo_horas=72,
             creado_por=system_user(),
         )
         m.orden_trabajo = ot
-        m.save(update_fields=['orden_trabajo'])
+        m.save(update_fields=["orden_trabajo"])
 
         inst.proximo_mantenimiento = proxima
-        inst.save(update_fields=['proximo_mantenimiento'])
+        inst.save(update_fields=["proximo_mantenimiento"])
 
         # Auto-asignar (no falla si no hay técnico)
         auto_asignar_orden.delay(ot.idorden)
         creados += 1
 
-    logger.info('generar_mantenimientos_preventivos: %d mantenimientos creados.', creados)
+    logger.info(
+        "generar_mantenimientos_preventivos: %d mantenimientos creados.", creados
+    )
     return creados
 
 
@@ -279,30 +297,36 @@ def verificar_sla_ordenes():
 
     activas = OrdenTrabajo.objects.filter(
         estado__in=OrdenTrabajo.ESTADOS_ACTIVOS,
-    ).select_related('instalacion')
+    ).select_related("instalacion")
 
     escalados = 0
     for o in activas:
         if not o.es_sla_vencido():
             continue
         # Subir prioridad si todavía no es 'urgente'
-        if o.prioridad != 'urgente':
-            o.prioridad = 'urgente'
-            o.save(update_fields=['prioridad'])
+        if o.prioridad != "urgente":
+            o.prioridad = "urgente"
+            o.save(update_fields=["prioridad"])
 
-        admins = RolInstalacion.objects.filter(
-            instalacion=o.instalacion, rol='admin_empresa'
-        ).values_list('usuario_id', flat=True).distinct()
+        admins = (
+            RolInstalacion.objects.filter(
+                instalacion=o.instalacion, rol="admin_empresa"
+            )
+            .values_list("usuario_id", flat=True)
+            .distinct()
+        )
         for uid in admins:
             _notificar_safe(
                 usuario_id=uid,
-                canal='email',
-                plantilla='sla_vencido',
-                context={'codigo': o.codigo, 'titulo': o.titulo, 'orden_id': o.idorden},
+                canal="email",
+                plantilla="sla_vencido",
+                context={"codigo": o.codigo, "titulo": o.titulo, "orden_id": o.idorden},
             )
         escalados += 1
 
-    logger.info('verificar_sla_ordenes: %d órdenes con SLA vencido escaladas.', escalados)
+    logger.info(
+        "verificar_sla_ordenes: %d órdenes con SLA vencido escaladas.", escalados
+    )
     return escalados
 
 
@@ -312,27 +336,25 @@ def recordatorio_mantenimientos_diario():
     from .models import OrdenTrabajo
 
     hoy = timezone.localdate()
-    ordenes_hoy = (
-        OrdenTrabajo.objects
-        .filter(
-            tipo='preventivo',
-            estado__in=['asignada', 'en_progreso'],
-            mantenimiento__fecha_programada=hoy,
-        )
-        .select_related('mantenimiento', 'instalacion', 'asignado_a')
-    )
+    ordenes_hoy = OrdenTrabajo.objects.filter(
+        tipo="preventivo",
+        estado__in=["asignada", "en_progreso"],
+        mantenimiento__fecha_programada=hoy,
+    ).select_related("mantenimiento", "instalacion", "asignado_a")
     for o in ordenes_hoy:
         if not o.asignado_a_id:
             continue
         _notificar_safe(
             usuario_id=o.asignado_a_id,
-            canal='in_app',
-            plantilla='mantenimiento_proximo',
+            canal="in_app",
+            plantilla="mantenimiento_proximo",
             context={
-                'codigo': o.codigo,
-                'instalacion': o.instalacion.nombre,
-                'titulo': o.titulo,
-                'orden_id': o.idorden,
+                "codigo": o.codigo,
+                "instalacion": o.instalacion.nombre,
+                "titulo": o.titulo,
+                "orden_id": o.idorden,
             },
         )
-    logger.info('recordatorio_mantenimientos_diario: %d notificaciones.', ordenes_hoy.count())
+    logger.info(
+        "recordatorio_mantenimientos_diario: %d notificaciones.", ordenes_hoy.count()
+    )

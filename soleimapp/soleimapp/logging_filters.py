@@ -2,6 +2,7 @@
 Logging utilities: filtro que inyecta un request_id en cada log record,
 y middleware que genera el UUID de request y lo propaga.
 """
+
 import logging
 import threading
 import uuid
@@ -11,7 +12,7 @@ _local = threading.local()
 
 
 def get_request_id():
-    return getattr(_local, 'request_id', '-')
+    return getattr(_local, "request_id", "-")
 
 
 def set_request_id(request_id: str):
@@ -19,7 +20,7 @@ def set_request_id(request_id: str):
 
 
 def clear_request_id():
-    _local.request_id = '-'
+    _local.request_id = "-"
 
 
 class RequestIdFilter(logging.Filter):
@@ -42,12 +43,12 @@ class RequestIdMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        request_id = request.headers.get('X-Request-ID') or str(uuid.uuid4())
+        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
         set_request_id(request_id)
         request.request_id = request_id
 
         response = self.get_response(request)
 
-        response['X-Request-ID'] = request_id
+        response["X-Request-ID"] = request_id
         clear_request_id()
         return response

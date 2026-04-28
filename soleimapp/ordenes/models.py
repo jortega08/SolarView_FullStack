@@ -6,72 +6,76 @@ class OrdenTrabajo(models.Model):
     """Orden de trabajo (work order). Núcleo operativo de despacho."""
 
     TIPOS = (
-        ('correctivo', 'Correctivo'),
-        ('preventivo', 'Preventivo'),
-        ('inspeccion', 'Inspección'),
-        ('instalacion', 'Instalación'),
+        ("correctivo", "Correctivo"),
+        ("preventivo", "Preventivo"),
+        ("inspeccion", "Inspección"),
+        ("instalacion", "Instalación"),
     )
     PRIORIDADES = (
-        ('urgente', 'Urgente'),
-        ('alta', 'Alta'),
-        ('media', 'Media'),
-        ('baja', 'Baja'),
+        ("urgente", "Urgente"),
+        ("alta", "Alta"),
+        ("media", "Media"),
+        ("baja", "Baja"),
     )
     ESTADOS = (
-        ('abierta', 'Abierta'),
-        ('asignada', 'Asignada'),
-        ('en_progreso', 'En progreso'),
-        ('completada', 'Completada'),
-        ('cerrada', 'Cerrada'),
-        ('cancelada', 'Cancelada'),
+        ("abierta", "Abierta"),
+        ("asignada", "Asignada"),
+        ("en_progreso", "En progreso"),
+        ("completada", "Completada"),
+        ("cerrada", "Cerrada"),
+        ("cancelada", "Cancelada"),
     )
-    ESTADOS_ACTIVOS = ('abierta', 'asignada', 'en_progreso')
+    ESTADOS_ACTIVOS = ("abierta", "asignada", "en_progreso")
 
     idorden = models.AutoField(primary_key=True)
     codigo = models.CharField(
         max_length=24,
         unique=True,
         editable=False,
-        help_text='Código legible: OT-YYYY-NNNNN.',
+        help_text="Código legible: OT-YYYY-NNNNN.",
     )
 
     instalacion = models.ForeignKey(
-        'core.Instalacion',
+        "core.Instalacion",
         on_delete=models.PROTECT,
-        related_name='ordenes',
+        related_name="ordenes",
     )
     alerta = models.ForeignKey(
-        'alerta.Alerta',
+        "alerta.Alerta",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='ordenes',
+        null=True,
+        blank=True,
+        related_name="ordenes",
     )
     mantenimiento = models.OneToOneField(
-        'mantenimiento.Mantenimiento',
+        "mantenimiento.Mantenimiento",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='_orden',
+        null=True,
+        blank=True,
+        related_name="_orden",
     )
 
-    tipo = models.CharField(max_length=12, choices=TIPOS, default='correctivo')
-    prioridad = models.CharField(max_length=8, choices=PRIORIDADES, default='media')
-    estado = models.CharField(max_length=12, choices=ESTADOS, default='abierta')
+    tipo = models.CharField(max_length=12, choices=TIPOS, default="correctivo")
+    prioridad = models.CharField(max_length=8, choices=PRIORIDADES, default="media")
+    estado = models.CharField(max_length=12, choices=ESTADOS, default="abierta")
 
     titulo = models.CharField(max_length=255)
     descripcion = models.TextField(blank=True)
     notas_resolucion = models.TextField(blank=True)
 
     asignado_a = models.ForeignKey(
-        'core.Usuario',
+        "core.Usuario",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='ordenes_asignadas',
+        null=True,
+        blank=True,
+        related_name="ordenes_asignadas",
     )
     creado_por = models.ForeignKey(
-        'core.Usuario',
+        "core.Usuario",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='ordenes_creadas',
+        null=True,
+        blank=True,
+        related_name="ordenes_creadas",
     )
 
     sla_objetivo_horas = models.IntegerField(default=24)
@@ -83,14 +87,16 @@ class OrdenTrabajo(models.Model):
     cerrada_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        db_table = 'orden_trabajo'
-        verbose_name = 'Orden de trabajo'
-        verbose_name_plural = 'Órdenes de trabajo'
-        ordering = ['-creada_at']
+        db_table = "orden_trabajo"
+        verbose_name = "Orden de trabajo"
+        verbose_name_plural = "Órdenes de trabajo"
+        ordering = ["-creada_at"]
         indexes = [
-            models.Index(fields=['instalacion', 'estado'], name='ot_inst_est_idx'),
-            models.Index(fields=['asignado_a', 'estado'], name='ot_asig_est_idx'),
-            models.Index(fields=['estado', 'prioridad', 'creada_at'], name='ot_est_prio_fch_idx'),
+            models.Index(fields=["instalacion", "estado"], name="ot_inst_est_idx"),
+            models.Index(fields=["asignado_a", "estado"], name="ot_asig_est_idx"),
+            models.Index(
+                fields=["estado", "prioridad", "creada_at"], name="ot_est_prio_fch_idx"
+            ),
         ]
 
     # ----- estado tracking para signals (cambio_estado) -----
@@ -106,7 +112,7 @@ class OrdenTrabajo(models.Model):
         return instance
 
     def __str__(self):
-        return f'{self.codigo} — {self.titulo[:40]}'
+        return f"{self.codigo} — {self.titulo[:40]}"
 
     # ----- helpers operativos -----
     def es_sla_vencido(self):
@@ -128,21 +134,20 @@ class OrdenTrabajo(models.Model):
     # ----- generación de código OT-YYYY-NNNNN -----
     def _generar_codigo(self):
         anio = timezone.now().year
-        prefix = f'OT-{anio}-'
+        prefix = f"OT-{anio}-"
         ultimo = (
-            OrdenTrabajo.objects
-            .filter(codigo__startswith=prefix)
-            .order_by('-codigo')
+            OrdenTrabajo.objects.filter(codigo__startswith=prefix)
+            .order_by("-codigo")
             .first()
         )
         if ultimo:
             try:
-                seq = int(ultimo.codigo.rsplit('-', 1)[-1]) + 1
+                seq = int(ultimo.codigo.rsplit("-", 1)[-1]) + 1
             except (ValueError, IndexError):
                 seq = 1
         else:
             seq = 1
-        return f'{prefix}{seq:05d}'
+        return f"{prefix}{seq:05d}"
 
     def save(self, *args, **kwargs):
         if not self.codigo:
@@ -155,74 +160,78 @@ class OrdenTrabajo(models.Model):
 
 class ComentarioOrden(models.Model):
     """Historial de comentarios y cambios de estado de una orden (inmutable)."""
+
     TIPOS = (
-        ('comentario', 'Comentario'),
-        ('cambio_estado', 'Cambio de estado'),
-        ('sistema', 'Sistema'),
+        ("comentario", "Comentario"),
+        ("cambio_estado", "Cambio de estado"),
+        ("sistema", "Sistema"),
     )
 
     idcomentario = models.AutoField(primary_key=True)
     orden = models.ForeignKey(
         OrdenTrabajo,
         on_delete=models.CASCADE,
-        related_name='comentarios',
+        related_name="comentarios",
     )
     usuario = models.ForeignKey(
-        'core.Usuario',
+        "core.Usuario",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='comentarios_orden',
+        null=True,
+        blank=True,
+        related_name="comentarios_orden",
     )
-    tipo = models.CharField(max_length=16, choices=TIPOS, default='comentario')
+    tipo = models.CharField(max_length=16, choices=TIPOS, default="comentario")
     texto = models.TextField()
     creado_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'comentario_orden'
-        verbose_name = 'Comentario de orden'
-        verbose_name_plural = 'Comentarios de orden'
-        ordering = ['creado_at']
+        db_table = "comentario_orden"
+        verbose_name = "Comentario de orden"
+        verbose_name_plural = "Comentarios de orden"
+        ordering = ["creado_at"]
         indexes = [
-            models.Index(fields=['orden', 'creado_at'], name='com_ord_fch_idx'),
+            models.Index(fields=["orden", "creado_at"], name="com_ord_fch_idx"),
         ]
 
     def __str__(self):
-        return f'#{self.idcomentario} {self.tipo} sobre {self.orden_id}'
+        return f"#{self.idcomentario} {self.tipo} sobre {self.orden_id}"
 
 
 class EvidenciaOrden(models.Model):
     """Foto, firma del cliente o documento adjunto a una orden de trabajo."""
+
     TIPOS = (
-        ('foto', 'Foto'),
-        ('firma', 'Firma del cliente'),
-        ('documento', 'Documento'),
+        ("foto", "Foto"),
+        ("firma", "Firma del cliente"),
+        ("documento", "Documento"),
     )
 
     idevidencia = models.AutoField(primary_key=True)
     orden = models.ForeignKey(
         OrdenTrabajo,
         on_delete=models.CASCADE,
-        related_name='evidencias',
+        related_name="evidencias",
     )
-    tipo = models.CharField(max_length=12, choices=TIPOS, default='foto')
-    archivo = models.FileField(upload_to='ordenes/%Y/%m/')
+    tipo = models.CharField(max_length=12, choices=TIPOS, default="foto")
+    archivo = models.FileField(upload_to="ordenes/%Y/%m/")
     descripcion = models.CharField(max_length=255, blank=True)
     subido_por = models.ForeignKey(
-        'core.Usuario',
+        "core.Usuario",
         on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='evidencias_subidas',
+        null=True,
+        blank=True,
+        related_name="evidencias_subidas",
     )
     creado_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        db_table = 'evidencia_orden'
-        verbose_name = 'Evidencia de orden'
-        verbose_name_plural = 'Evidencias de orden'
-        ordering = ['-creado_at']
+        db_table = "evidencia_orden"
+        verbose_name = "Evidencia de orden"
+        verbose_name_plural = "Evidencias de orden"
+        ordering = ["-creado_at"]
         indexes = [
-            models.Index(fields=['orden', 'tipo'], name='evi_ord_tipo_idx'),
+            models.Index(fields=["orden", "tipo"], name="evi_ord_tipo_idx"),
         ]
 
     def __str__(self):
-        return f'{self.tipo} de orden {self.orden_id}'
+        return f"{self.tipo} de orden {self.orden_id}"

@@ -6,13 +6,18 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('ordenes', '0001_initial'),
+        ("ordenes", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='ordentrabajo',
-            name='codigo',
-            field=models.CharField(editable=False, help_text='Código legible: OT-YYYY-NNNNN.', max_length=24, unique=True),
+            model_name="ordentrabajo",
+            name="codigo",
+            field=models.CharField(
+                editable=False,
+                help_text="Código legible: OT-YYYY-NNNNN.",
+                max_length=24,
+                unique=True,
+            ),
         ),
     ]

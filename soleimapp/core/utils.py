@@ -1,13 +1,14 @@
 """Utilidades compartidas del módulo `core`."""
+
 import logging
 import secrets
 from functools import lru_cache
 
 from .models import Usuario
 
-logger = logging.getLogger('soleim')
+logger = logging.getLogger("soleim")
 
-SYSTEM_USER_EMAIL = 'system@soleim.local'
+SYSTEM_USER_EMAIL = "system@soleim.local"
 
 
 @lru_cache(maxsize=1)
@@ -30,14 +31,14 @@ def _system_user_cached_id():
         return user.idusuario
 
     user = Usuario(
-        nombre='Sistema Soleim',
+        nombre="Sistema Soleim",
         email=SYSTEM_USER_EMAIL,
-        rol='admin',
+        rol="admin",
         is_active=False,
     )
     user.set_password(secrets.token_urlsafe(48))
     user.save()
-    logger.info('Usuario de sistema creado (id=%s)', user.idusuario)
+    logger.info("Usuario de sistema creado (id=%s)", user.idusuario)
     return user.idusuario
 
 

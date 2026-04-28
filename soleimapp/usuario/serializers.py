@@ -10,13 +10,13 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Usuario
-        fields = ['idusuario', 'nombre', 'email', 'contrasena', 'rol']
-        read_only_fields = ['idusuario']
+        fields = ["idusuario", "nombre", "email", "contrasena", "rol"]
+        read_only_fields = ["idusuario"]
 
     def validate_email(self, value):
         normalized = value.strip().lower()
         if Usuario.objects.filter(email__iexact=normalized).exists():
-            raise serializers.ValidationError('Ya existe un usuario con este email.')
+            raise serializers.ValidationError("Ya existe un usuario con este email.")
         return normalized
 
     def validate_contrasena(self, value):
@@ -32,11 +32,11 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         if not any(c.isupper() for c in value):
             raise serializers.ValidationError(
-                'La contraseña debe contener al menos una letra mayúscula.'
+                "La contraseña debe contener al menos una letra mayúscula."
             )
         if not any(c.isdigit() for c in value):
             raise serializers.ValidationError(
-                'La contraseña debe contener al menos un número.'
+                "La contraseña debe contener al menos un número."
             )
         return value
 
@@ -56,5 +56,5 @@ class LoginSerializer(serializers.Serializer):
 class UsuarioProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = Usuario
-        fields = ['idusuario', 'nombre', 'email', 'rol', 'fecha_registro', 'is_active']
-        read_only_fields = ['idusuario', 'fecha_registro', 'is_active']
+        fields = ["idusuario", "nombre", "email", "rol", "fecha_registro", "is_active"]
+        read_only_fields = ["idusuario", "fecha_registro", "is_active"]

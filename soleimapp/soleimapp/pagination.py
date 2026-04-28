@@ -13,6 +13,7 @@ Usage (in a ViewSet):
 The cursor is an opaque base64-encoded string so clients never need to
 construct it manually — they just follow `next` and `previous` links.
 """
+
 from rest_framework.pagination import CursorPagination
 
 
@@ -21,15 +22,17 @@ class TimeSeriesCursorPagination(CursorPagination):
     Cursor paginator for time-ordered telemetry data.
     Sorts by descending primary timestamp (most recent first).
     """
+
     page_size = 50
-    page_size_query_param = 'page_size'
+    page_size_query_param = "page_size"
     max_page_size = 500
-    ordering = '-fecha'            # Consumo.fecha — override per view if needed
+    ordering = "-fecha"  # Consumo.fecha — override per view if needed
 
 
 class BateriaTimeSeriesCursorPagination(CursorPagination):
     """Same pattern for Bateria (different timestamp field name)."""
+
     page_size = 50
-    page_size_query_param = 'page_size'
+    page_size_query_param = "page_size"
     max_page_size = 500
-    ordering = '-fecha_registro'
+    ordering = "-fecha_registro"

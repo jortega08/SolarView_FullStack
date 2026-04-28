@@ -6,18 +6,26 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('mantenimiento', '0002_mantenimiento_orden_trabajo'),
+        ("mantenimiento", "0002_mantenimiento_orden_trabajo"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='planmantenimiento',
-            name='checklist',
-            field=models.JSONField(default=list, help_text='Lista de items a verificar: [{titulo, requerido}].'),
+            model_name="planmantenimiento",
+            name="checklist",
+            field=models.JSONField(
+                default=list,
+                help_text="Lista de items a verificar: [{titulo, requerido}].",
+            ),
         ),
         migrations.AlterField(
-            model_name='planmantenimiento',
-            name='duracion_estimada_horas',
-            field=models.DecimalField(decimal_places=2, default=2, help_text='Duración estimada de la visita.', max_digits=5),
+            model_name="planmantenimiento",
+            name="duracion_estimada_horas",
+            field=models.DecimalField(
+                decimal_places=2,
+                default=2,
+                help_text="Duración estimada de la visita.",
+                max_digits=5,
+            ),
         ),
     ]

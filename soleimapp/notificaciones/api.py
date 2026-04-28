@@ -7,11 +7,12 @@ Usar desde cualquier otra app:
     notificar(usuario_id=42, canal='in_app', plantilla='orden_asignada',
               context={'codigo': 'OT-2025-0001', 'titulo': 'Cambio de batería'})
 """
+
 import logging
 
 from .models import Notificacion, PlantillaNotificacion
 
-logger = logging.getLogger('soleim')
+logger = logging.getLogger("soleim")
 
 
 def _render_template(plantilla: PlantillaNotificacion, context: dict):
@@ -22,8 +23,9 @@ def _render_template(plantilla: PlantillaNotificacion, context: dict):
         cuerpo = plantilla.cuerpo_txt.format(**ctx)
     except KeyError as exc:
         logger.warning(
-            'Faltó key %s al renderizar plantilla %s; dejando placeholders.',
-            exc, plantilla.clave,
+            "Faltó key %s al renderizar plantilla %s; dejando placeholders.",
+            exc,
+            plantilla.clave,
         )
         asunto = plantilla.asunto
         cuerpo = plantilla.cuerpo_txt
@@ -37,7 +39,7 @@ def notificar(
     context: dict | None = None,
     asunto_override: str | None = None,
     cuerpo_override: str | None = None,
-    enlace: str = '',
+    enlace: str = "",
     metadata: dict | None = None,
 ) -> Notificacion:
     """
@@ -50,9 +52,11 @@ def notificar(
     """
     plant = None
     if plantilla:
-        plant = PlantillaNotificacion.objects.filter(clave=plantilla, activo=True).first()
+        plant = PlantillaNotificacion.objects.filter(
+            clave=plantilla, activo=True
+        ).first()
         if not plant:
-            logger.warning('Plantilla %r no encontrada o inactiva.', plantilla)
+            logger.warning("Plantilla %r no encontrada o inactiva.", plantilla)
 
     asunto = asunto_override
     cuerpo = cuerpo_override
@@ -63,7 +67,7 @@ def notificar(
 
     if not asunto or not cuerpo:
         raise ValueError(
-            'notificar() requiere `plantilla` con `context` o `asunto_override`+`cuerpo_override`.'
+            "notificar() requiere `plantilla` con `context` o `asunto_override`+`cuerpo_override`."
         )
 
     notif = Notificacion.objects.create(
@@ -74,10 +78,11 @@ def notificar(
         cuerpo=cuerpo,
         enlace=enlace,
         metadata=metadata or {},
-        estado='pendiente',
+        estado="pendiente",
     )
 
     # Disparo asíncrono — import perezoso para no romper en migraciones
     from .tasks import enviar_notificacion
+
     enviar_notificacion.delay(notif.idnotificacion)
     return notif

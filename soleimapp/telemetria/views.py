@@ -13,20 +13,24 @@ from rest_framework.permissions import IsAuthenticated
 
 from core.models import ConfiguracionUser, Domicilio, Instalacion
 from core.permissions import IsActiveUser
-from soleimapp.pagination import BateriaTimeSeriesCursorPagination, TimeSeriesCursorPagination
+from soleimapp.pagination import (
+    BateriaTimeSeriesCursorPagination,
+    TimeSeriesCursorPagination,
+)
 
 from .models import Bateria, Consumo
 from .serializers import BateriaSerializer, ConsumoSerializer
 from .task import IOT_BATERIA_BUFFER_KEY, IOT_CONSUMO_BUFFER_KEY
 
-logger = logging.getLogger('soleim')
+logger = logging.getLogger("soleim")
 
-FUENTES_VALIDAS = {'solar', 'electrica'}
+FUENTES_VALIDAS = {"solar", "electrica"}
 
 
 # ---------------------------------------------------------------------------
 # Helpers de validación
 # ---------------------------------------------------------------------------
+
 
 def _validate_positive_float(value, field_name):
     if value is None:
@@ -41,20 +45,25 @@ def _validate_positive_float(value, field_name):
 
 
 def _resolve_operational_context(data):
-    domicilio_id = data.get('domicilio_id')
-    instalacion_id = data.get('instalacion_id')
+    domicilio_id = data.get("domicilio_id")
+    instalacion_id = data.get("instalacion_id")
 
     if not domicilio_id and not instalacion_id:
-        raise ValueError('domicilio_id o instalacion_id es requerido')
+        raise ValueError("domicilio_id o instalacion_id es requerido")
 
-    instalacion = Instalacion.objects.get(idinstalacion=instalacion_id) if instalacion_id else None
-    domicilio = Domicilio.objects.get(iddomicilio=domicilio_id) if domicilio_id else None
+    instalacion = (
+        Instalacion.objects.get(idinstalacion=instalacion_id)
+        if instalacion_id
+        else None
+    )
+    domicilio = (
+        Domicilio.objects.get(iddomicilio=domicilio_id) if domicilio_id else None
+    )
 
     # Modo legacy: enlazar domicilio ↔ instalacion via ConfiguracionUser
     if domicilio and not instalacion:
         config = (
-            ConfiguracionUser.objects
-            .select_related('instalacion')
+            ConfiguracionUser.objects.select_related("instalacion")
             .filter(domicilio=domicilio, instalacion__isnull=False)
             .first()
         )
@@ -69,10 +78,10 @@ def _validate_iot_key(request):
     Valida la clave compartida del consumer MQTT.
     Si IOT_SHARED_SECRET está vacío, el check se omite (desarrollo local).
     """
-    secret = getattr(settings, 'IOT_SHARED_SECRET', '')
+    secret = getattr(settings, "IOT_SHARED_SECRET", "")
     if not secret:
-        return True   # Sin secreto configurado → permitir (sólo en dev)
-    provided = request.headers.get('X-IoT-Key', '')
+        return True  # Sin secreto configurado → permitir (sólo en dev)
+    provided = request.headers.get("X-IoT-Key", "")
     return provided == secret
 
 
@@ -80,7 +89,10 @@ def _validate_iot_key(request):
 # Endpoint de ingesta IoT (llamado por el consumer MQTT)
 # ---------------------------------------------------------------------------
 
-def _push_to_iot_buffer(redis_client, consumo_payload: dict, bateria_payload: dict) -> None:
+
+def _push_to_iot_buffer(
+    redis_client, consumo_payload: dict, bateria_payload: dict
+) -> None:
     """
     Push validated IoT payloads to the Redis write-ahead buffer.
     Uses a pipeline to minimise round-trips.
@@ -92,7 +104,7 @@ def _push_to_iot_buffer(redis_client, consumo_payload: dict, bateria_payload: di
 
 
 @csrf_exempt
-@require_http_methods(['POST'])
+@require_http_methods(["POST"])
 def registrar_datos(request):
     """
     Endpoint de ingesta para el consumer MQTT.
@@ -109,94 +121,117 @@ def registrar_datos(request):
       Comportamiento original — escribe directamente a Postgres.
     """
     if not _validate_iot_key(request):
-        logger.warning('registrar_datos: clave IoT inválida desde %s', request.META.get('REMOTE_ADDR'))
-        return JsonResponse({'success': False, 'error': 'No autorizado'}, status=401)
+        logger.warning(
+            "registrar_datos: clave IoT inválida desde %s",
+            request.META.get("REMOTE_ADDR"),
+        )
+        return JsonResponse({"success": False, "error": "No autorizado"}, status=401)
 
     try:
         data = json.loads(request.body)
         domicilio, instalacion = _resolve_operational_context(data)
 
-        energia_consumida = _validate_positive_float(data.get('energia_consumida'), 'energia_consumida')
-        potencia = _validate_positive_float(data.get('potencia'), 'potencia')
-        costo = _validate_positive_float(data.get('costo'), 'costo')
+        energia_consumida = _validate_positive_float(
+            data.get("energia_consumida"), "energia_consumida"
+        )
+        potencia = _validate_positive_float(data.get("potencia"), "potencia")
+        costo = _validate_positive_float(data.get("costo"), "costo")
 
-        fuente = data.get('fuente', 'electrica')
+        fuente = data.get("fuente", "electrica")
         if fuente not in FUENTES_VALIDAS:
             return JsonResponse(
-                {'success': False, 'error': f"fuente debe ser una de: {', '.join(FUENTES_VALIDAS)}"},
+                {
+                    "success": False,
+                    "error": f"fuente debe ser una de: {', '.join(FUENTES_VALIDAS)}",
+                },
                 status=400,
             )
 
-        voltaje = _validate_positive_float(data.get('voltaje'), 'voltaje')
-        corriente = _validate_positive_float(data.get('corriente'), 'corriente')
-        temperatura = float(data.get('temperatura', 0))
-        capacidad_bateria = _validate_positive_float(data.get('capacidad_bateria'), 'capacidad_bateria')
-        porcentaje_carga_val = float(data.get('porcentaje_carga', 0))
+        voltaje = _validate_positive_float(data.get("voltaje"), "voltaje")
+        corriente = _validate_positive_float(data.get("corriente"), "corriente")
+        temperatura = float(data.get("temperatura", 0))
+        capacidad_bateria = _validate_positive_float(
+            data.get("capacidad_bateria"), "capacidad_bateria"
+        )
+        porcentaje_carga_val = float(data.get("porcentaje_carga", 0))
         if not 0 <= porcentaje_carga_val <= 100:
             return JsonResponse(
-                {'success': False, 'error': 'porcentaje_carga debe estar entre 0 y 100'}, status=400
+                {
+                    "success": False,
+                    "error": "porcentaje_carga debe estar entre 0 y 100",
+                },
+                status=400,
             )
-        tiempo_restante = _validate_positive_float(data.get('tiempo_restante'), 'tiempo_restante')
+        tiempo_restante = _validate_positive_float(
+            data.get("tiempo_restante"), "tiempo_restante"
+        )
 
         instalacion_id = instalacion.idinstalacion if instalacion else None
         domicilio_id = domicilio.iddomicilio if domicilio else None
 
-        buffer_enabled = getattr(settings, 'IOT_BUFFER_ENABLED', False)
+        buffer_enabled = getattr(settings, "IOT_BUFFER_ENABLED", False)
 
         if buffer_enabled:
             # ---- Async / buffered path (P2) ----
             try:
                 from django_redis import get_redis_connection
-                redis = get_redis_connection('default')
+
+                redis = get_redis_connection("default")
                 _push_to_iot_buffer(
                     redis,
                     consumo_payload={
-                        'instalacion_id': instalacion_id,
-                        'domicilio_id': domicilio_id,
-                        'energia_consumida': energia_consumida,
-                        'potencia': potencia,
-                        'fuente': fuente,
-                        'costo': costo,
+                        "instalacion_id": instalacion_id,
+                        "domicilio_id": domicilio_id,
+                        "energia_consumida": energia_consumida,
+                        "potencia": potencia,
+                        "fuente": fuente,
+                        "costo": costo,
                     },
                     bateria_payload={
-                        'instalacion_id': instalacion_id,
-                        'domicilio_id': domicilio_id,
-                        'voltaje': voltaje,
-                        'corriente': corriente,
-                        'temperatura': temperatura,
-                        'capacidad_bateria': capacidad_bateria,
-                        'porcentaje_carga': porcentaje_carga_val,
-                        'tiempo_restante': tiempo_restante,
+                        "instalacion_id": instalacion_id,
+                        "domicilio_id": domicilio_id,
+                        "voltaje": voltaje,
+                        "corriente": corriente,
+                        "temperatura": temperatura,
+                        "capacidad_bateria": capacidad_bateria,
+                        "porcentaje_carga": porcentaje_carga_val,
+                        "tiempo_restante": tiempo_restante,
                     },
                 )
             except Exception:
-                logger.exception('registrar_datos: Redis buffer write failed, falling back to sync')
+                logger.exception(
+                    "registrar_datos: Redis buffer write failed, falling back to sync"
+                )
                 buffer_enabled = False  # fall through to synchronous write below
 
             if buffer_enabled:
                 # WebSocket update still fires immediately (lightweight, no DB)
                 from .tasks import notify_realtime_update
+
                 notify_realtime_update.delay(
                     instalacion_id=instalacion_id,
                     domicilio_id=domicilio_id,
-                    data_type='sensor',
+                    data_type="sensor",
                     data={
-                        'instalacion_id': instalacion_id,
-                        'domicilio_id': domicilio_id,
-                        'energia_consumida': energia_consumida,
-                        'fuente': fuente,
-                        'porcentaje_carga': porcentaje_carga_val,
-                        'temperatura': temperatura,
-                        'buffered': True,
+                        "instalacion_id": instalacion_id,
+                        "domicilio_id": domicilio_id,
+                        "energia_consumida": energia_consumida,
+                        "fuente": fuente,
+                        "porcentaje_carga": porcentaje_carga_val,
+                        "temperatura": temperatura,
+                        "buffered": True,
                     },
                 )
-                return JsonResponse({
-                    'success': True,
-                    'buffered': True,
-                    'timestamp': timezone.now().isoformat(),
-                    'instalacion_id': instalacion_id,
-                    'domicilio_id': domicilio_id,
-                }, status=202)
+                return JsonResponse(
+                    {
+                        "success": True,
+                        "buffered": True,
+                        "timestamp": timezone.now().isoformat(),
+                        "instalacion_id": instalacion_id,
+                        "domicilio_id": domicilio_id,
+                    },
+                    status=202,
+                )
 
         # ---- Synchronous / direct-write path (original behaviour) ----
         consumo = Consumo.objects.create(
@@ -220,95 +255,112 @@ def registrar_datos(request):
         )
 
         from .tasks import notify_realtime_update, process_battery_alerts
+
         process_battery_alerts.delay(bateria.idbateria)
         notify_realtime_update.delay(
             instalacion_id=instalacion_id,
             domicilio_id=domicilio_id,
-            data_type='sensor',
+            data_type="sensor",
             data={
-                'consumo_id': consumo.idconsumo,
-                'bateria_id': bateria.idbateria,
-                'instalacion_id': instalacion_id,
-                'domicilio_id': domicilio_id,
-                'energia_consumida': energia_consumida,
-                'fuente': fuente,
-                'porcentaje_carga': porcentaje_carga_val,
-                'temperatura': temperatura,
+                "consumo_id": consumo.idconsumo,
+                "bateria_id": bateria.idbateria,
+                "instalacion_id": instalacion_id,
+                "domicilio_id": domicilio_id,
+                "energia_consumida": energia_consumida,
+                "fuente": fuente,
+                "porcentaje_carga": porcentaje_carga_val,
+                "temperatura": temperatura,
             },
         )
 
-        return JsonResponse({
-            'success': True,
-            'timestamp': timezone.now().isoformat(),
-            'consumo_id': consumo.idconsumo,
-            'bateria_id': bateria.idbateria,
-            'domicilio_id': domicilio_id,
-            'instalacion_id': instalacion_id,
-        })
+        return JsonResponse(
+            {
+                "success": True,
+                "timestamp": timezone.now().isoformat(),
+                "consumo_id": consumo.idconsumo,
+                "bateria_id": bateria.idbateria,
+                "domicilio_id": domicilio_id,
+                "instalacion_id": instalacion_id,
+            }
+        )
 
     except Domicilio.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Domicilio no encontrado'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Domicilio no encontrado"}, status=400
+        )
     except Instalacion.DoesNotExist:
-        return JsonResponse({'success': False, 'error': 'Instalación no encontrada'}, status=400)
+        return JsonResponse(
+            {"success": False, "error": "Instalación no encontrada"}, status=400
+        )
     except ValueError as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
     except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'JSON inválido'}, status=400)
+        return JsonResponse({"success": False, "error": "JSON inválido"}, status=400)
     except Exception:
-        logger.exception('Error en registrar_datos')
-        return JsonResponse({'success': False, 'error': 'Error interno del servidor'}, status=500)
+        logger.exception("Error en registrar_datos")
+        return JsonResponse(
+            {"success": False, "error": "Error interno del servidor"}, status=500
+        )
 
 
 # ---------------------------------------------------------------------------
 # Endpoints de consulta (accedidos por el frontend con JWT)
 # ---------------------------------------------------------------------------
 
-@api_view(['GET'])
+
+@api_view(["GET"])
 @permission_classes([IsAuthenticated, IsActiveUser])
 def ver_datos(request):
     """Devuelve los últimos 10 registros de consumo y batería del usuario."""
     user = request.user
-    consumos_qs = Consumo.objects.order_by('-idconsumo')
-    baterias_qs = Bateria.objects.order_by('-idbateria')
+    consumos_qs = Consumo.objects.order_by("-idconsumo")
+    baterias_qs = Bateria.objects.order_by("-idbateria")
 
-    if user.rol != 'admin':
-        ids = list(user.roles_instalacion.values_list('instalacion_id', flat=True).distinct())
+    if user.rol != "admin":
+        ids = list(
+            user.roles_instalacion.values_list("instalacion_id", flat=True).distinct()
+        )
         consumos_qs = consumos_qs.filter(instalacion_id__in=ids)
         baterias_qs = baterias_qs.filter(instalacion_id__in=ids)
 
-    return JsonResponse({
-        'consumos': list(consumos_qs.values()[:10]),
-        'baterias': list(baterias_qs.values()[:10]),
-    }, safe=False)
+    return JsonResponse(
+        {
+            "consumos": list(consumos_qs.values()[:10]),
+            "baterias": list(baterias_qs.values()[:10]),
+        },
+        safe=False,
+    )
 
 
-@api_view(['GET'])
+@api_view(["GET"])
 @permission_classes([IsAuthenticated, IsActiveUser])
 def factura_mensual(request):
     """Factura mensual de consumo para un domicilio."""
-    domicilio_id = request.GET.get('domicilio_id')
-    mes = request.GET.get('mes')
-    ano = request.GET.get('ano')
+    domicilio_id = request.GET.get("domicilio_id")
+    mes = request.GET.get("mes")
+    ano = request.GET.get("ano")
 
     if not domicilio_id or not mes or not ano:
-        return JsonResponse({'error': 'Faltan datos'}, status=400)
+        return JsonResponse({"error": "Faltan datos"}, status=400)
 
     try:
         domicilio_id = int(domicilio_id)
         mes = int(mes)
         ano = int(ano)
     except ValueError:
-        return JsonResponse({'error': 'Parámetros inválidos: deben ser números'}, status=400)
+        return JsonResponse(
+            {"error": "Parámetros inválidos: deben ser números"}, status=400
+        )
 
     try:
         domicilio = Domicilio.objects.get(iddomicilio=domicilio_id)
     except Domicilio.DoesNotExist:
-        return JsonResponse({'error': 'Domicilio no encontrado'}, status=404)
+        return JsonResponse({"error": "Domicilio no encontrado"}, status=404)
 
     # Verificar que el usuario tiene acceso al domicilio
     user = request.user
-    if user.rol != 'admin' and domicilio.usuario != user:
-        return JsonResponse({'error': 'Sin acceso a este domicilio'}, status=403)
+    if user.rol != "admin" and domicilio.usuario != user:
+        return JsonResponse({"error": "Sin acceso a este domicilio"}, status=403)
 
     consumos = Consumo.objects.filter(
         domicilio=domicilio,
@@ -316,19 +368,31 @@ def factura_mensual(request):
         fecha__month=mes,
     )
 
-    electrica = consumos.filter(fuente='electrica').aggregate(total=Sum('energia_consumida'))['total'] or 0
-    solar = consumos.filter(fuente='solar').aggregate(total=Sum('energia_consumida'))['total'] or 0
-    costo_total = consumos.aggregate(total=Sum('costo'))['total'] or 0
+    electrica = (
+        consumos.filter(fuente="electrica").aggregate(total=Sum("energia_consumida"))[
+            "total"
+        ]
+        or 0
+    )
+    solar = (
+        consumos.filter(fuente="solar").aggregate(total=Sum("energia_consumida"))[
+            "total"
+        ]
+        or 0
+    )
+    costo_total = consumos.aggregate(total=Sum("costo"))["total"] or 0
 
-    return JsonResponse({
-        'electrica': float(electrica),
-        'solar': float(solar),
-        'costo': float(costo_total),
-        'fecha_emision': timezone.now().strftime('%Y-%m-%d'),
-        'usuario': getattr(domicilio.usuario, 'nombre', str(domicilio.usuario)),
-        'domicilio': str(domicilio),
-        'ciudad': getattr(domicilio.ciudad, 'nombre', str(domicilio.ciudad)),
-    })
+    return JsonResponse(
+        {
+            "electrica": float(electrica),
+            "solar": float(solar),
+            "costo": float(costo_total),
+            "fecha_emision": timezone.now().strftime("%Y-%m-%d"),
+            "usuario": getattr(domicilio.usuario, "nombre", str(domicilio.usuario)),
+            "domicilio": str(domicilio),
+            "ciudad": getattr(domicilio.ciudad, "nombre", str(domicilio.ciudad)),
+        }
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -344,25 +408,31 @@ def factura_mensual(request):
 # The old ver_datos endpoint is kept for backwards compatibility.
 # ---------------------------------------------------------------------------
 
+
 class ConsumoViewSet(viewsets.ReadOnlyModelViewSet):
     """
     Cursor-paginated read-only list of Consumo records.
     Supports ?instalacion=<id> and ?fuente=solar|electrica filters.
     """
+
     serializer_class = ConsumoSerializer
     permission_classes = [IsAuthenticated, IsActiveUser]
     pagination_class = TimeSeriesCursorPagination
-    filterset_fields = ['fuente', 'instalacion']
+    filterset_fields = ["fuente", "instalacion"]
 
     def get_queryset(self):
         user = self.request.user
-        qs = Consumo.objects.select_related('instalacion').order_by('-fecha')
-        if user.rol != 'admin':
-            ids = list(user.roles_instalacion.values_list('instalacion_id', flat=True).distinct())
+        qs = Consumo.objects.select_related("instalacion").order_by("-fecha")
+        if user.rol != "admin":
+            ids = list(
+                user.roles_instalacion.values_list(
+                    "instalacion_id", flat=True
+                ).distinct()
+            )
             qs = qs.filter(instalacion_id__in=ids)
         # Optional ?instalacion filter (already handled by filterset_fields but
         # we guard here so non-authorised instalacion IDs are silently ignored)
-        inst_id = self.request.query_params.get('instalacion')
+        inst_id = self.request.query_params.get("instalacion")
         if inst_id:
             qs = qs.filter(instalacion_id=inst_id)
         return qs
@@ -373,18 +443,23 @@ class BateriaViewSet(viewsets.ReadOnlyModelViewSet):
     Cursor-paginated read-only list of Bateria records.
     Supports ?instalacion=<id> filter.
     """
+
     serializer_class = BateriaSerializer
     permission_classes = [IsAuthenticated, IsActiveUser]
     pagination_class = BateriaTimeSeriesCursorPagination
-    filterset_fields = ['instalacion']
+    filterset_fields = ["instalacion"]
 
     def get_queryset(self):
         user = self.request.user
-        qs = Bateria.objects.select_related('instalacion').order_by('-fecha_registro')
-        if user.rol != 'admin':
-            ids = list(user.roles_instalacion.values_list('instalacion_id', flat=True).distinct())
+        qs = Bateria.objects.select_related("instalacion").order_by("-fecha_registro")
+        if user.rol != "admin":
+            ids = list(
+                user.roles_instalacion.values_list(
+                    "instalacion_id", flat=True
+                ).distinct()
+            )
             qs = qs.filter(instalacion_id__in=ids)
-        inst_id = self.request.query_params.get('instalacion')
+        inst_id = self.request.query_params.get("instalacion")
         if inst_id:
             qs = qs.filter(instalacion_id=inst_id)
         return qs
