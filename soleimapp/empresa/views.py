@@ -1,4 +1,5 @@
 import csv
+import logging
 from datetime import timedelta
 
 from django.core.cache import cache
@@ -6,13 +7,17 @@ from django.db.models import Count, OuterRef, Q, Subquery, Sum
 from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import IsAuthenticated
 
 from alerta.models import Alerta
+from auditoria.utils import registrar_evento
 from core.models import Instalacion
+from core.permissions import IsActiveUser
 from telemetria.models import Bateria, Consumo
 
 from .permissions import check_instalacion_access, get_instalaciones_for_user, get_user_from_request
+
+logger = logging.getLogger('soleim')
 
 
 def _calcular_riesgo(alertas_criticas, alertas_medias, bateria_pct):
@@ -44,7 +49,7 @@ def _autonomia_horas(instalacion):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated, IsActiveUser])
 def panel_empresa(request):
     usuario = get_user_from_request(request)
     cache_key = f'panel_{usuario.idusuario}'
@@ -128,7 +133,7 @@ def panel_empresa(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated, IsActiveUser])
 def listar_instalaciones(request):
     usuario = get_user_from_request(request)
     roles = get_instalaciones_for_user(usuario)
@@ -158,7 +163,7 @@ def listar_instalaciones(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated, IsActiveUser])
 def detalle_instalacion(request, pk):
     usuario = get_user_from_request(request)
     if not check_instalacion_access(usuario, pk):
@@ -234,7 +239,7 @@ def detalle_instalacion(request, pk):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated, IsActiveUser])
 def reporte_consumo_csv(request):
     usuario = get_user_from_request(request)
     instalacion_id = request.GET.get('instalacion_id')
@@ -252,6 +257,20 @@ def reporte_consumo_csv(request):
         .filter(instalacion=instalacion, fecha__gte=desde)
         .order_by('-fecha')
         .values('fecha', 'fuente', 'energia_consumida', 'potencia', 'costo')
+    )
+
+    # Auditor\u00eda de descarga
+    logger.info(
+        'Descarga CSV consumo \u2014 usuario=%s instalacion=%s dias=%s',
+        usuario.email, instalacion_id, dias,
+    )
+    registrar_evento(
+        usuario=usuario,
+        accion='descarga_reporte_consumo',
+        entidad='Instalacion',
+        entidad_id=int(instalacion_id),
+        detalle={'dias': dias, 'instalacion_nombre': instalacion.nombre},
+        request=request,
     )
 
     nombre_archivo = f"consumo_{instalacion.nombre.replace(' ', '_')}_{dias}d.csv"
@@ -273,7 +292,7 @@ def reporte_consumo_csv(request):
 
 
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated, IsActiveUser])
 def reporte_alertas_csv(request):
     usuario = get_user_from_request(request)
     instalacion_id = request.GET.get('instalacion_id')
@@ -292,6 +311,20 @@ def reporte_alertas_csv(request):
         .select_related('tipoalerta', 'resuelta_por')
         .order_by('-fecha')
         .values('fecha', 'severidad', 'estado', 'mensaje', 'causa_probable', 'accion_sugerida', 'resuelta_por__nombre')
+    )
+
+    # Auditor\u00eda de descarga
+    logger.info(
+        'Descarga CSV alertas \u2014 usuario=%s instalacion=%s dias=%s',
+        usuario.email, instalacion_id, dias,
+    )
+    registrar_evento(
+        usuario=usuario,
+        accion='descarga_reporte_alertas',
+        entidad='Instalacion',
+        entidad_id=int(instalacion_id),
+        detalle={'dias': dias, 'instalacion_nombre': instalacion.nombre},
+        request=request,
     )
 
     nombre_archivo = f"alertas_{instalacion.nombre.replace(' ', '_')}_{dias}d.csv"

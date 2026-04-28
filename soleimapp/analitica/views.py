@@ -3,17 +3,19 @@ from calendar import monthrange
 from datetime import timedelta
 
 from django.core.cache import cache
-from django.db.models import Avg, Sum
+from django.db.models import Avg, Case, Count, FloatField, Sum, When
 from django.db.models.functions import TruncDay
 from django.http import JsonResponse
 from django.utils import timezone
-from django.views.decorators.http import require_GET
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 
 from alerta.models import Alerta
 from core.models import Domicilio, Empresa, Instalacion
+from core.permissions import IsActiveUser
 from telemetria.models import Bateria, Consumo
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('soleim')
 
 CACHE_TTL_SHORT = 30
 CACHE_TTL_MEDIUM = 300
@@ -36,7 +38,8 @@ def _build_filters(domicilio=None, instalacion=None):
     return {}
 
 
-@require_GET
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsActiveUser])
 def obtener_actividades_mensuales(request):
     try:
         domicilio, instalacion = _resolve_context(request)
@@ -150,7 +153,8 @@ def obtener_actividades_mensuales(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
-@require_GET
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsActiveUser])
 def obtener_estado_bateria(request):
     try:
         domicilio, instalacion = _resolve_context(request)
@@ -183,7 +187,8 @@ def obtener_estado_bateria(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
-@require_GET
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsActiveUser])
 def autonomia_instalacion(request):
     try:
         instalacion_id = request.GET.get('instalacion_id')
@@ -221,7 +226,8 @@ def autonomia_instalacion(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
-@require_GET
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsActiveUser])
 def tendencia_instalacion(request):
     try:
         instalacion_id = request.GET.get('instalacion_id')
@@ -283,8 +289,18 @@ def tendencia_instalacion(request):
         return JsonResponse({'success': False, 'error': str(e)}, status=400)
 
 
-@require_GET
+@api_view(['GET'])
+@permission_classes([IsAuthenticated, IsActiveUser])
 def comparativa_empresa(request):
+    """
+    Comparativa de consumo por instalación para los últimos 30 días.
+
+    P2 — Reescrito para eliminar el N+1 original (4 queries por instalación).
+    Ahora usa exactamente 3 queries sin importar cuántas instalaciones tenga la empresa:
+      1. Instalaciones de la empresa  (1 query)
+      2. Agregados de consumo  (1 query, GROUP BY instalacion_id)
+      3. Conteo de alertas activas  (1 query, GROUP BY instalacion_id)
+    """
     try:
         empresa_id = request.GET.get('empresa_id')
         if not empresa_id:
@@ -296,22 +312,59 @@ def comparativa_empresa(request):
             return JsonResponse({'success': True, 'data': cached, 'cached': True})
 
         empresa = Empresa.objects.get(idempresa=empresa_id)
-        instalaciones = empresa.instalaciones.all().order_by('nombre')
         desde = timezone.now() - timedelta(days=30)
-        data = []
 
+        # --- Query 1: installations (already ordered) ----
+        instalaciones = list(empresa.instalaciones.order_by('nombre'))
+        if not instalaciones:
+            cache.set(cache_key, [], CACHE_TTL_MEDIUM)
+            return JsonResponse({'success': True, 'data': []})
+
+        inst_ids = [i.idinstalacion for i in instalaciones]
+
+        # --- Query 2: consumo aggregates (1 query, GROUP BY instalacion_id) ---
+        consumo_stats = (
+            Consumo.objects
+            .filter(instalacion_id__in=inst_ids, fecha__gte=desde)
+            .values('instalacion_id')
+            .annotate(
+                solar=Sum(
+                    Case(
+                        When(fuente='solar', then='energia_consumida'),
+                        default=0,
+                        output_field=FloatField(),
+                    )
+                ),
+                total=Sum('energia_consumida'),
+                costo_total=Sum('costo'),
+            )
+        )
+        consumo_map = {r['instalacion_id']: r for r in consumo_stats}
+
+        # --- Query 3: active alert counts (1 query, GROUP BY instalacion_id) ---
+        alerta_map = {
+            r['instalacion_id']: r['count']
+            for r in (
+                Alerta.objects
+                .filter(instalacion_id__in=inst_ids, estado='activa', fecha__gte=desde)
+                .values('instalacion_id')
+                .annotate(count=Count('idalerta'))
+            )
+        }
+
+        data = []
         for instalacion in instalaciones:
-            consumos = Consumo.objects.filter(instalacion=instalacion, fecha__gte=desde)
-            solar = consumos.filter(fuente='solar').aggregate(total=Sum('energia_consumida')).get('total') or 0
-            total = consumos.aggregate(total=Sum('energia_consumida')).get('total') or 0
-            costo_total = consumos.aggregate(total=Sum('costo')).get('total') or 0
-            alertas_activas = Alerta.objects.filter(instalacion=instalacion, estado='activa', fecha__gte=desde).count()
+            stats = consumo_map.get(instalacion.idinstalacion, {})
+            solar = float(stats.get('solar') or 0)
+            total = float(stats.get('total') or 0)
+            costo_total = float(stats.get('costo_total') or 0)
+            alertas_activas = alerta_map.get(instalacion.idinstalacion, 0)
 
             data.append({
                 'instalacion_id': instalacion.idinstalacion,
                 'instalacion_nombre': instalacion.nombre,
-                'solar_ratio': round(float(solar / total), 4) if total else 0,
-                'costo_total': round(float(costo_total), 2),
+                'solar_ratio': round(solar / total, 4) if total else 0,
+                'costo_total': round(costo_total, 2),
                 'alertas_activas': alertas_activas,
             })
 

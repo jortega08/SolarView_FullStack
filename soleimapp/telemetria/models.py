@@ -24,9 +24,13 @@ class Consumo(models.Model):
         ordering = ['-fecha']
         unique_together = ('instalacion', 'fecha')
         indexes = [
+            # Legacy domicilio-based paths
             models.Index(fields=['domicilio', 'fecha'], name='idx_consumo_dom_fecha'),
             models.Index(fields=['domicilio', 'fuente', 'fecha'], name='idx_consumo_dom_fuente_fecha'),
             models.Index(fields=['fecha'], name='idx_consumo_fecha'),
+            # P2 — instalacion-based analytical queries
+            models.Index(fields=['instalacion', 'fecha'], name='idx_consumo_inst_fecha'),
+            models.Index(fields=['instalacion', 'fuente', 'fecha'], name='idx_consumo_inst_fuente_fecha'),
         ]
 
     def __str__(self):
@@ -60,8 +64,11 @@ class Bateria(models.Model):
         verbose_name = 'Bateria'
         verbose_name_plural = 'Baterias'
         indexes = [
+            # Legacy domicilio-based paths
             models.Index(fields=['domicilio', 'fecha_registro'], name='idx_bateria_dom_fecha'),
             models.Index(fields=['-fecha_registro'], name='idx_bateria_fecha_desc'),
+            # P2 — instalacion-based queries
+            models.Index(fields=['instalacion', 'fecha_registro'], name='idx_bateria_inst_fecha'),
         ]
 
     def __str__(self):

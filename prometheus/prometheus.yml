@@ -1,0 +1,43 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    environment: 'soleim'
+
+scrape_configs:
+  # Django app metrics (django-prometheus exposes /metrics)
+  - job_name: 'django'
+    static_configs:
+      - targets: ['django:8000']
+    metrics_path: /metrics
+    scrape_interval: 15s
+
+  # Celery worker metrics via prometheus-client (optional: add celery-prometheus-exporter)
+  - job_name: 'celery'
+    static_configs:
+      - targets: ['celery-worker:9090']
+    scrape_interval: 30s
+    # If no celery exporter is running, this job will fail gracefully (no alerts)
+
+  # Postgres exporter (optional: add postgres-exporter service)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # Redis exporter (optional: add redis-exporter service)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+  # Nginx exporter (optional)
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx-exporter:9113']
+    scrape_interval: 30s
+
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

@@ -22,4 +22,19 @@ RUN python manage.py collectstatic --noinput || true
 
 EXPOSE 8000
 
-CMD ["gunicorn", "soleimapp.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]
+# P2: Gunicorn default (used when docker-compose does NOT override the command).
+# Worker count formula: 2 * CPU + 1.  Set GUNICORN_WORKERS env var to override.
+# The docker-compose service uses daphne (ASGI) instead; this CMD is the
+# fallback for plain WSGI deployments (e.g. staging without WebSockets).
+CMD ["sh", "-c", \
+     "gunicorn soleimapp.wsgi:application \
+       --bind 0.0.0.0:8000 \
+       --workers ${GUNICORN_WORKERS:-3} \
+       --worker-class gthread \
+       --threads 4 \
+       --timeout 120 \
+       --keep-alive 5 \
+       --max-requests 1000 \
+       --max-requests-jitter 100 \
+       --access-logfile - \
+       --error-logfile -"]
