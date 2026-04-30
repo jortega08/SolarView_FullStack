@@ -57,6 +57,20 @@ class Usuario(models.Model):
         ("user", "Usuario"),
     )
     rol = models.CharField(max_length=10, choices=ROLES, default="user")
+    prestador = models.ForeignKey(
+        "PrestadorServicio",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="usuarios",
+    )
+    empresa_cliente = models.ForeignKey(
+        "Empresa",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="usuarios_cliente",
+    )
     fecha_registro = models.DateTimeField(auto_now_add=True)
 
     # ---------- estado de cuenta ----------
@@ -178,6 +192,30 @@ class Empresa(models.Model):
         return self.nombre
 
 
+class PrestadorServicio(models.Model):
+    idprestador = models.AutoField(primary_key=True)
+    nombre = models.CharField(max_length=150)
+    nit = models.CharField(max_length=50, unique=True, null=True, blank=True)
+    ciudad = models.ForeignKey(
+        Ciudad,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="prestadores_servicio",
+    )
+    activo = models.BooleanField(default=True)
+    fecha_registro = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "prestador_servicio"
+        ordering = ["nombre"]
+        verbose_name = "Prestador de servicio"
+        verbose_name_plural = "Prestadores de servicio"
+
+    def __str__(self):
+        return self.nombre
+
+
 class Instalacion(models.Model):
     TIPOS_SISTEMA = (
         ("hibrido", "Híbrido"),
@@ -193,6 +231,20 @@ class Instalacion(models.Model):
     idinstalacion = models.AutoField(primary_key=True)
     empresa = models.ForeignKey(
         Empresa, on_delete=models.CASCADE, related_name="instalaciones"
+    )
+    prestador = models.ForeignKey(
+        PrestadorServicio,
+        on_delete=models.PROTECT,
+        related_name="instalaciones",
+        null=True,
+        blank=True,
+    )
+    cliente = models.ForeignKey(
+        Empresa,
+        on_delete=models.PROTECT,
+        related_name="instalaciones_cliente",
+        null=True,
+        blank=True,
     )
     nombre = models.CharField(max_length=255)
     direccion = models.CharField(max_length=255, blank=True)
@@ -210,6 +262,12 @@ class Instalacion(models.Model):
     capacidad_bateria_kwh = models.FloatField(default=0)
     fecha_instalacion = models.DateField(null=True, blank=True)
     estado = models.CharField(max_length=15, choices=ESTADOS, default="activa")
+    imagen = models.ImageField(
+        upload_to="instalaciones/",
+        null=True,
+        blank=True,
+        help_text="Foto principal de la instalacion.",
+    )
 
     # --- Campos operativos de mantenimiento (P1) ---
     ultimo_mantenimiento = models.DateField(null=True, blank=True)
@@ -223,6 +281,55 @@ class Instalacion(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+class Sensor(models.Model):
+    TIPOS = (
+        ("gateway", "Gateway"),
+        ("inversor", "Inversor"),
+        ("medidor", "Medidor"),
+        ("bateria", "Bateria"),
+        ("irradiancia", "Irradiancia"),
+        ("temperatura", "Temperatura"),
+        ("otro", "Otro"),
+    )
+    ESTADOS = (
+        ("activo", "Activo"),
+        ("inactivo", "Inactivo"),
+        ("mantenimiento", "Mantenimiento"),
+    )
+
+    idsensor = models.AutoField(primary_key=True)
+    instalacion = models.ForeignKey(
+        Instalacion,
+        on_delete=models.SET_NULL,
+        related_name="sensores",
+        null=True,
+        blank=True,
+    )
+    nombre = models.CharField(max_length=120)
+    codigo = models.CharField(max_length=64, unique=True)
+    tipo = models.CharField(max_length=20, choices=TIPOS, default="medidor")
+    unidad = models.CharField(max_length=24, blank=True)
+    estado = models.CharField(max_length=20, choices=ESTADOS, default="activo")
+    ultima_lectura = models.FloatField(null=True, blank=True)
+    fecha_ultima_lectura = models.DateTimeField(null=True, blank=True)
+    notas = models.TextField(blank=True)
+    creado_at = models.DateTimeField(auto_now_add=True)
+    actualizado_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "sensor"
+        ordering = ["instalacion__nombre", "nombre"]
+        indexes = [
+            models.Index(fields=["instalacion", "estado"], name="sensor_inst_estado"),
+            models.Index(fields=["codigo"], name="sensor_codigo_idx"),
+        ]
+        verbose_name = "Sensor"
+        verbose_name_plural = "Sensores"
+
+    def __str__(self):
+        return f"{self.nombre} ({self.codigo})"
 
 
 class RolInstalacion(models.Model):

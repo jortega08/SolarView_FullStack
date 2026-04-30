@@ -122,6 +122,8 @@ class Bateria(models.Model):
         )
 
     def alerta_temperatura(self):
+        if self.capacidad_bateria <= 0:
+            return
         if self.temperatura > 40:
             from alerta.models import Alerta, TipoAlerta
 
@@ -140,6 +142,8 @@ class Bateria(models.Model):
             )
 
     def alerta_carga(self):
+        if self.capacidad_bateria <= 0:
+            return
         if self.porcentaje_carga < 20:
             from alerta.models import Alerta, TipoAlerta
 

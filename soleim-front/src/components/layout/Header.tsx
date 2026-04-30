@@ -87,6 +87,13 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
           {dropOpen && (
             <div className="absolute right-0 top-full mt-1 w-44 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-[var(--radius-lg)] shadow-[var(--shadow-overlay)] py-1 z-50">
               <Link
+                to="/perfil-profesional"
+                className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-neutral-50)]"
+                onClick={() => setDropOpen(false)}
+              >
+                Perfil profesional
+              </Link>
+              <Link
                 to="/configuracion"
                 className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-neutral-50)]"
                 onClick={() => setDropOpen(false)}

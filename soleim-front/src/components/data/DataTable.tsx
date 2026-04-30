@@ -19,6 +19,8 @@ interface DataTableProps<T> {
   emptyTitle?: string
   emptyDescription?: string
   className?: string
+  scrollContainerClassName?: string
+  stickyHeader?: boolean
 }
 
 export function DataTable<T>({
@@ -29,12 +31,14 @@ export function DataTable<T>({
   emptyTitle = "Sin resultados",
   emptyDescription,
   className,
+  scrollContainerClassName,
+  stickyHeader = false,
 }: DataTableProps<T>) {
   return (
     <div className={cn("overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)]", className)}>
-      <div className="overflow-x-auto">
+      <div className={cn("overflow-x-auto", scrollContainerClassName)}>
         <table className="w-full text-xs">
-          <thead>
+          <thead className={cn(stickyHeader && "sticky top-0 z-10")}>
             <tr className="border-b border-[var(--color-border)] bg-[var(--color-neutral-50)]">
               {columns.map((column) => (
                 <th

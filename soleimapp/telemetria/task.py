@@ -12,6 +12,18 @@ IOT_BATERIA_BUFFER_KEY = "iot:bateria_buffer"
 FLUSH_BATCH_SIZE = 500
 
 
+def _read_batch(redis, key):
+    pipe = redis.pipeline()
+    pipe.lrange(key, 0, FLUSH_BATCH_SIZE - 1)
+    result = pipe.execute()
+    return result[0] if result else []
+
+
+def _trim_batch(redis, key, count):
+    if count:
+        redis.ltrim(key, count, -1)
+
+
 @shared_task(bind=True, max_retries=3)
 def process_battery_alerts(self, bateria_id):
     try:
@@ -58,18 +70,18 @@ def notify_realtime_update(
 @shared_task(bind=True, max_retries=3, default_retry_delay=5)
 def flush_iot_buffer(self):
     """
-    P2 — Drains the Redis write-ahead buffer and persists to Postgres with bulk_create.
+    P2 - Drains the Redis write-ahead buffer and persists to Postgres with bulk_create.
 
     Called by Celery Beat every ~3 seconds (see CELERY_BEAT_SCHEDULE).
     Pattern:
-      1. Atomically pop up to FLUSH_BATCH_SIZE entries from each Redis list.
+      1. Read up to FLUSH_BATCH_SIZE entries from each Redis list.
       2. Deserialise and validate each record.
-      3. bulk_create(ignore_conflicts=True) — idempotent, safe on retry.
-      4. For each new Bateria, fire process_battery_alerts asynchronously.
+      3. bulk_create records in Postgres.
+      4. Trim Redis only after the database write succeeds.
+      5. For each new Bateria, fire process_battery_alerts asynchronously.
 
-    No record is lost: LRANGE + LTRIM inside a pipeline is effectively atomic
-    (Redis is single-threaded); on task failure the un-trimmed items remain
-    in the buffer until the next flush cycle.
+    If the database write fails, the un-trimmed items remain in Redis and the
+    task retries without losing telemetry.
     """
     try:
         from django_redis import get_redis_connection
@@ -84,10 +96,7 @@ def flush_iot_buffer(self):
 
     # ---- Consumo batch ----
     try:
-        pipe = redis.pipeline()
-        pipe.lrange(IOT_CONSUMO_BUFFER_KEY, 0, FLUSH_BATCH_SIZE - 1)
-        pipe.ltrim(IOT_CONSUMO_BUFFER_KEY, FLUSH_BATCH_SIZE, -1)
-        raw_items, _ = pipe.execute()
+        raw_items = _read_batch(redis, IOT_CONSUMO_BUFFER_KEY)
 
         if raw_items:
             from .models import Consumo
@@ -110,18 +119,16 @@ def flush_iot_buffer(self):
                     logger.warning("flush_iot_buffer: invalid consumo record discarded")
 
             if objs:
-                created = Consumo.objects.bulk_create(objs, ignore_conflicts=True)
+                created = Consumo.objects.bulk_create(objs, batch_size=FLUSH_BATCH_SIZE)
                 flushed_consumo = len(created)
+            _trim_batch(redis, IOT_CONSUMO_BUFFER_KEY, len(raw_items))
     except Exception as exc:
         logger.exception("flush_iot_buffer: consumo flush failed")
         raise self.retry(exc=exc)
 
     # ---- Bateria batch ----
     try:
-        pipe = redis.pipeline()
-        pipe.lrange(IOT_BATERIA_BUFFER_KEY, 0, FLUSH_BATCH_SIZE - 1)
-        pipe.ltrim(IOT_BATERIA_BUFFER_KEY, FLUSH_BATCH_SIZE, -1)
-        raw_items, _ = pipe.execute()
+        raw_items = _read_batch(redis, IOT_BATERIA_BUFFER_KEY)
 
         if raw_items:
             from .models import Bateria
@@ -146,13 +153,13 @@ def flush_iot_buffer(self):
                     logger.warning("flush_iot_buffer: invalid bateria record discarded")
 
             if objs:
-                created = Bateria.objects.bulk_create(
-                    objs, ignore_conflicts=True, update_conflicts=False
-                )
+                created = Bateria.objects.bulk_create(objs, batch_size=FLUSH_BATCH_SIZE)
                 flushed_bateria = len(created)
                 # Trigger battery alert checks asynchronously for newly created records
                 for bateria in created:
-                    process_battery_alerts.delay(bateria.idbateria)
+                    if bateria.idbateria:
+                        process_battery_alerts.delay(bateria.idbateria)
+            _trim_batch(redis, IOT_BATERIA_BUFFER_KEY, len(raw_items))
     except Exception as exc:
         logger.exception("flush_iot_buffer: bateria flush failed")
         raise self.retry(exc=exc)

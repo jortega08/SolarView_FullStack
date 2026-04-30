@@ -1,7 +1,19 @@
 import { useQuery } from "@tanstack/react-query"
 import { analiticaService } from "@/services/analitica.service"
-import type { BateriaSalud, Autonomia, TendenciaPunto } from "@/types/domain"
-import type { ApiAnaliticaBateria, ApiAnaliticaAutonomia, ApiTendencia } from "@/types/api"
+import type {
+  ActividadEnergetica,
+  Autonomia,
+  BateriaSalud,
+  ComparativaInstalacion,
+  TendenciaPunto,
+} from "@/types/domain"
+import type {
+  ApiAnaliticaActividad,
+  ApiAnaliticaBateria,
+  ApiAnaliticaAutonomia,
+  ApiAnaliticaComparativa,
+  ApiTendencia,
+} from "@/types/api"
 
 function normalizeBateria(api: ApiAnaliticaBateria | null | undefined, instalacionId: number): BateriaSalud | null {
   if (!api) return null
@@ -32,11 +44,33 @@ function normalizeTendencia(api: ApiTendencia): TendenciaPunto {
   return {
     fecha: api.fecha,
     generacion: api.generacion ?? api.solar ?? null,
-    consumo: api.consumo ?? api.electrica ?? null,
+    consumo: api.consumo ?? (api.solar != null || api.electrica != null ? (api.solar ?? 0) + (api.electrica ?? 0) : null),
     bateriaSoc: api.bateria_soc ?? api.bateria_avg ?? null,
     irradiancia: api.irradiancia ?? null,
     exportacion: api.exportacion ?? null,
-    importacion: api.importacion ?? null,
+    importacion: api.importacion ?? api.electrica ?? null,
+  }
+}
+
+function normalizeActividad(api: ApiAnaliticaActividad): ActividadEnergetica {
+  const solar = api.solar ?? null
+  const redElectrica = api.electrica ?? null
+  return {
+    label: api.mes ?? api.fecha ?? "Periodo",
+    fecha: api.fecha ?? null,
+    solar,
+    redElectrica,
+    consumoTotal: solar != null || redElectrica != null ? (solar ?? 0) + (redElectrica ?? 0) : null,
+  }
+}
+
+function normalizeComparativa(api: ApiAnaliticaComparativa): ComparativaInstalacion {
+  return {
+    instalacionId: api.instalacion_id,
+    instalacionNombre: api.instalacion_nombre,
+    solarRatio: api.solar_ratio ?? null,
+    costoTotal: api.costo_total ?? null,
+    alertasActivas: api.alertas_activas ?? null,
   }
 }
 
@@ -90,5 +124,35 @@ export function useAnaliticaTendencia(params: {
         .then((res) => (res.data ?? []).map(normalizeTendencia)),
     enabled: params.instalacionId != null,
     staleTime: 60_000,
+  })
+}
+
+export function useAnaliticaActividades(params: {
+  instalacionId?: number
+  periodo?: "week" | "month" | "year"
+}) {
+  return useQuery({
+    queryKey: ["analitica-actividades", params],
+    queryFn: () =>
+      analiticaService
+        .actividades({
+          instalacion_id: params.instalacionId,
+          periodo: params.periodo ?? "year",
+        })
+        .then((res) => (res.data ?? []).map(normalizeActividad)),
+    enabled: params.instalacionId != null,
+    staleTime: 60_000,
+  })
+}
+
+export function useAnaliticaComparativa(empresaId: number | null | undefined) {
+  return useQuery({
+    queryKey: ["analitica-comparativa", empresaId],
+    queryFn: () =>
+      analiticaService
+        .comparativa({ empresa_id: empresaId! })
+        .then((res) => (res.data ?? []).map(normalizeComparativa)),
+    enabled: empresaId != null,
+    staleTime: 120_000,
   })
 }

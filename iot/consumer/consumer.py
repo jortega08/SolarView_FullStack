@@ -10,6 +10,8 @@ MQTT_PASS = os.getenv("MQTT_PASS", "")
 DJANGO_API = os.getenv("DJANGO_API", "http://localhost:8000")
 # Clave compartida con el backend Django para autenticar la ingesta IoT
 IOT_SHARED_SECRET = os.getenv("IOT_SHARED_SECRET", "")
+DJANGO_REQUEST_TIMEOUT_SECONDS = float(os.getenv("DJANGO_REQUEST_TIMEOUT_SECONDS", "10"))
+HTTP = requests.Session()
 
 def on_connect(client, userdata, flags, rc):
     print(f"[Consumer] Conectado MQTT: {rc}")
@@ -27,11 +29,11 @@ def on_message(client, userdata, msg):
         headers = {}
         if IOT_SHARED_SECRET:
             headers["X-IoT-Key"] = IOT_SHARED_SECRET
-        response = requests.post(
+        response = HTTP.post(
             f"{DJANGO_API}/api/telemetria/registrar_datos/",
             json=payload,
             headers=headers,
-            timeout=5,
+            timeout=DJANGO_REQUEST_TIMEOUT_SECONDS,
         )
         print(f"[Consumer] Django Status: {response.status_code} | Resp: {response.text}")
 

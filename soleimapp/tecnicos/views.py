@@ -1,9 +1,11 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
 from rest_framework.decorators import action
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from core.access import get_user_installation_queryset
 from core.models import Ciudad, RolInstalacion
 from core.permissions import IsActiveUser
 
@@ -48,6 +50,7 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
 
     serializer_class = PerfilTecnicoSerializer
     permission_classes = [IsAuthenticated, IsActiveUser]
+    parser_classes = [JSONParser, MultiPartParser, FormParser]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["empresa", "disponible"]
 
@@ -58,6 +61,9 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
         ).prefetch_related("especialidades", "zonas")
         if user.rol == "admin":
             return qs
+
+        if user.prestador_id:
+            return qs.filter(prestador_id=user.prestador_id)
 
         # Empresas donde el usuario tiene rol 'admin_empresa'
         empresas_admin = (
@@ -83,12 +89,49 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
                         return False
                     if user.rol == "admin":
                         return True
+                    if getattr(user, "prestador_id", None):
+                        return True
                     return RolInstalacion.objects.filter(
                         usuario=user, rol="admin_empresa"
                     ).exists()
 
             return [IsAuthenticated(), IsActiveUser(), IsAdminGlobalOrEmpresa()]
         return super().get_permissions()
+
+    def _validate_scope(self, perfil_data):
+        user = self.request.user
+        if user.rol == "admin":
+            return perfil_data
+        prestador = perfil_data.get("prestador")
+        if user.prestador_id:
+            if prestador and prestador.idprestador != user.prestador_id:
+                from rest_framework.exceptions import PermissionDenied
+
+                raise PermissionDenied(
+                    "No puedes gestionar tecnicos de otro prestador."
+                )
+            perfil_data["prestador_id"] = user.prestador_id
+            return perfil_data
+
+        empresa = perfil_data.get("empresa")
+        empresas_admin = list(
+            RolInstalacion.objects.filter(usuario=user, rol="admin_empresa")
+            .values_list("instalacion__empresa_id", flat=True)
+            .distinct()
+        )
+        if empresa and empresa.idempresa not in empresas_admin:
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("No puedes gestionar tecnicos de esta empresa.")
+        return perfil_data
+
+    def perform_create(self, serializer):
+        kwargs = self._validate_scope(dict(serializer.validated_data))
+        serializer.save(**{k: v for k, v in kwargs.items() if k.endswith("_id")})
+
+    def perform_update(self, serializer):
+        kwargs = self._validate_scope(dict(serializer.validated_data))
+        serializer.save(**{k: v for k, v in kwargs.items() if k.endswith("_id")})
 
     @action(detail=False, methods=["get"], url_path="disponibles")
     def disponibles(self, request):
@@ -99,6 +142,7 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
         ciudad_id = request.query_params.get("ciudad")
         especialidad_id = request.query_params.get("especialidad")
         empresa_id = request.query_params.get("empresa")
+        prestador_id = request.query_params.get("prestador")
 
         if not ciudad_id:
             return Response(
@@ -121,22 +165,52 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
             from core.models import Empresa
 
             empresa = Empresa.objects.filter(idempresa=empresa_id).first()
+        prestador = None
+        if prestador_id:
+            from core.models import PrestadorServicio
+
+            prestador = PrestadorServicio.objects.filter(
+                idprestador=prestador_id
+            ).first()
 
         # Restringir el alcance al tenant del usuario, igual que en get_queryset
         qs = PerfilTecnico.objects.disponibles_en_zona(
             ciudad,
             especialidad=especialidad,
             empresa=empresa,
+            prestador=prestador,
         )
         if request.user.rol != "admin":
-            empresas_visibles = list(
-                RolInstalacion.objects.filter(
-                    usuario=request.user, rol__in=["admin_empresa", "operador"]
+            if request.user.prestador_id:
+                qs = qs.filter(prestador_id=request.user.prestador_id)
+            else:
+                empresas_visibles = list(
+                    get_user_installation_queryset(request.user).values_list(
+                        "empresa_id", flat=True
+                    )
                 )
-                .values_list("instalacion__empresa_id", flat=True)
-                .distinct()
-            )
-            qs = qs.filter(empresa_id__in=empresas_visibles)
+                qs = qs.filter(empresa_id__in=empresas_visibles)
 
         data = PerfilTecnicoLigeroSerializer(qs, many=True).data
         return Response({"count": len(data), "results": data})
+
+    @action(detail=False, methods=["get", "patch"], url_path="me")
+    def me(self, request):
+        perfil = (
+            PerfilTecnico.objects.select_related("usuario", "empresa")
+            .prefetch_related("especialidades", "zonas")
+            .filter(usuario=request.user)
+            .first()
+        )
+        if not perfil:
+            return Response(
+                {"error": "El usuario no tiene perfil tecnico."}, status=404
+            )
+
+        if request.method.lower() == "patch":
+            serializer = self.get_serializer(perfil, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+
+        return Response(self.get_serializer(perfil).data)

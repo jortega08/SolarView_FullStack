@@ -19,6 +19,11 @@ class CanAssignOrden(BasePermission):
             return False
         if user.rol == "admin":
             return True
+        if (
+            getattr(user, "prestador_id", None)
+            and obj.instalacion.prestador_id == user.prestador_id
+        ):
+            return True
         return RolInstalacion.objects.filter(
             usuario=user,
             instalacion=obj.instalacion,
@@ -56,6 +61,11 @@ class CanCancelOrden(BasePermission):
         if user.rol == "admin":
             return True
         if obj.creado_por_id == user.idusuario:
+            return True
+        if (
+            getattr(user, "prestador_id", None)
+            and obj.instalacion.prestador_id == user.prestador_id
+        ):
             return True
         return RolInstalacion.objects.filter(
             usuario=user,

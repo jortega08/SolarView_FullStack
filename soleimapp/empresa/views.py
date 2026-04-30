@@ -11,13 +11,14 @@ from rest_framework.permissions import IsAuthenticated
 
 from alerta.models import Alerta
 from auditoria.utils import registrar_evento
+from core.access import get_user_installation_queryset
 from core.models import Instalacion
 from core.permissions import IsActiveUser
+from ordenes.models import OrdenTrabajo
 from telemetria.models import Bateria, Consumo
 
 from .permissions import (
     check_instalacion_access,
-    get_instalaciones_for_user,
     get_user_from_request,
 )
 
@@ -56,37 +57,59 @@ def _autonomia_horas(instalacion):
     return round(float(energia_disponible / promedio_hora), 2)
 
 
+def _round_float(value, digits=2):
+    if value is None:
+        return None
+    return round(float(value), digits)
+
+
+def _solar_irradiancia(potencia_actual, capacidad_panel_kw):
+    if potencia_actual is None or not capacidad_panel_kw:
+        return None
+    return round(
+        max(0, min(1000, (float(potencia_actual) / capacidad_panel_kw) * 1000)),
+        2,
+    )
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated, IsActiveUser])
 def panel_empresa(request):
     usuario = get_user_from_request(request)
-    cache_key = f"panel_{usuario.idusuario}"
+    cliente_id = request.GET.get("cliente_id") or request.GET.get("empresa_id")
+    prestador_id = request.GET.get("prestador_id")
+    cache_key = (
+        f"panel_{usuario.idusuario}:cliente:{cliente_id or 'all'}:"
+        f"prestador:{prestador_id or 'all'}"
+    )
     cached = cache.get(cache_key)
     if cached:
         return JsonResponse(cached)
 
-    roles = get_instalaciones_for_user(usuario)
-    instalaciones_ids = list(roles.values_list("instalacion_id", flat=True).distinct())
+    base_qs = get_user_installation_queryset(usuario)
+    if cliente_id:
+        base_qs = base_qs.filter(Q(cliente_id=cliente_id) | Q(empresa_id=cliente_id))
+    if prestador_id:
+        base_qs = base_qs.filter(prestador_id=prestador_id)
 
-    if not instalaciones_ids:
+    if not base_qs.exists():
         data = {
             "empresa": None,
+            "prestador": None,
+            "clientes": [],
             "instalaciones": [],
             "resumen": {"total": 0, "con_alerta_critica": 0, "en_mantenimiento": 0},
         }
         cache.set(cache_key, data, 30)
         return JsonResponse(data)
 
-    empresa_id = request.GET.get("empresa_id")
-    base_qs = Instalacion.objects.filter(idinstalacion__in=instalaciones_ids)
-    if empresa_id:
-        base_qs = base_qs.filter(empresa_id=empresa_id)
-
-    referencia = base_qs.select_related("empresa").first()
+    referencia = base_qs.select_related("empresa", "cliente", "prestador").first()
     if not referencia:
         return JsonResponse(
             {
                 "empresa": None,
+                "prestador": None,
+                "clientes": [],
                 "instalaciones": [],
                 "resumen": {"total": 0, "con_alerta_critica": 0, "en_mantenimiento": 0},
             }
@@ -95,12 +118,39 @@ def panel_empresa(request):
     latest_battery = Bateria.objects.filter(instalacion_id=OuterRef("pk")).order_by(
         "-fecha_registro"
     )
+    latest_consumo = Consumo.objects.filter(instalacion_id=OuterRef("pk")).order_by(
+        "-fecha"
+    )
+    hoy = timezone.localdate()
+    solar_hoy = (
+        Consumo.objects.filter(
+            instalacion_id=OuterRef("pk"),
+            fecha__date=hoy,
+            fuente="solar",
+        )
+        .values("instalacion_id")
+        .annotate(total=Sum("energia_consumida"))
+        .values("total")
+    )
+    red_hoy = (
+        Consumo.objects.filter(
+            instalacion_id=OuterRef("pk"),
+            fecha__date=hoy,
+            fuente="electrica",
+        )
+        .values("instalacion_id")
+        .annotate(total=Sum("energia_consumida"))
+        .values("total")
+    )
     instalaciones = (
-        base_qs.filter(empresa=referencia.empresa)
-        .select_related("empresa")
+        base_qs.select_related("empresa", "cliente", "prestador", "ciudad")
         .annotate(
             bateria_pct=Subquery(latest_battery.values("porcentaje_carga")[:1]),
+            bateria_temp=Subquery(latest_battery.values("temperatura")[:1]),
             ultimo_registro=Subquery(latest_battery.values("fecha_registro")[:1]),
+            potencia_actual=Subquery(latest_consumo.values("potencia")[:1]),
+            generacion_hoy=Subquery(solar_hoy[:1]),
+            red_hoy=Subquery(red_hoy[:1]),
             alertas_criticas=Count(
                 "alertas",
                 filter=Q(
@@ -120,17 +170,40 @@ def panel_empresa(request):
     instalaciones_data = []
     con_alerta_critica = 0
     en_mantenimiento = 0
+    total_generacion_hoy = 0.0
+    total_red_hoy = 0.0
+    temperaturas = []
+    irradiancias = []
 
     for instalacion in instalaciones:
+        bateria_pct = (
+            instalacion.bateria_pct
+            if instalacion.capacidad_bateria_kwh
+            and instalacion.capacidad_bateria_kwh > 0
+            else None
+        )
         riesgo = _calcular_riesgo(
             instalacion.alertas_criticas,
             instalacion.alertas_medias,
-            instalacion.bateria_pct,
+            bateria_pct,
         )
         if instalacion.alertas_criticas:
             con_alerta_critica += 1
         if instalacion.estado == "mantenimiento":
             en_mantenimiento += 1
+
+        generacion_hoy = float(instalacion.generacion_hoy or 0)
+        red_kwh = float(instalacion.red_hoy or 0)
+        total_generacion_hoy += generacion_hoy
+        total_red_hoy += red_kwh
+        if instalacion.bateria_temp is not None:
+            temperaturas.append(float(instalacion.bateria_temp))
+        irradiancia = _solar_irradiancia(
+            instalacion.potencia_actual,
+            instalacion.capacidad_panel_kw,
+        )
+        if irradiancia is not None:
+            irradiancias.append(irradiancia)
 
         instalaciones_data.append(
             {
@@ -138,12 +211,38 @@ def panel_empresa(request):
                 "nombre": instalacion.nombre,
                 "estado": instalacion.estado,
                 "bateria_pct": (
-                    round(float(instalacion.bateria_pct), 2)
-                    if instalacion.bateria_pct is not None
-                    else None
+                    round(float(bateria_pct), 2) if bateria_pct is not None else None
                 ),
                 "alertas_criticas": instalacion.alertas_criticas,
                 "riesgo": riesgo,
+                "potencia_actual": _round_float(instalacion.potencia_actual),
+                "generacion_hoy": round(generacion_hoy, 2),
+                "tipo_sistema": instalacion.tipo_sistema,
+                "empresa": (
+                    instalacion.cliente.nombre
+                    if instalacion.cliente
+                    else instalacion.empresa.nombre
+                ),
+                "cliente": (
+                    {
+                        "id": instalacion.cliente_id,
+                        "nombre": instalacion.cliente.nombre,
+                    }
+                    if instalacion.cliente
+                    else {
+                        "id": instalacion.empresa_id,
+                        "nombre": instalacion.empresa.nombre,
+                    }
+                ),
+                "prestador": (
+                    {
+                        "id": instalacion.prestador_id,
+                        "nombre": instalacion.prestador.nombre,
+                    }
+                    if instalacion.prestador
+                    else None
+                ),
+                "ciudad": instalacion.ciudad.nombre if instalacion.ciudad else None,
                 "ultimo_registro": (
                     instalacion.ultimo_registro.isoformat()
                     if instalacion.ultimo_registro
@@ -152,10 +251,83 @@ def panel_empresa(request):
             }
         )
 
+    inst_ids_ref = [item["id"] for item in instalaciones_data]
+    ordenes_activas = OrdenTrabajo.objects.filter(
+        instalacion_id__in=inst_ids_ref,
+        estado__in=OrdenTrabajo.ESTADOS_ACTIVOS,
+    ).select_related("instalacion")
+    ordenes_abiertas = ordenes_activas.count()
+    sla_en_riesgo = sum(1 for orden in ordenes_activas if orden.es_sla_vencido())
+    energia_total = total_generacion_hoy + total_red_hoy
+    temperatura_promedio = (
+        round(sum(temperaturas) / len(temperaturas), 2) if temperaturas else None
+    )
+    irradiancia_promedio = (
+        round(sum(irradiancias) / len(irradiancias), 2) if irradiancias else None
+    )
+
+    clientes = {}
+    prestadores = {}
+    for instalacion in instalaciones:
+        cliente = instalacion.cliente or instalacion.empresa
+        clientes[cliente.idempresa] = {
+            "id": cliente.idempresa,
+            "nombre": cliente.nombre,
+        }
+        if instalacion.prestador:
+            prestadores[instalacion.prestador_id] = {
+                "id": instalacion.prestador_id,
+                "nombre": instalacion.prestador.nombre,
+            }
+
+    empresa_contexto = None
+    if cliente_id and referencia:
+        cliente_ref = referencia.cliente or referencia.empresa
+        empresa_contexto = {"id": cliente_ref.idempresa, "nombre": cliente_ref.nombre}
+    elif len(clientes) == 1:
+        empresa_contexto = next(iter(clientes.values()))
+    elif usuario.prestador_id and usuario.prestador:
+        empresa_contexto = {
+            "id": usuario.prestador_id,
+            "nombre": usuario.prestador.nombre,
+        }
+    elif len(prestadores) == 1:
+        empresa_contexto = next(iter(prestadores.values()))
+
     data = {
-        "empresa": {
-            "id": referencia.empresa.idempresa,
-            "nombre": referencia.empresa.nombre,
+        "empresa": empresa_contexto,
+        "prestador": (
+            {"id": usuario.prestador_id, "nombre": usuario.prestador.nombre}
+            if usuario.prestador_id and usuario.prestador
+            else (next(iter(prestadores.values())) if len(prestadores) == 1 else None)
+        ),
+        "clientes": list(clientes.values()),
+        "instalaciones_activas": sum(
+            1 for item in instalaciones_data if item["estado"] == "activa"
+        ),
+        "total_generacion_hoy": round(total_generacion_hoy, 2),
+        "ahorro_estimado": round(total_generacion_hoy * 800, 2),
+        "alertas_criticas": con_alerta_critica,
+        "ordenes_abiertas": ordenes_abiertas,
+        "sla_en_riesgo": sla_en_riesgo,
+        "fuentes_energia": {
+            "solar_kwh": round(total_generacion_hoy, 2),
+            "red_kwh": round(total_red_hoy, 2),
+            "solar_pct": (
+                round((total_generacion_hoy / energia_total) * 100, 2)
+                if energia_total
+                else 0
+            ),
+            "red_pct": (
+                round((total_red_hoy / energia_total) * 100, 2) if energia_total else 0
+            ),
+        },
+        "clima": {
+            "temperatura": temperatura_promedio,
+            "humedad": None,
+            "viento": None,
+            "descripcion": "Estimado desde telemetria de campo",
+            "irradiancia": irradiancia_promedio,
         },
         "instalaciones": instalaciones_data,
         "resumen": {
@@ -172,13 +344,20 @@ def panel_empresa(request):
 @permission_classes([IsAuthenticated, IsActiveUser])
 def listar_instalaciones(request):
     usuario = get_user_from_request(request)
-    roles = get_instalaciones_for_user(usuario)
-    instalaciones_ids = list(roles.values_list("instalacion_id", flat=True).distinct())
+    cliente_id = request.GET.get("cliente_id") or request.GET.get("empresa_id")
+    prestador_id = request.GET.get("prestador_id")
 
-    instalaciones = (
-        Instalacion.objects.filter(idinstalacion__in=instalaciones_ids)
-        .select_related("empresa", "ciudad")
-        .order_by("empresa__nombre", "nombre")
+    instalaciones = get_user_installation_queryset(usuario).select_related(
+        "empresa", "cliente", "prestador", "ciudad"
+    )
+    if cliente_id:
+        instalaciones = instalaciones.filter(
+            Q(cliente_id=cliente_id) | Q(empresa_id=cliente_id)
+        )
+    if prestador_id:
+        instalaciones = instalaciones.filter(prestador_id=prestador_id)
+    instalaciones = instalaciones.order_by(
+        "cliente__nombre", "empresa__nombre", "nombre"
     )
 
     return JsonResponse(
@@ -188,7 +367,30 @@ def listar_instalaciones(request):
                 {
                     "id": instalacion.idinstalacion,
                     "nombre": instalacion.nombre,
-                    "empresa": instalacion.empresa.nombre,
+                    "empresa": (
+                        instalacion.cliente.nombre
+                        if instalacion.cliente
+                        else instalacion.empresa.nombre
+                    ),
+                    "cliente": (
+                        {
+                            "id": instalacion.cliente_id,
+                            "nombre": instalacion.cliente.nombre,
+                        }
+                        if instalacion.cliente
+                        else {
+                            "id": instalacion.empresa_id,
+                            "nombre": instalacion.empresa.nombre,
+                        }
+                    ),
+                    "prestador": (
+                        {
+                            "id": instalacion.prestador_id,
+                            "nombre": instalacion.prestador.nombre,
+                        }
+                        if instalacion.prestador
+                        else None
+                    ),
                     "ciudad": instalacion.ciudad.nombre if instalacion.ciudad else None,
                     "estado": instalacion.estado,
                     "tipo_sistema": instalacion.tipo_sistema,
@@ -213,9 +415,9 @@ def detalle_instalacion(request, pk):
     if cached:
         return JsonResponse(cached)
 
-    instalacion = Instalacion.objects.select_related("empresa", "ciudad").get(
-        idinstalacion=pk
-    )
+    instalacion = Instalacion.objects.select_related(
+        "empresa", "cliente", "prestador", "ciudad"
+    ).get(idinstalacion=pk)
     bateria = (
         Bateria.objects.filter(instalacion=instalacion)
         .order_by("-fecha_registro")
@@ -224,6 +426,9 @@ def detalle_instalacion(request, pk):
     hoy = timezone.localdate()
 
     consumo_hoy = Consumo.objects.filter(instalacion=instalacion, fecha__date=hoy)
+    ultimo_consumo = (
+        Consumo.objects.filter(instalacion=instalacion).order_by("-fecha").first()
+    )
     consumo_solar = (
         consumo_hoy.filter(fuente="solar")
         .aggregate(total=Sum("energia_consumida"))
@@ -237,6 +442,13 @@ def detalle_instalacion(request, pk):
         or 0
     )
     costo_total = consumo_hoy.aggregate(total=Sum("costo")).get("total") or 0
+    consumo_total = float(consumo_solar or 0) + float(consumo_electrica or 0)
+    potencia_actual = ultimo_consumo.potencia if ultimo_consumo else None
+    eficiencia = (
+        _solar_irradiancia(potencia_actual, instalacion.capacidad_panel_kw) / 10
+        if potencia_actual is not None and instalacion.capacidad_panel_kw
+        else None
+    )
     alertas = (
         Alerta.objects.filter(instalacion=instalacion, estado="activa")
         .select_related("tipoalerta", "resuelta_por")
@@ -246,7 +458,30 @@ def detalle_instalacion(request, pk):
     data = {
         "instalacion": {
             "id": instalacion.idinstalacion,
-            "empresa": instalacion.empresa.nombre,
+            "empresa": (
+                instalacion.cliente.nombre
+                if instalacion.cliente
+                else instalacion.empresa.nombre
+            ),
+            "cliente": (
+                {
+                    "id": instalacion.cliente_id,
+                    "nombre": instalacion.cliente.nombre,
+                }
+                if instalacion.cliente
+                else {
+                    "id": instalacion.empresa_id,
+                    "nombre": instalacion.empresa.nombre,
+                }
+            ),
+            "prestador": (
+                {
+                    "id": instalacion.prestador_id,
+                    "nombre": instalacion.prestador.nombre,
+                }
+                if instalacion.prestador
+                else None
+            ),
             "nombre": instalacion.nombre,
             "direccion": instalacion.direccion,
             "ciudad": instalacion.ciudad.nombre if instalacion.ciudad else None,
@@ -259,6 +494,15 @@ def detalle_instalacion(request, pk):
                 if instalacion.fecha_instalacion
                 else None
             ),
+            "potencia_actual": _round_float(potencia_actual),
+            "generacion_hoy": round(float(consumo_solar), 2),
+            "consumo_actual": round(consumo_total, 2),
+            "bateria_soc": (
+                round(float(bateria.porcentaje_carga), 2)
+                if bateria and instalacion.capacidad_bateria_kwh > 0
+                else None
+            ),
+            "eficiencia": round(eficiencia, 2) if eficiencia is not None else None,
         },
         "bateria": (
             {

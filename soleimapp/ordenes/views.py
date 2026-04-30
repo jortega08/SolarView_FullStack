@@ -10,7 +10,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from auditoria.utils import registrar_evento
-from core.models import RolInstalacion, Usuario
+from core.access import (
+    get_user_installation_queryset,
+    user_can_access_installation,
+    user_has_installation_role,
+)
+from core.models import Usuario
 from core.permissions import IsActiveUser, IsOperadorOrAdmin
 
 from .models import ComentarioOrden, EvidenciaOrden, OrdenTrabajo
@@ -30,11 +35,9 @@ logger = logging.getLogger("soleim")
 
 
 def _instalaciones_visibles(user):
-    """IDs de instalaciones donde el usuario tiene cualquier RolInstalacion."""
+    """IDs de instalaciones visibles para el usuario."""
     return list(
-        RolInstalacion.objects.filter(usuario=user)
-        .values_list("instalacion_id", flat=True)
-        .distinct()
+        get_user_installation_queryset(user).values_list("idinstalacion", flat=True)
     )
 
 
@@ -63,6 +66,7 @@ class OrdenTrabajoViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = OrdenTrabajo.objects.select_related(
             "instalacion__empresa",
+            "instalacion__prestador",
             "asignado_a",
             "creado_por",
             "alerta",
@@ -90,6 +94,23 @@ class OrdenTrabajoViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_create(self, serializer):
+        instalacion = serializer.validated_data.get("instalacion")
+        user = self.request.user
+        if user.rol != "admin":
+            if not user_can_access_installation(user, instalacion):
+                from rest_framework.exceptions import PermissionDenied
+
+                raise PermissionDenied("No puedes crear ordenes en esta instalacion.")
+            provider_match = (
+                getattr(user, "prestador_id", None)
+                and instalacion.prestador_id == user.prestador_id
+            )
+            if not provider_match and not user_has_installation_role(
+                user, instalacion, "operador"
+            ):
+                from rest_framework.exceptions import PermissionDenied
+
+                raise PermissionDenied("No puedes crear ordenes en esta instalacion.")
         orden = serializer.save(creado_por=self.request.user)
         logger.info("Orden creada: %s por %s", orden.codigo, self.request.user.email)
         registrar_evento(
@@ -117,9 +138,23 @@ class OrdenTrabajoViewSet(viewsets.ModelViewSet):
         if not tecnico_id:
             return Response({"error": "tecnico_id es requerido."}, status=400)
         try:
-            tecnico = Usuario.objects.get(idusuario=tecnico_id)
+            tecnico = Usuario.objects.select_related("perfil_tecnico").get(
+                idusuario=tecnico_id
+            )
         except Usuario.DoesNotExist:
             return Response({"error": "Técnico no encontrado."}, status=404)
+
+        perfil = getattr(tecnico, "perfil_tecnico", None)
+        if (
+            orden.instalacion.prestador_id
+            and perfil
+            and perfil.prestador_id
+            and perfil.prestador_id != orden.instalacion.prestador_id
+        ):
+            return Response(
+                {"error": "El tecnico no pertenece al prestador de la instalacion."},
+                status=403,
+            )
 
         sla = request.data.get("sla_objetivo_horas")
         if sla:

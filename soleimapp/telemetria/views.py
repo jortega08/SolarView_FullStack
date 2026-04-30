@@ -2,6 +2,7 @@ import json
 import logging
 
 from django.conf import settings
+from django.db import IntegrityError
 from django.db.models import Sum
 from django.http import JsonResponse
 from django.utils import timezone
@@ -11,6 +12,7 @@ from rest_framework import viewsets
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
+from core.access import get_user_installation_queryset
 from core.models import ConfiguracionUser, Domicilio, Instalacion
 from core.permissions import IsActiveUser
 from soleimapp.pagination import (
@@ -25,6 +27,16 @@ from .task import IOT_BATERIA_BUFFER_KEY, IOT_CONSUMO_BUFFER_KEY
 logger = logging.getLogger("soleim")
 
 FUENTES_VALIDAS = {"solar", "electrica"}
+REALTIME_OPTIONAL_FIELDS = {
+    "energia_generada",
+    "irradiancia",
+    "exportacion",
+    "importacion",
+    "temperatura_ambiente",
+    "humedad",
+    "viento",
+    "timestamp",
+}
 
 
 # ---------------------------------------------------------------------------
@@ -42,6 +54,59 @@ def _validate_positive_float(value, field_name):
     if val < 0:
         raise ValueError(f"El campo '{field_name}' no puede ser negativo.")
     return val
+
+
+def _optional_realtime_fields(data):
+    values = {}
+    for field in REALTIME_OPTIONAL_FIELDS:
+        value = data.get(field)
+        if value is None:
+            continue
+        if field == "timestamp":
+            values[field] = str(value)
+            continue
+        try:
+            values[field] = float(value)
+        except (TypeError, ValueError):
+            logger.warning("registrar_datos: campo opcional invalido: %s", field)
+    return values
+
+
+def _optional_positive_int(value, field_name):
+    if value in (None, ""):
+        return None
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"El campo '{field_name}' debe ser un entero valido.") from exc
+    if parsed <= 0:
+        raise ValueError(f"El campo '{field_name}' debe ser mayor que cero.")
+    return parsed
+
+
+def _resolve_ingest_ids(data):
+    domicilio_id = _optional_positive_int(data.get("domicilio_id"), "domicilio_id")
+    instalacion_id = _optional_positive_int(
+        data.get("instalacion_id"), "instalacion_id"
+    )
+
+    if not domicilio_id and not instalacion_id:
+        raise ValueError("domicilio_id o instalacion_id es requerido")
+
+    # Fast path for MQTT: the publisher sends instalacion_id, so avoid a DB
+    # lookup for every sensor sample.
+    if instalacion_id or not domicilio_id:
+        return domicilio_id, instalacion_id
+
+    # Legacy domicilio-only payloads can still be linked to an installation.
+    instalacion_id = (
+        ConfiguracionUser.objects.filter(
+            domicilio_id=domicilio_id, instalacion__isnull=False
+        )
+        .values_list("instalacion_id", flat=True)
+        .first()
+    )
+    return domicilio_id, instalacion_id
 
 
 def _resolve_operational_context(data):
@@ -129,7 +194,7 @@ def registrar_datos(request):
 
     try:
         data = json.loads(request.body)
-        domicilio, instalacion = _resolve_operational_context(data)
+        domicilio_id, instalacion_id = _resolve_ingest_ids(data)
 
         energia_consumida = _validate_positive_float(
             data.get("energia_consumida"), "energia_consumida"
@@ -166,8 +231,22 @@ def registrar_datos(request):
             data.get("tiempo_restante"), "tiempo_restante"
         )
 
-        instalacion_id = instalacion.idinstalacion if instalacion else None
-        domicilio_id = domicilio.iddomicilio if domicilio else None
+        realtime_extra = _optional_realtime_fields(data)
+        realtime_payload = {
+            "instalacion_id": instalacion_id,
+            "domicilio_id": domicilio_id,
+            "energia_consumida": energia_consumida,
+            "potencia": potencia,
+            "fuente": fuente,
+            "costo": costo,
+            "voltaje": voltaje,
+            "corriente": corriente,
+            "temperatura": temperatura,
+            "capacidad_bateria": capacidad_bateria,
+            "porcentaje_carga": porcentaje_carga_val,
+            "tiempo_restante": tiempo_restante,
+            **realtime_extra,
+        }
 
         buffer_enabled = getattr(settings, "IOT_BUFFER_ENABLED", False)
 
@@ -212,15 +291,7 @@ def registrar_datos(request):
                     instalacion_id=instalacion_id,
                     domicilio_id=domicilio_id,
                     data_type="sensor",
-                    data={
-                        "instalacion_id": instalacion_id,
-                        "domicilio_id": domicilio_id,
-                        "energia_consumida": energia_consumida,
-                        "fuente": fuente,
-                        "porcentaje_carga": porcentaje_carga_val,
-                        "temperatura": temperatura,
-                        "buffered": True,
-                    },
+                    data={**realtime_payload, "buffered": True},
                 )
                 return JsonResponse(
                     {
@@ -235,8 +306,8 @@ def registrar_datos(request):
 
         # ---- Synchronous / direct-write path (original behaviour) ----
         consumo = Consumo.objects.create(
-            domicilio=domicilio,
-            instalacion=instalacion,
+            domicilio_id=domicilio_id,
+            instalacion_id=instalacion_id,
             energia_consumida=energia_consumida,
             potencia=potencia,
             fuente=fuente,
@@ -244,8 +315,8 @@ def registrar_datos(request):
         )
 
         bateria = Bateria.objects.create(
-            domicilio=domicilio,
-            instalacion=instalacion,
+            domicilio_id=domicilio_id,
+            instalacion_id=instalacion_id,
             voltaje=voltaje,
             corriente=corriente,
             temperatura=temperatura,
@@ -262,14 +333,9 @@ def registrar_datos(request):
             domicilio_id=domicilio_id,
             data_type="sensor",
             data={
+                **realtime_payload,
                 "consumo_id": consumo.idconsumo,
                 "bateria_id": bateria.idbateria,
-                "instalacion_id": instalacion_id,
-                "domicilio_id": domicilio_id,
-                "energia_consumida": energia_consumida,
-                "fuente": fuente,
-                "porcentaje_carga": porcentaje_carga_val,
-                "temperatura": temperatura,
             },
         )
 
@@ -296,6 +362,14 @@ def registrar_datos(request):
         return JsonResponse({"success": False, "error": str(e)}, status=400)
     except json.JSONDecodeError:
         return JsonResponse({"success": False, "error": "JSON inválido"}, status=400)
+    except IntegrityError:
+        return JsonResponse(
+            {
+                "success": False,
+                "error": "domicilio_id o instalacion_id no existe",
+            },
+            status=400,
+        )
     except Exception:
         logger.exception("Error en registrar_datos")
         return JsonResponse(
@@ -318,7 +392,7 @@ def ver_datos(request):
 
     if user.rol != "admin":
         ids = list(
-            user.roles_instalacion.values_list("instalacion_id", flat=True).distinct()
+            get_user_installation_queryset(user).values_list("idinstalacion", flat=True)
         )
         consumos_qs = consumos_qs.filter(instalacion_id__in=ids)
         baterias_qs = baterias_qs.filter(instalacion_id__in=ids)
@@ -425,9 +499,9 @@ class ConsumoViewSet(viewsets.ReadOnlyModelViewSet):
         qs = Consumo.objects.select_related("instalacion").order_by("-fecha")
         if user.rol != "admin":
             ids = list(
-                user.roles_instalacion.values_list(
-                    "instalacion_id", flat=True
-                ).distinct()
+                get_user_installation_queryset(user).values_list(
+                    "idinstalacion", flat=True
+                )
             )
             qs = qs.filter(instalacion_id__in=ids)
         # Optional ?instalacion filter (already handled by filterset_fields but
@@ -454,9 +528,9 @@ class BateriaViewSet(viewsets.ReadOnlyModelViewSet):
         qs = Bateria.objects.select_related("instalacion").order_by("-fecha_registro")
         if user.rol != "admin":
             ids = list(
-                user.roles_instalacion.values_list(
-                    "instalacion_id", flat=True
-                ).distinct()
+                get_user_installation_queryset(user).values_list(
+                    "idinstalacion", flat=True
+                )
             )
             qs = qs.filter(instalacion_id__in=ids)
         inst_id = self.request.query_params.get("instalacion")

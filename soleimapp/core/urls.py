@@ -11,7 +11,9 @@ router.register(r"paises", views.PaisViewSet, basename="pais")
 router.register(r"estados", views.EstadoViewSet, basename="estado")
 router.register(r"ciudades", views.CiudadViewSet, basename="ciudad")
 router.register(r"empresas", views.EmpresaViewSet, basename="empresa")
+router.register(r"prestadores", views.PrestadorServicioViewSet, basename="prestador")
 router.register(r"instalaciones", views.InstalacionViewSet, basename="instalacion")
+router.register(r"sensores", views.SensorViewSet, basename="sensor")
 
 urlpatterns = [
     path("api/core/", include(router.urls)),

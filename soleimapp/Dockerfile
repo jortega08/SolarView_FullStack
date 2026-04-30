@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p /app/staticfiles /home/appuser && chown -R appuser:appuser /app /home/appuser
+RUN mkdir -p /app/staticfiles /app/media /home/appuser && chown -R appuser:appuser /app /home/appuser
 
 USER appuser
 

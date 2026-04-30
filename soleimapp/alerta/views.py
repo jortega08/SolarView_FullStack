@@ -6,6 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from auditoria.utils import registrar_evento
+from core.access import get_user_installation_queryset, user_can_access_installation
 from core.permissions import IsActiveUser
 
 from .models import Alerta, TipoAlerta
@@ -17,7 +18,7 @@ def _instalacion_ids_for_user(user):
     if user.rol == "admin":
         return None  # None indica "sin restricción"
     return list(
-        user.roles_instalacion.values_list("instalacion_id", flat=True).distinct()
+        get_user_installation_queryset(user).values_list("idinstalacion", flat=True)
     )
 
 
@@ -44,6 +45,26 @@ class AlertaViewSet(viewsets.ModelViewSet):
         # Cada usuario sólo ve las alertas de sus instalaciones o sus domicilios
         ids = _instalacion_ids_for_user(user)
         return qs.filter(Q(instalacion_id__in=ids) | Q(domicilio__usuario=user))
+
+    def perform_create(self, serializer):
+        instalacion = serializer.validated_data.get("instalacion")
+        if instalacion and not user_can_access_installation(
+            self.request.user, instalacion
+        ):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("No puedes crear alertas en esta instalacion.")
+        serializer.save()
+
+    def perform_update(self, serializer):
+        instalacion = serializer.validated_data.get("instalacion")
+        if instalacion and not user_can_access_installation(
+            self.request.user, instalacion
+        ):
+            from rest_framework.exceptions import PermissionDenied
+
+            raise PermissionDenied("No puedes mover alertas a esta instalacion.")
+        serializer.save()
 
     @action(detail=True, methods=["post"], url_path="resolver")
     def resolver(self, request, pk=None):

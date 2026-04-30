@@ -1,43 +1,86 @@
-import { useParams, Link } from "react-router-dom"
+import { Link, useParams } from "react-router-dom"
+import type { ReactNode } from "react"
 import {
-  Zap, Battery, Thermometer, Sun, Activity,
-  AlertTriangle, ClipboardList, Calendar, Download,
-  ChevronRight, MapPin, Settings2
+  AlertTriangle,
+  Activity,
+  Battery,
+  Calendar,
+  ChevronRight,
+  ClipboardList,
+  Download,
+  FileText,
+  Home,
+  Info,
+  Radio,
+  Sun,
+  Thermometer,
+  Zap,
 } from "lucide-react"
+import { format, subDays } from "date-fns"
 import { useDetalleInstalacion } from "@/hooks/useDetalleInstalacion"
-import { useAnaliticaBateria, useAnaliticaAutonomia, useAnaliticaTendencia } from "@/hooks/useAnalitica"
+import {
+  useAnaliticaAutonomia,
+  useAnaliticaBateria,
+  useAnaliticaTendencia,
+} from "@/hooks/useAnalitica"
 import { useAlertas } from "@/hooks/useAlertas"
-import { useOrdenes } from "@/hooks/useOrdenes"
 import { useMantenimientos } from "@/hooks/useMantenimientos"
+import { useOrdenes } from "@/hooks/useOrdenes"
 import { useSensorSocket } from "@/hooks/useSensorSocket"
-import { MetricCard } from "@/components/data/MetricCard"
-import { ChartCard } from "@/components/data/ChartCard"
 import { AreaTimeSeries } from "@/components/charts/AreaTimeSeries"
+import { ChartCard } from "@/components/data/ChartCard"
+import { MetricCard } from "@/components/data/MetricCard"
 import { BatteryGauge } from "@/components/domain/BatteryGauge"
 import { TelemetryTimeline } from "@/components/domain/TelemetryTimeline"
-import { AlertList } from "@/components/domain/AlertList"
-import { StatusBadge } from "@/components/status/StatusBadge"
-import { SeverityBadge } from "@/components/status/SeverityBadge"
-import { LiveBadge } from "@/components/status/LiveBadge"
 import { EmptyState } from "@/components/feedback/EmptyState"
-import { Skeleton } from "@/components/feedback/LoadingSkeleton"
 import { ErrorState } from "@/components/feedback/ErrorState"
+import { Skeleton } from "@/components/feedback/LoadingSkeleton"
+import { LiveBadge } from "@/components/status/LiveBadge"
+import { OrdenEstadoBadge } from "@/components/status/OrdenEstadoBadge"
+import { SeverityBadge } from "@/components/status/SeverityBadge"
+import { StatusBadge } from "@/components/status/StatusBadge"
 import {
-  formatPower, formatEnergy, formatPercent, formatTemp,
-  formatVoltage, formatCurrent, formatRelativeTime, formatDate, formatDuration
+  formatCurrent,
+  formatDate,
+  formatDuration,
+  formatEnergy,
+  formatPercent,
+  formatPower,
+  formatRelativeTime,
+  formatTemp,
+  formatVoltage,
 } from "@/lib/format"
-import { subDays, format } from "date-fns"
+import type { Alerta, MantenimientoProgramado, Orden } from "@/types/domain"
+import type { BateriaSalud, TelemetriaEvento } from "@/types/domain"
+import type { ConexionWS, SeveridadAlerta } from "@/types/enums"
+
+const ALERT_GROUPS: Array<{ severidad: SeveridadAlerta; label: string; color: string }> = [
+  { severidad: "critica", label: "Críticas", color: "text-[var(--color-danger-600)]" },
+  { severidad: "alta", label: "Altas", color: "text-[var(--color-warning-600)]" },
+  { severidad: "media", label: "Medias", color: "text-[var(--color-solar-600)]" },
+  { severidad: "baja", label: "Bajas", color: "text-[var(--color-primary-600)]" },
+]
 
 export default function InstalacionDetallePage() {
   const { id } = useParams<{ id: string }>()
-  const instalacionId = id ? parseInt(id, 10) : null
+  const instalacionId = id ? Number.parseInt(id, 10) : null
 
   const { data: inst, isLoading: instLoading, isError: instError, refetch } = useDetalleInstalacion(instalacionId)
   const { data: bateria } = useAnaliticaBateria(instalacionId)
   const { data: autonomia } = useAnaliticaAutonomia(instalacionId)
-  const { data: alertas, isLoading: alertasLoading } = useAlertas({ instalacion: instalacionId ?? undefined, estado: "activa" })
-  const { data: ordenes, isLoading: ordenesLoading } = useOrdenes({ instalacion: instalacionId ?? undefined, limit: 3 })
-  const { data: mantenimientos } = useMantenimientos({ instalacion: instalacionId ?? undefined, limit: 1 })
+  const { data: alertas, isLoading: alertasLoading } = useAlertas({
+    instalacion: instalacionId ?? undefined,
+    estado: "activa",
+    limit: 24,
+  })
+  const { data: ordenes, isLoading: ordenesLoading } = useOrdenes({
+    instalacion: instalacionId ?? undefined,
+    limit: 8,
+  })
+  const { data: mantenimientos, isLoading: mantLoading } = useMantenimientos({
+    instalacion: instalacionId ?? undefined,
+    limit: 4,
+  })
   const { connectionStatus, messages } = useSensorSocket(instalacionId)
 
   const hoy = format(new Date(), "yyyy-MM-dd")
@@ -51,11 +94,16 @@ export default function InstalacionDetallePage() {
   const autonomiaMin =
     autonomia?.autonomiaHoras != null
       ? autonomia.autonomiaHoras * 60 + (autonomia.autonomiaMinutos ?? 0)
-      : null
+      : bateria?.tiempoRestanteMinutos ?? null
+  const capacidadDisponible =
+    bateria?.capacidadDisponible ??
+    (bateria?.capacidadTotal != null && bateria.soc != null
+      ? (bateria.capacidadTotal * bateria.soc) / 100
+      : null)
 
   if (instError) {
     return (
-      <div className="flex items-center justify-center min-h-64">
+      <div className="flex min-h-64 items-center justify-center">
         <ErrorState message="Error al cargar la instalación" onRetry={refetch} />
       </div>
     )
@@ -63,69 +111,153 @@ export default function InstalacionDetallePage() {
 
   return (
     <div className="space-y-5">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
-        <Link to="/" className="hover:text-[var(--color-primary-600)]">Inicio</Link>
-        <ChevronRight className="w-3 h-3" />
-        <Link to="/instalaciones" className="hover:text-[var(--color-primary-600)]">Instalaciones</Link>
-        <ChevronRight className="w-3 h-3" />
-        <span className="text-[var(--color-text-primary)] font-medium">{inst?.nombre ?? "Detalle"}</span>
-      </nav>
-
-      {/* Banner cabecera */}
-      <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border)] p-4">
-        {instLoading ? (
-          <div className="flex gap-4 items-center">
-            <Skeleton className="w-16 h-16 rounded-xl" />
-            <div className="space-y-2 flex-1">
-              <Skeleton className="h-5 w-48" />
-              <Skeleton className="h-3 w-64" />
-            </div>
+      <section className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-[var(--color-text-primary)]">
+            Detalle de instalación
+          </h2>
+          <nav className="mt-3 flex flex-wrap items-center gap-1.5 text-xs text-[var(--color-text-secondary)]">
+            <Link to="/" className="inline-flex items-center gap-1 hover:text-[var(--color-primary-600)]">
+              <Home className="h-3.5 w-3.5" />
+              Resumen
+            </Link>
+            <ChevronRight className="h-3 w-3" />
+            <Link to="/instalaciones" className="hover:text-[var(--color-primary-600)]">Instalaciones</Link>
+            <ChevronRight className="h-3 w-3" />
+            <span className="font-medium text-[var(--color-text-primary)]">{inst?.nombre ?? "Detalle"}</span>
+          </nav>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2">
+            <p className="text-xs font-semibold text-[var(--color-text-primary)]">{inst?.nombre ?? "Instalación"}</p>
+            <p className="text-xs text-[var(--color-text-secondary)]">
+              {inst?.capacidadSolarKwp ? `${inst.capacidadSolarKwp} kWp` : "Capacidad N/D"}
+            </p>
           </div>
-        ) : inst ? (
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="w-16 h-16 rounded-xl bg-[var(--color-neutral-100)] flex items-center justify-center flex-shrink-0 overflow-hidden">
-              {inst.imagen ? (
-                <img src={inst.imagen} alt={inst.nombre} className="w-full h-full object-cover" />
-              ) : (
-                <Zap className="w-7 h-7 text-[var(--color-neutral-400)]" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap mb-1">
-                <h1 className="text-xl font-bold text-[var(--color-text-primary)]">{inst.nombre}</h1>
-                <StatusBadge estado={inst.estado} />
-                <LiveBadge status={connectionStatus} />
-              </div>
-              <div className="flex flex-wrap gap-4 text-xs text-[var(--color-text-secondary)]">
-                <span className="flex items-center gap-1"><Settings2 className="w-3.5 h-3.5" />{inst.tipoSistema}</span>
-                <span className="flex items-center gap-1"><Zap className="w-3.5 h-3.5" />{inst.capacidadSolarKwp} kWp solar</span>
-                <span className="flex items-center gap-1"><Battery className="w-3.5 h-3.5" />{inst.capacidadBateriaKwh} kWh batería</span>
-                <span className="flex items-center gap-1"><MapPin className="w-3.5 h-3.5" />{inst.ciudad}</span>
-                {inst.ultimaActualizacion && (
-                  <span className="text-[var(--color-text-muted)]">Actualizado {formatRelativeTime(inst.ultimaActualizacion)}</span>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : null}
-      </div>
+          <LiveBadge status={connectionStatus} />
+          <span className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-text-secondary)]">
+            {formatDate(hace7)} - {formatDate(hoy)}
+          </span>
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-xs font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-neutral-100)]"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Exportar
+          </button>
+        </div>
+      </section>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-3">
-        <MetricCard title="Potencia actual" value={formatPower(inst?.potenciaActual)} icon={Zap} iconBg="bg-[var(--color-energy-50)]" iconColor="text-[var(--color-energy-600)]" loading={instLoading} />
-        <MetricCard title="Generación hoy" value={formatEnergy(inst?.generacionHoy)} icon={Sun} iconBg="bg-[var(--color-solar-50)]" iconColor="text-[var(--color-solar-600)]" loading={instLoading} />
-        <MetricCard title="Consumo actual" value={formatPower(inst?.consumoActual)} icon={Activity} iconBg="bg-[var(--color-primary-50)]" iconColor="text-[var(--color-primary-600)]" loading={instLoading} />
-        <MetricCard title="Batería SOC" value={bateria ? formatPercent(bateria.soc) : "—"} icon={Battery} iconBg="bg-[var(--color-energy-50)]" iconColor="text-[var(--color-energy-600)]" loading={instLoading} />
-        <MetricCard title="Autonomía est." value={autonomiaMin != null ? formatDuration(autonomiaMin) : "—"} icon={Battery} iconBg="bg-[var(--color-sla-50)]" iconColor="text-[var(--color-sla-600)]" loading={instLoading} />
-        <MetricCard title="Temperatura" value={bateria ? formatTemp(bateria.temperatura) : "—"} icon={Thermometer} iconBg="bg-[var(--color-solar-50)]" iconColor="text-[var(--color-solar-600)]" loading={instLoading} />
-        <MetricCard title="Irradiancia" value={"—"} icon={Sun} iconBg="bg-[var(--color-solar-50)]" iconColor="text-[var(--color-solar-600)]" loading={instLoading} />
-        <MetricCard title="Eficiencia" value={formatPercent(inst?.eficiencia)} icon={Activity} iconBg="bg-[var(--color-energy-50)]" iconColor="text-[var(--color-energy-600)]" loading={instLoading} />
-      </div>
+      <InstallationSummaryCard
+        loading={instLoading}
+        name={inst?.nombre}
+        image={inst?.imagen}
+        estado={inst?.estado}
+        tipoSistema={inst?.tipoSistema}
+        capacidadSolarKwp={inst?.capacidadSolarKwp}
+        capacidadBateriaKwh={inst?.capacidadBateriaKwh}
+        ciudad={inst?.ciudad}
+        ultimaActualizacion={inst?.ultimaActualizacion}
+      />
 
-      {/* Gráfico + Batería + Acciones */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <ChartCard title="Generación, consumo y batería" loading={tendLoading} className="xl:col-span-2">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4 2xl:grid-cols-8">
+        <MetricCard
+          title="Potencia actual"
+          value={formatPower(inst?.potenciaActual)}
+          delta={inst?.capacidadSolarKwp ? `${Math.round(((inst.potenciaActual ?? 0) / inst.capacidadSolarKwp) * 100)}% de capacidad` : undefined}
+          icon={Zap}
+          iconBg="bg-[var(--color-energy-50)]"
+          iconColor="text-[var(--color-energy-700)]"
+          loading={instLoading}
+        />
+        <MetricCard
+          title="Generación hoy"
+          value={formatEnergy(inst?.generacionHoy)}
+          delta="Dato diario"
+          icon={Sun}
+          iconBg="bg-[var(--color-primary-50)]"
+          iconColor="text-[var(--color-primary-700)]"
+          loading={instLoading}
+        />
+        <MetricCard
+          title="Consumo actual"
+          value={formatPower(inst?.consumoActual)}
+          delta="Desde medición actual"
+          icon={Activity}
+          iconBg="bg-[var(--color-sla-50)]"
+          iconColor="text-[var(--color-sla-700)]"
+          loading={instLoading}
+        />
+        <MetricCard
+          title="Batería SOC"
+          value={bateria ? formatPercent(bateria.soc) : formatPercent(inst?.bateriaSoc)}
+          delta={capacidadDisponible != null ? `${formatEnergy(capacidadDisponible)} disponibles` : undefined}
+          icon={Battery}
+          iconBg="bg-[var(--color-energy-50)]"
+          iconColor="text-[var(--color-energy-700)]"
+          loading={instLoading}
+        />
+        <MetricCard
+          title="Autonomía estimada"
+          value={autonomiaMin != null ? formatDuration(autonomiaMin) : "—"}
+          delta="Con carga actual"
+          icon={Battery}
+          iconBg="bg-[var(--color-solar-50)]"
+          iconColor="text-[var(--color-solar-700)]"
+          loading={instLoading}
+        />
+        <MetricCard
+          title="Temperatura"
+          value={bateria ? formatTemp(bateria.temperatura) : "—"}
+          delta="Ambiente/sistema"
+          icon={Thermometer}
+          iconBg="bg-[var(--color-primary-50)]"
+          iconColor="text-[var(--color-primary-700)]"
+          loading={instLoading}
+        />
+        <MetricCard
+          title="Irradiancia"
+          value={latestIrradiance(tendencia)}
+          delta="Último dato"
+          icon={Sun}
+          iconBg="bg-[var(--color-solar-50)]"
+          iconColor="text-[var(--color-solar-700)]"
+          loading={instLoading || tendLoading}
+        />
+        <MetricCard
+          title="Eficiencia"
+          value={formatPercent(inst?.eficiencia)}
+          delta={inst?.eficiencia != null && inst.eficiencia >= 90 ? "Excelente" : undefined}
+          icon={Activity}
+          iconBg="bg-[var(--color-energy-50)]"
+          iconColor="text-[var(--color-energy-700)]"
+          loading={instLoading}
+        />
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 2xl:grid-cols-[minmax(0,2fr)_minmax(300px,0.9fr)_220px]">
+        <ChartCard
+          title="Generación, consumo y estado de batería"
+          subtitle="Serie operativa con SOC, irradiancia y consumo"
+          loading={tendLoading}
+          toolbar={
+            <div className="flex items-center gap-1 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-neutral-50)] p-1">
+              {["Hoy", "7 días", "30 días"].map((label, index) => (
+                <button
+                  key={label}
+                  type="button"
+                  className={
+                    index === 1
+                      ? "rounded bg-[var(--color-surface)] px-2.5 py-1 text-xs font-semibold text-[var(--color-primary-700)] shadow-sm"
+                      : "px-2.5 py-1 text-xs font-medium text-[var(--color-text-secondary)]"
+                  }
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          }
+        >
           {tendencia && tendencia.length > 0 ? (
             <AreaTimeSeries data={tendencia} />
           ) : (
@@ -133,151 +265,396 @@ export default function InstalacionDetallePage() {
           )}
         </ChartCard>
 
-        <div className="space-y-4">
-          {/* Salud batería */}
-          <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border)] p-4">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">
-              Batería y salud del sistema
-            </h3>
-            {bateria ? (
-              <div className="flex gap-4 items-start">
-                <BatteryGauge soc={bateria.soc} />
-                <div className="flex-1 space-y-1.5 text-xs">
-                  {[
-                    ["Voltaje", formatVoltage(bateria.voltaje)],
-                    ["Corriente", formatCurrent(bateria.corriente)],
-                    ["Temperatura", formatTemp(bateria.temperatura)],
-                    ["Fuente", bateria.fuentePrincipal ?? "—"],
-                    ["Desde red", formatEnergy(bateria.desdeRed)],
-                  ].map(([k, v]) => (
-                    <div key={k} className="flex justify-between">
-                      <span className="text-[var(--color-text-secondary)]">{k}</span>
-                      <span className="font-medium tabular text-[var(--color-text-primary)]">{v}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <EmptyState title="Sin datos de batería" icon={Battery} />
-            )}
-          </div>
+        <BatterySystemCard
+          bateria={bateria}
+          autonomiaMin={autonomiaMin}
+          capacidadDisponible={capacidadDisponible}
+          capacidadTotal={bateria?.capacidadTotal ?? inst?.capacidadBateriaKwh ?? null}
+        />
 
-          {/* Acciones rápidas */}
-          <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border)] p-4">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-3">Acciones rápidas</h3>
-            <div className="space-y-2">
-              {[
-                { icon: AlertTriangle, label: "Resolver alerta", color: "text-[var(--color-danger-600)]", bg: "hover:bg-[var(--color-danger-50)]" },
-                { icon: ClipboardList, label: "Crear orden", color: "text-[var(--color-primary-600)]", bg: "hover:bg-[var(--color-primary-50)]" },
-                { icon: Activity, label: "Ver histórico", color: "text-[var(--color-neutral-600)]", bg: "hover:bg-[var(--color-neutral-100)]" },
-                { icon: Download, label: "Exportar reporte", color: "text-[var(--color-energy-600)]", bg: "hover:bg-[var(--color-energy-50)]" },
-              ].map(({ icon: Icon, label, color, bg }) => (
-                <button
-                  key={label}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-[var(--radius-md)] text-xs font-medium transition-colors ${bg}`}
-                >
-                  <Icon className={`w-3.5 h-3.5 flex-shrink-0 ${color}`} />
-                  <span className={color}>{label}</span>
-                </button>
-              ))}
-            </div>
+        <QuickActionsCard />
+      </section>
+
+      <section className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-4">
+        <LiveTelemetryCard messages={messages} connectionStatus={connectionStatus} />
+        <GroupedAlertsCard alertas={alertas ?? []} loading={alertasLoading} />
+        <RelatedOrdersCard ordenes={ordenes ?? []} loading={ordenesLoading} />
+        <NextMaintenanceCard mantenimientos={mantenimientos ?? []} loading={mantLoading} />
+      </section>
+    </div>
+  )
+}
+
+function InstallationSummaryCard({
+  loading,
+  name,
+  image,
+  estado,
+  tipoSistema,
+  capacidadSolarKwp,
+  capacidadBateriaKwh,
+  ciudad,
+  ultimaActualizacion,
+}: {
+  loading: boolean
+  name?: string
+  image?: string | null
+  estado?: string
+  tipoSistema?: string
+  capacidadSolarKwp?: number
+  capacidadBateriaKwh?: number
+  ciudad?: string
+  ultimaActualizacion?: string | null
+}) {
+  if (loading) {
+    return (
+      <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
+        <div className="flex items-center gap-4">
+          <Skeleton className="h-20 w-28 rounded-xl" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-5 w-56" />
+            <Skeleton className="h-4 w-full" />
           </div>
         </div>
       </div>
+    )
+  }
 
-      {/* Telemetría + Alertas + Órdenes + Mantenimiento */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        {/* Telemetría en vivo */}
-        <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border)]">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Telemetría en vivo</h3>
-            <LiveBadge status={connectionStatus} />
-          </div>
-          <div className="px-4 py-2">
-            <TelemetryTimeline events={messages} />
-          </div>
-        </div>
-
-        {/* Alertas activas */}
-        <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border)]">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Alertas activas</h3>
-              {alertas && alertas.length > 0 && (
-                <span className="w-5 h-5 bg-[var(--color-danger-500)] text-white text-xs font-bold rounded-full flex items-center justify-center">
-                  {alertas.length}
-                </span>
-              )}
-            </div>
-            <Link to="/alertas" className="text-xs text-[var(--color-primary-600)] font-medium hover:underline">Ver todas</Link>
-          </div>
-          <div className="px-4 py-2">
-            {alertasLoading ? (
-              <div className="space-y-2 py-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(260px,1.2fr)_repeat(5,minmax(120px,1fr))] lg:items-center">
+        <div className="flex min-w-0 items-center gap-4">
+          <div className="h-20 w-28 flex-shrink-0 overflow-hidden rounded-xl bg-[var(--color-neutral-100)]">
+            {image ? (
+              <img src={image} alt="" className="h-full w-full object-cover" />
             ) : (
-              <AlertList alerts={alertas ?? []} showResolve />
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Órdenes relacionadas + Próximo mantenimiento */}
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-        <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border)]">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Órdenes relacionadas</h3>
-            <Link to="/ordenes" className="text-xs text-[var(--color-primary-600)] font-medium hover:underline">Ver todas</Link>
-          </div>
-          <div className="divide-y divide-[var(--color-border)]">
-            {ordenesLoading ? (
-              <div className="px-4 py-3 space-y-2">{Array.from({ length: 2 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}</div>
-            ) : ordenes?.length === 0 ? (
-              <EmptyState title="Sin órdenes relacionadas" icon={ClipboardList} className="py-6" />
-            ) : (
-              ordenes?.map((o) => (
-                <div key={o.id} className="px-4 py-3 flex items-center gap-3">
-                  <ClipboardList className="w-4 h-4 text-[var(--color-neutral-400)] flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-[var(--color-text-primary)] truncate">{o.titulo}</p>
-                    <p className="text-xs text-[var(--color-text-secondary)]">
-                      {o.tecnicoNombre ?? "Sin asignar"} · {o.fechaVencimiento ? formatDate(o.fechaVencimiento) : ""}
-                    </p>
-                  </div>
-                  <SeverityBadge severidad={o.prioridad} />
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="bg-[var(--color-surface)] rounded-[var(--radius-lg)] shadow-[var(--shadow-card)] border border-[var(--color-border)]">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--color-border)]">
-            <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Próximo mantenimiento</h3>
-            <Link to="/mantenimiento" className="text-xs text-[var(--color-primary-600)] font-medium hover:underline">Ver plan</Link>
-          </div>
-          <div className="p-4">
-            {mantenimientos && mantenimientos.length > 0 ? (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[var(--color-primary-500)]" />
-                  <span className="text-sm font-semibold text-[var(--color-text-primary)] capitalize">{mantenimientos[0].tipo}</span>
-                </div>
-                <div className="text-xs text-[var(--color-text-secondary)] space-y-1">
-                  <p><span className="text-[var(--color-text-muted)]">Fecha: </span>{formatDate(mantenimientos[0].fechaProgramada)}</p>
-                  {mantenimientos[0].tecnicoNombre && (
-                    <p><span className="text-[var(--color-text-muted)]">Técnico: </span>{mantenimientos[0].tecnicoNombre}</p>
-                  )}
-                  <p className="capitalize">
-                    <span className="text-[var(--color-text-muted)]">Estado: </span>{mantenimientos[0].estado}
-                  </p>
-                </div>
+              <div className="flex h-full w-full items-center justify-center">
+                <Zap className="h-7 w-7 text-[var(--color-neutral-400)]" />
               </div>
-            ) : (
-              <EmptyState title="Sin mantenimientos programados" icon={Calendar} />
             )}
           </div>
+          <div className="min-w-0">
+            <h3 className="truncate text-base font-bold text-[var(--color-text-primary)]">{name ?? "Instalación"}</h3>
+            {estado && <StatusBadge estado={estado} className="mt-2" />}
+          </div>
         </div>
+        <SummaryItem label="Tipo de sistema" value={tipoSistema?.replace("_", " ") ?? "—"} />
+        <SummaryItem label="Capacidad solar" value={capacidadSolarKwp != null ? `${capacidadSolarKwp} kWp` : "—"} />
+        <SummaryItem label="Capacidad batería" value={capacidadBateriaKwh != null ? `${capacidadBateriaKwh} kWh` : "—"} />
+        <SummaryItem label="Ciudad" value={ciudad || "—"} />
+        <SummaryItem
+          label="Última actualización"
+          value={ultimaActualizacion ? formatRelativeTime(ultimaActualizacion) : "—"}
+        />
       </div>
     </div>
   )
+}
+
+function SummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="min-w-0">
+      <p className="text-xs text-[var(--color-text-secondary)]">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold capitalize text-[var(--color-text-primary)]">{value}</p>
+    </div>
+  )
+}
+
+function BatterySystemCard({
+  bateria,
+  autonomiaMin,
+  capacidadDisponible,
+  capacidadTotal,
+}: {
+  bateria: BateriaSalud | null | undefined
+  autonomiaMin: number | null
+  capacidadDisponible: number | null
+  capacidadTotal: number | null
+}) {
+  const healthLabel = bateria?.soc == null ? "N/D" : bateria.soc >= 70 ? "Óptima" : bateria.soc >= 40 ? "Regular" : "Crítica"
+
+  return (
+    <PanelCard
+      title="Batería y salud del sistema"
+      action={<span className="text-xs font-semibold text-[var(--color-energy-700)]">Salud: {healthLabel}</span>}
+    >
+      {bateria ? (
+        <div className="grid gap-4 md:grid-cols-[130px_minmax(0,1fr)] 2xl:grid-cols-1">
+          <div className="flex flex-col items-center">
+            <BatteryGauge soc={Math.round(bateria.soc)} size={136} />
+            <p className="tabular text-xs font-semibold text-[var(--color-text-primary)]">
+              {capacidadDisponible != null ? formatEnergy(capacidadDisponible) : "—"} disponibles
+            </p>
+            <p className="tabular text-xs text-[var(--color-text-muted)]">
+              de {capacidadTotal != null ? formatEnergy(capacidadTotal) : "—"}
+            </p>
+          </div>
+          <div className="space-y-2 text-xs">
+            <BatteryRow label="Estado" value={bateria.estado ?? "No expuesto"} />
+            <BatteryRow label="Voltaje" value={formatVoltage(bateria.voltaje)} />
+            <BatteryRow label="Corriente" value={formatCurrent(bateria.corriente)} />
+            <BatteryRow label="Temperatura" value={formatTemp(bateria.temperatura)} />
+            <BatteryRow label="Tiempo restante" value={autonomiaMin != null ? formatDuration(autonomiaMin) : "—"} />
+            <BatteryRow label="Fuente principal" value={bateria.fuentePrincipal ?? "—"} />
+            <BatteryRow label="Desde la red" value={formatPower(bateria.desdeRed)} />
+          </div>
+        </div>
+      ) : (
+        <EmptyState title="Sin datos de batería" icon={Battery} className="py-8" />
+      )}
+      <Link
+        to="/telemetria"
+        className="mt-4 flex items-center justify-center gap-1.5 border-t border-[var(--color-border)] pt-3 text-xs font-medium text-[var(--color-primary-700)] hover:underline"
+      >
+        Ver telemetría en vivo
+        <ChevronRight className="h-3.5 w-3.5" />
+      </Link>
+    </PanelCard>
+  )
+}
+
+function BatteryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <span className="text-[var(--color-text-secondary)]">{label}</span>
+      <span className="tabular text-right font-semibold text-[var(--color-text-primary)]">{value}</span>
+    </div>
+  )
+}
+
+function QuickActionsCard() {
+  const actions = [
+    { label: "Resolver alerta", to: "/alertas", icon: AlertTriangle, color: "text-[var(--color-danger-600)]", bg: "hover:bg-[var(--color-danger-50)]" },
+    { label: "Crear orden", to: "/ordenes", icon: ClipboardList, color: "text-[var(--color-primary-600)]", bg: "hover:bg-[var(--color-primary-50)]" },
+    { label: "Ver histórico", to: "/analitica", icon: Activity, color: "text-[var(--color-sla-700)]", bg: "hover:bg-[var(--color-sla-50)]" },
+    { label: "Abrir telemetría", to: "/telemetria", icon: Radio, color: "text-[var(--color-energy-700)]", bg: "hover:bg-[var(--color-energy-50)]" },
+    { label: "Exportar reporte", to: "/reportes", icon: Download, color: "text-[var(--color-primary-700)]", bg: "hover:bg-[var(--color-primary-50)]" },
+  ]
+
+  return (
+    <PanelCard title="Acciones rápidas">
+      <div className="space-y-2">
+        {actions.map(({ label, to, icon: Icon, color, bg }) => (
+          <Link
+            key={label}
+            to={to}
+            className={`flex items-center gap-2.5 rounded-[var(--radius-md)] border border-[var(--color-border)] px-3 py-2 text-xs font-medium transition-colors ${bg}`}
+          >
+            <Icon className={`h-4 w-4 flex-shrink-0 ${color}`} />
+            <span className="text-[var(--color-text-primary)]">{label}</span>
+          </Link>
+        ))}
+      </div>
+    </PanelCard>
+  )
+}
+
+function LiveTelemetryCard({
+  messages,
+  connectionStatus,
+}: {
+  messages: TelemetriaEvento[]
+  connectionStatus: ConexionWS
+}) {
+  return (
+    <PanelCard title="Telemetría en vivo" action={<LiveBadge status={connectionStatus} />}>
+      <TelemetryTimeline events={messages} className="max-h-[300px]" />
+      <Link
+        to="/telemetria"
+        className="mt-3 flex items-center justify-center gap-1.5 border-t border-[var(--color-border)] pt-3 text-xs font-medium text-[var(--color-primary-700)] hover:underline"
+      >
+        Ver telemetría completa
+        <ChevronRight className="h-3.5 w-3.5" />
+      </Link>
+    </PanelCard>
+  )
+}
+
+function GroupedAlertsCard({ alertas, loading }: { alertas: Alerta[]; loading: boolean }) {
+  return (
+    <PanelCard
+      title="Alertas activas"
+      action={
+        <Link to="/alertas" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">
+          Ver todas
+        </Link>
+      }
+    >
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-14 w-full" />)}
+        </div>
+      ) : alertas.length === 0 ? (
+        <EmptyState title="Sin alertas activas" icon={AlertTriangle} className="py-8" />
+      ) : (
+        <>
+          <div className="mb-3 flex items-center justify-between rounded-[var(--radius-md)] bg-[var(--color-neutral-50)] px-3 py-2">
+            <span className="text-xs font-medium text-[var(--color-text-secondary)]">Agrupadas por severidad</span>
+            <span className="tabular rounded-full bg-[var(--color-danger-500)] px-2 py-0.5 text-xs font-bold text-white">
+              {alertas.length}
+            </span>
+          </div>
+          <div className="max-h-[300px] space-y-4 overflow-y-auto pr-1">
+            {ALERT_GROUPS.map((group) => {
+              const items = alertas.filter((alerta) => alerta.severidad === group.severidad)
+              if (items.length === 0) return null
+              return (
+                <div key={group.severidad}>
+                  <div className="sticky top-0 z-10 mb-1 flex items-center justify-between bg-[var(--color-surface)] py-1">
+                    <span className={`flex items-center gap-1.5 text-xs font-semibold ${group.color}`}>
+                      <AlertTriangle className="h-3.5 w-3.5" />
+                      {group.label}
+                    </span>
+                    <span className="tabular rounded-full bg-[var(--color-neutral-100)] px-2 py-0.5 text-xs font-semibold text-[var(--color-text-secondary)]">
+                      {items.length}
+                    </span>
+                  </div>
+                  <div className="divide-y divide-[var(--color-border)] rounded-[var(--radius-md)] border border-[var(--color-border)]">
+                    {items.map((alerta) => (
+                      <div key={alerta.id} className="px-3 py-2.5">
+                        <div className="mb-1 flex items-center gap-2">
+                          <p className="min-w-0 flex-1 truncate text-xs font-semibold text-[var(--color-text-primary)]">
+                            {alerta.tipoAlertaNombre || "Alerta"}
+                          </p>
+                          <SeverityBadge severidad={alerta.severidad} />
+                        </div>
+                        <p className="truncate text-xs text-[var(--color-text-secondary)]">{alerta.descripcion}</p>
+                        <div className="mt-2 flex items-center justify-between gap-3">
+                          <span className="text-xs text-[var(--color-text-muted)]">{formatRelativeTime(alerta.fechaCreacion)}</span>
+                          <Link
+                            to="/alertas"
+                            className="rounded-[var(--radius-md)] border border-[var(--color-border)] px-2 py-1 text-xs font-medium text-[var(--color-primary-700)] hover:bg-[var(--color-primary-50)]"
+                          >
+                            Resolver
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>
+      )}
+    </PanelCard>
+  )
+}
+
+function RelatedOrdersCard({ ordenes, loading }: { ordenes: Orden[]; loading: boolean }) {
+  return (
+    <PanelCard
+      title="Órdenes relacionadas"
+      action={<Link to="/ordenes" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">Ver todas</Link>}
+    >
+      {loading ? (
+        <div className="space-y-2">
+          {Array.from({ length: 3 }).map((_, index) => <Skeleton key={index} className="h-14 w-full" />)}
+        </div>
+      ) : ordenes.length === 0 ? (
+        <EmptyState title="Sin órdenes relacionadas" icon={ClipboardList} className="py-8" />
+      ) : (
+        <div className="max-h-[300px] divide-y divide-[var(--color-border)] overflow-y-auto pr-1">
+          {ordenes.map((orden) => (
+            <Link key={orden.id} to="/ordenes" className="flex items-center gap-3 py-3 hover:bg-[var(--color-neutral-50)]">
+              <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-[var(--color-primary-50)]">
+                <ClipboardList className="h-4 w-4 text-[var(--color-primary-700)]" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="mb-1 flex items-center gap-2">
+                  <span className="font-mono text-xs font-semibold text-[var(--color-text-primary)]">{orden.codigo}</span>
+                  <OrdenEstadoBadge estado={orden.estado} />
+                </div>
+                <p className="truncate text-xs font-semibold text-[var(--color-text-primary)]">{orden.titulo}</p>
+                <p className="truncate text-xs text-[var(--color-text-secondary)]">Técnico: {orden.tecnicoNombre ?? "Sin asignar"}</p>
+              </div>
+              <ChevronRight className="h-4 w-4 flex-shrink-0 text-[var(--color-text-muted)]" />
+            </Link>
+          ))}
+        </div>
+      )}
+    </PanelCard>
+  )
+}
+
+function NextMaintenanceCard({
+  mantenimientos,
+  loading,
+}: {
+  mantenimientos: MantenimientoProgramado[]
+  loading: boolean
+}) {
+  const next = mantenimientos[0]
+
+  return (
+    <PanelCard
+      title="Próximo mantenimiento"
+      action={<Link to="/mantenimiento" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">Ver plan</Link>}
+    >
+      {loading ? (
+        <Skeleton className="h-48 w-full" />
+      ) : next ? (
+        <div className="space-y-4">
+          <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-neutral-50)] p-4">
+            <p className="text-sm font-semibold text-[var(--color-text-primary)]">{next.planNombre ?? "Mantenimiento programado"}</p>
+            <p className="mt-1 text-xs capitalize text-[var(--color-text-secondary)]">{next.tipo}</p>
+            <span className="mt-3 inline-flex rounded-full border border-[var(--color-primary-100)] bg-[var(--color-primary-50)] px-2 py-0.5 text-xs font-semibold capitalize text-[var(--color-primary-700)]">
+              {next.estado}
+            </span>
+          </div>
+          <div className="space-y-3 text-xs">
+            <MaintenanceInfo icon={<Calendar className="h-4 w-4" />} label={formatDate(next.fechaProgramada)} />
+            <MaintenanceInfo icon={<Activity className="h-4 w-4" />} label={next.tecnicoNombre ? `Técnico asignado: ${next.tecnicoNombre}` : "Técnico sin asignar"} />
+            <MaintenanceInfo icon={<FileText className="h-4 w-4" />} label={next.notas?.trim() || "Sin notas registradas"} />
+          </div>
+          <Link
+            to="/mantenimiento"
+            className="flex items-center justify-center gap-1.5 border-t border-[var(--color-border)] pt-3 text-xs font-medium text-[var(--color-primary-700)] hover:underline"
+          >
+            Ver plan de mantenimiento
+            <ChevronRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      ) : (
+        <EmptyState title="Sin mantenimientos programados" icon={Calendar} className="py-8" />
+      )}
+    </PanelCard>
+  )
+}
+
+function MaintenanceInfo({ icon, label }: { icon: ReactNode; label: string }) {
+  return (
+    <div className="flex items-start gap-3 text-[var(--color-text-secondary)]">
+      <span className="mt-0.5 text-[var(--color-text-muted)]">{icon}</span>
+      <span>{label}</span>
+    </div>
+  )
+}
+
+function PanelCard({
+  title,
+  action,
+  children,
+}: {
+  title: string
+  action?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <div className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
+      <div className="flex items-center justify-between gap-3 border-b border-[var(--color-border)] px-4 py-3">
+        <h3 className="flex min-w-0 items-center gap-1.5 text-sm font-semibold text-[var(--color-text-primary)]">
+          <span className="truncate">{title}</span>
+          <Info className="h-3.5 w-3.5 flex-shrink-0 text-[var(--color-text-muted)]" />
+        </h3>
+        {action}
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  )
+}
+
+function latestIrradiance(tendencia: ReturnType<typeof useAnaliticaTendencia>["data"]) {
+  const latest = [...(tendencia ?? [])].reverse().find((point) => point.irradiancia != null)
+  return latest?.irradiancia == null ? "—" : `${Math.round(latest.irradiancia)} W/m²`
 }

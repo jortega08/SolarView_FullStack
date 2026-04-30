@@ -68,6 +68,8 @@ class IsOperadorOrAdmin(BasePermission):
             return False
         if user.rol == "admin":
             return True
+        if getattr(user, "prestador_id", None):
+            return True
         return RolInstalacion.objects.filter(
             usuario=user,
             rol__in=["operador", "admin_empresa"],

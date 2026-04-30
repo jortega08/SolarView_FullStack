@@ -9,11 +9,13 @@ function normalize(api: ApiPanelEmpresa): PanelEmpresa {
     typeof api.empresa === "string"
       ? api.empresa
       : api.empresa?.nombre ?? ""
+  const empresaId = typeof api.empresa === "string" ? null : api.empresa?.id ?? null
   const activas = instalaciones.filter((i) =>
     ["activa", "activo", "en_linea", "online"].includes(i.estado)
   ).length
 
   return {
+    empresaId,
     empresa,
     instalacionesActivas: api.instalaciones_activas ?? (instalaciones.length > 0 ? activas : api.resumen?.total ?? 0),
     generacionHoy: api.total_generacion_hoy ?? null,

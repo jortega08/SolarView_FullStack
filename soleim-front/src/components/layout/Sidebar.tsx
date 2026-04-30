@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom"
 import {
   LayoutDashboard, Zap, Radio, Bell, ClipboardList,
-  Wrench, Users, BarChart2, FileText, Settings,
+  Wrench, Users, UserCog, BarChart2, FileText, Settings,
   ChevronLeft, ChevronRight, LogOut
 } from "lucide-react"
 import { cn } from "@/lib/cn"
@@ -29,6 +29,7 @@ function useSidebarItems() {
     { to: "/alertas", label: "Alertas", icon: <Bell className="w-4 h-4" />, badge: alertas?.length },
     { to: "/ordenes", label: "Órdenes", icon: <ClipboardList className="w-4 h-4" /> },
     { to: "/mantenimiento", label: "Mantenimiento", icon: <Wrench className="w-4 h-4" /> },
+    { to: "/perfil-profesional", label: "Mi perfil", icon: <UserCog className="w-4 h-4" /> },
     { to: "/tecnicos", label: "Técnicos", icon: <Users className="w-4 h-4" /> },
     { to: "/analitica", label: "Analítica", icon: <BarChart2 className="w-4 h-4" /> },
     { to: "/reportes", label: "Reportes", icon: <FileText className="w-4 h-4" /> },

@@ -6,6 +6,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from auditoria.utils import registrar_evento
+from core.access import (
+    get_user_installation_queryset,
+    user_can_access_installation,
+    user_has_installation_role,
+)
 from core.models import RolInstalacion
 from core.permissions import IsActiveUser
 
@@ -26,6 +31,12 @@ def _empresas_visibles(user, roles=("admin_empresa", "operador")):
     )
 
 
+def _instalaciones_visibles(user):
+    return list(
+        get_user_installation_queryset(user).values_list("idinstalacion", flat=True)
+    )
+
+
 class ContratoServicioViewSet(viewsets.ModelViewSet):
     """
     Contratos de servicio. Sólo admin global o admin_empresa pueden mutar.
@@ -42,8 +53,7 @@ class ContratoServicioViewSet(viewsets.ModelViewSet):
         qs = ContratoServicio.objects.select_related("instalacion__empresa")
         if user.rol == "admin":
             return qs
-        empresas = _empresas_visibles(user)
-        return qs.filter(instalacion__empresa_id__in=empresas)
+        return qs.filter(instalacion_id__in=_instalaciones_visibles(user))
 
     def get_permissions(self):
         if self.action in ("create", "update", "partial_update", "destroy"):
@@ -56,6 +66,8 @@ class ContratoServicioViewSet(viewsets.ModelViewSet):
                         return False
                     if user.rol == "admin":
                         return True
+                    if getattr(user, "prestador_id", None):
+                        return True
                     return RolInstalacion.objects.filter(
                         usuario=user, rol="admin_empresa"
                     ).exists()
@@ -64,6 +76,21 @@ class ContratoServicioViewSet(viewsets.ModelViewSet):
         return super().get_permissions()
 
     def perform_create(self, serializer):
+        instalacion = serializer.validated_data.get("instalacion")
+        if self.request.user.rol != "admin":
+            if not user_can_access_installation(self.request.user, instalacion):
+                from rest_framework.exceptions import PermissionDenied
+
+                raise PermissionDenied("No puedes crear contratos en esta instalacion.")
+            if not (
+                getattr(self.request.user, "prestador_id", None)
+                and instalacion.prestador_id == self.request.user.prestador_id
+            ) and not user_has_installation_role(
+                self.request.user, instalacion, "admin_empresa"
+            ):
+                from rest_framework.exceptions import PermissionDenied
+
+                raise PermissionDenied("No puedes crear contratos en esta instalacion.")
         contrato = serializer.save()
         registrar_evento(
             usuario=self.request.user,
@@ -127,8 +154,7 @@ class MantenimientoViewSet(viewsets.ReadOnlyModelViewSet):
         if user.rol == "admin":
             return qs
 
-        empresas = _empresas_visibles(user)
-        return qs.filter(instalacion__empresa_id__in=empresas)
+        return qs.filter(instalacion_id__in=_instalaciones_visibles(user))
 
     @action(detail=True, methods=["post"], url_path="cancelar")
     def cancelar(self, request, pk=None):

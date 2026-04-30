@@ -3,7 +3,7 @@ from calendar import monthrange
 from datetime import timedelta
 
 from django.core.cache import cache
-from django.db.models import Avg, Case, Count, FloatField, Sum, When
+from django.db.models import Avg, Case, Count, FloatField, Q, Sum, When
 from django.db.models.functions import TruncDay
 from django.http import JsonResponse
 from django.utils import timezone
@@ -11,6 +11,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 
 from alerta.models import Alerta
+from core.access import get_user_installation_queryset
 from core.models import Domicilio, Empresa, Instalacion
 from core.permissions import IsActiveUser
 from telemetria.models import Bateria, Consumo
@@ -30,20 +31,56 @@ def _resolve_context(request):
         if domicilio_id
         else None
     )
+    if (
+        domicilio_id
+        and domicilio is not None
+        and getattr(request.user, "rol", None) != "admin"
+        and domicilio.usuario_id != request.user.idusuario
+    ):
+        raise ValueError("Sin acceso al domicilio")
     instalacion = (
-        Instalacion.objects.filter(idinstalacion=instalacion_id).first()
+        get_user_installation_queryset(request.user)
+        .filter(idinstalacion=instalacion_id)
+        .first()
         if instalacion_id
         else None
     )
+    if instalacion_id and instalacion is None:
+        raise ValueError("Sin acceso a la instalacion")
     return domicilio, instalacion
 
 
-def _build_filters(domicilio=None, instalacion=None):
+def _build_filters(user, domicilio=None, instalacion=None):
     if instalacion is not None:
         return {"instalacion": instalacion}
     if domicilio is not None:
         return {"domicilio": domicilio}
+    if getattr(user, "rol", None) != "admin":
+        ids = get_user_installation_queryset(user).values_list(
+            "idinstalacion", flat=True
+        )
+        return {"instalacion_id__in": ids}
     return {}
+
+
+def _estado_bateria(porcentaje_carga, temperatura):
+    if porcentaje_carga is None:
+        return None
+    if porcentaje_carga <= 15 or (temperatura is not None and temperatura >= 40):
+        return "critica"
+    if porcentaje_carga <= 30 or (temperatura is not None and temperatura >= 36):
+        return "advertencia"
+    return "normal"
+
+
+def _irradiancia_desde_generacion(generacion_kwh, capacidad_panel_kw):
+    if not capacidad_panel_kw:
+        return None
+    # Estimado diario: 5 horas solares pico como base conservadora.
+    return round(
+        max(0, min(1000, (generacion_kwh / (capacidad_panel_kw * 5)) * 1000)),
+        2,
+    )
 
 
 @api_view(["GET"])
@@ -57,7 +94,9 @@ def obtener_actividades_mensuales(request):
             if instalacion
             else (domicilio.iddomicilio if domicilio else 1)
         )
-        filtros = _build_filters(domicilio=domicilio, instalacion=instalacion)
+        filtros = _build_filters(
+            request.user, domicilio=domicilio, instalacion=instalacion
+        )
 
         cache_key = f"actividades_{context_key}_{periodo}"
         cached = cache.get(cache_key)
@@ -201,7 +240,9 @@ def obtener_estado_bateria(request):
             if instalacion
             else (domicilio.iddomicilio if domicilio else 1)
         )
-        filtros = _build_filters(domicilio=domicilio, instalacion=instalacion)
+        filtros = _build_filters(
+            request.user, domicilio=domicilio, instalacion=instalacion
+        )
 
         cache_key = f"bateria_{context_key}"
         cached = cache.get(cache_key)
@@ -209,14 +250,36 @@ def obtener_estado_bateria(request):
             return JsonResponse({"success": True, "data": cached, "cached": True})
 
         bateria = Bateria.objects.filter(**filtros).order_by("-fecha_registro").first()
+        consumo = Consumo.objects.filter(**filtros).order_by("-fecha").first()
         if bateria:
+            capacidad_disponible = bateria.capacidad_bateria * (
+                bateria.porcentaje_carga / 100
+            )
             data = {
+                "instalacion_id": bateria.instalacion_id,
                 "voltaje": bateria.voltaje,
                 "corriente": bateria.corriente,
                 "temperatura": bateria.temperatura,
                 "capacidad": bateria.capacidad_bateria,
+                "capacidad_bateria": bateria.capacidad_bateria,
+                "capacidad_total": bateria.capacidad_bateria,
+                "capacidad_disponible": round(float(capacidad_disponible), 2),
                 "porcentaje_carga": bateria.porcentaje_carga,
+                "soc": bateria.porcentaje_carga,
                 "tiempo_restante": bateria.tiempo_restante,
+                "tiempo_restante_minutos": round(
+                    float(bateria.tiempo_restante) * 60,
+                    2,
+                ),
+                "estado": _estado_bateria(
+                    bateria.porcentaje_carga, bateria.temperatura
+                ),
+                "fuente_principal": consumo.fuente if consumo else None,
+                "desde_red": (
+                    round(float(consumo.potencia), 2)
+                    if consumo and consumo.fuente == "electrica"
+                    else 0
+                ),
                 "fecha": bateria.fecha_registro.isoformat(),
             }
         else:
@@ -251,7 +314,11 @@ def autonomia_instalacion(request):
             .first()
         )
         if not bateria:
-            data = {"autonomia_horas": None}
+            data = {
+                "instalacion_id": instalacion.idinstalacion,
+                "autonomia_horas": None,
+                "autonomia_minutos": None,
+            }
         else:
             desde = timezone.now() - timedelta(hours=24)
             total_24h = (
@@ -262,12 +329,20 @@ def autonomia_instalacion(request):
             )
             promedio_hora = total_24h / 24 if total_24h else 0
             if promedio_hora <= 0:
-                data = {"autonomia_horas": None}
+                data = {
+                    "instalacion_id": instalacion.idinstalacion,
+                    "autonomia_horas": None,
+                    "autonomia_minutos": None,
+                }
             else:
                 autonomia_horas = (
                     bateria.capacidad_bateria * (bateria.porcentaje_carga / 100)
                 ) / promedio_hora
-                data = {"autonomia_horas": round(float(autonomia_horas), 2)}
+                data = {
+                    "instalacion_id": instalacion.idinstalacion,
+                    "autonomia_horas": round(float(autonomia_horas), 2),
+                    "autonomia_minutos": round(float(autonomia_horas) * 60, 2),
+                }
 
         cache.set(cache_key, data, CACHE_TTL_SHORT)
         return JsonResponse({"success": True, "data": data})
@@ -333,12 +408,23 @@ def tendencia_instalacion(request):
             datos = mapa.get(
                 fecha, {"solar": 0.0, "electrica": 0.0, "bateria_avg": None}
             )
+            solar = datos["solar"]
+            electrica = datos["electrica"]
+            consumo_total = round(solar + electrica, 2)
             data.append(
                 {
                     "fecha": fecha.isoformat(),
-                    "solar": datos["solar"],
-                    "electrica": datos["electrica"],
+                    "solar": solar,
+                    "electrica": electrica,
+                    "generacion": solar,
+                    "consumo": consumo_total,
                     "bateria_avg": datos["bateria_avg"],
+                    "bateria_soc": datos["bateria_avg"],
+                    "irradiancia": _irradiancia_desde_generacion(
+                        solar, instalacion.capacidad_panel_kw
+                    ),
+                    "exportacion": round(max(solar - electrica, 0), 2),
+                    "importacion": electrica,
                 }
             )
 
@@ -368,16 +454,30 @@ def comparativa_empresa(request):
                 {"success": False, "error": "empresa_id es requerido"}, status=400
             )
 
-        cache_key = f"comparativa_{empresa_id}"
+        empresa = Empresa.objects.filter(idempresa=empresa_id).first()
+        if not empresa:
+            return JsonResponse(
+                {"success": False, "error": "Empresa no encontrada"}, status=404
+            )
+
+        cache_key = f"comparativa_empresa:{empresa_id}:user:{request.user.idusuario}"
         cached = cache.get(cache_key)
         if cached:
             return JsonResponse({"success": True, "data": cached, "cached": True})
 
-        empresa = Empresa.objects.get(idempresa=empresa_id)
         desde = timezone.now() - timedelta(days=30)
 
         # --- Query 1: installations (already ordered) ----
-        instalaciones = list(empresa.instalaciones.order_by("nombre"))
+        instalaciones = list(
+            get_user_installation_queryset(request.user)
+            .filter(Q(cliente_id=empresa_id) | Q(empresa_id=empresa_id))
+            .order_by("nombre")
+        )
+        if not instalaciones and request.user.rol != "admin":
+            return JsonResponse(
+                {"success": False, "error": "Sin acceso a esta empresa"},
+                status=403,
+            )
         if not instalaciones:
             cache.set(cache_key, [], CACHE_TTL_MEDIUM)
             return JsonResponse({"success": True, "data": []})
