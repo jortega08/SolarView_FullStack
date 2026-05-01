@@ -1,0 +1,22 @@
+# Archivos generados — no incluir en la imagen Docker
+staticfiles/
+media/
+__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+pytest-cache-files-*/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*.sqlite3
+db.sqlite3
+celerybeat-schedule
+celerybeat.pid
+.env
+.env.*
+venv/
+.venv/

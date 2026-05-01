@@ -9,99 +9,154 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('alerta', '0001_initial'),
+        ("alerta", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Ciudad',
+            name="Ciudad",
             fields=[
-                ('idciudad', models.AutoField(primary_key=True, serialize=False)),
-                ('nombre', models.CharField(max_length=100)),
+                ("idciudad", models.AutoField(primary_key=True, serialize=False)),
+                ("nombre", models.CharField(max_length=100)),
             ],
             options={
-                'verbose_name': 'Ciudad',
-                'verbose_name_plural': 'Ciudades',
-                'db_table': 'ciudad',
+                "verbose_name": "Ciudad",
+                "verbose_name_plural": "Ciudades",
+                "db_table": "ciudad",
             },
         ),
         migrations.CreateModel(
-            name='Estado',
+            name="Estado",
             fields=[
-                ('idestado', models.AutoField(primary_key=True, serialize=False)),
-                ('nombre', models.CharField(max_length=100)),
+                ("idestado", models.AutoField(primary_key=True, serialize=False)),
+                ("nombre", models.CharField(max_length=100)),
             ],
             options={
-                'verbose_name': 'Estado',
-                'verbose_name_plural': 'Estados',
-                'db_table': 'estado',
+                "verbose_name": "Estado",
+                "verbose_name_plural": "Estados",
+                "db_table": "estado",
             },
         ),
         migrations.CreateModel(
-            name='Pais',
+            name="Pais",
             fields=[
-                ('idpais', models.AutoField(primary_key=True, serialize=False)),
-                ('nombre', models.CharField(max_length=100)),
+                ("idpais", models.AutoField(primary_key=True, serialize=False)),
+                ("nombre", models.CharField(max_length=100)),
             ],
             options={
-                'verbose_name': 'País',
-                'verbose_name_plural': 'Países',
-                'db_table': 'pais',
+                "verbose_name": "País",
+                "verbose_name_plural": "Países",
+                "db_table": "pais",
             },
         ),
         migrations.CreateModel(
-            name='Usuario',
+            name="Usuario",
             fields=[
-                ('idusuario', models.AutoField(primary_key=True, serialize=False)),
-                ('nombre', models.CharField(max_length=255)),
-                ('email', models.EmailField(max_length=254, unique=True)),
-                ('contrasena', models.CharField(max_length=16)),
-                ('rol', models.CharField(choices=[('admin', 'Administrador'), ('user', 'Usuario')], default='user', max_length=10)),
-                ('fecha_registro', models.DateTimeField(auto_now_add=True)),
+                ("idusuario", models.AutoField(primary_key=True, serialize=False)),
+                ("nombre", models.CharField(max_length=255)),
+                ("email", models.EmailField(max_length=254, unique=True)),
+                ("contrasena", models.CharField(max_length=16)),
+                (
+                    "rol",
+                    models.CharField(
+                        choices=[("admin", "Administrador"), ("user", "Usuario")],
+                        default="user",
+                        max_length=10,
+                    ),
+                ),
+                ("fecha_registro", models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'verbose_name': 'Usuario',
-                'verbose_name_plural': 'Usuarios',
-                'db_table': 'usuario',
+                "verbose_name": "Usuario",
+                "verbose_name_plural": "Usuarios",
+                "db_table": "usuario",
             },
         ),
         migrations.CreateModel(
-            name='Domicilio',
+            name="Domicilio",
             fields=[
-                ('iddomicilio', models.AutoField(primary_key=True, serialize=False)),
-                ('ciudad', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='domicilios', to='core.ciudad')),
-                ('usuario', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='domicilios', to='core.usuario')),
+                ("iddomicilio", models.AutoField(primary_key=True, serialize=False)),
+                (
+                    "ciudad",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="domicilios",
+                        to="core.ciudad",
+                    ),
+                ),
+                (
+                    "usuario",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="domicilios",
+                        to="core.usuario",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Domicilio',
-                'verbose_name_plural': 'Domicilios',
-                'db_table': 'domicilio',
+                "verbose_name": "Domicilio",
+                "verbose_name_plural": "Domicilios",
+                "db_table": "domicilio",
             },
         ),
         migrations.CreateModel(
-            name='ConfiguracionUser',
+            name="ConfiguracionUser",
             fields=[
-                ('idconfiguracion', models.AutoField(primary_key=True, serialize=False)),
-                ('nombre', models.CharField(max_length=255)),
-                ('notificaciones_email', models.BooleanField(default=True)),
-                ('prioridad', models.CharField(choices=[('electrica', 'Electrica'), ('solar', 'Solar'), ('auto', 'Auto')], default='auto', max_length=10)),
-                ('alertas_activas', models.ManyToManyField(blank=True, related_name='configuraciones', to='alerta.alerta')),
-                ('domicilio', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='configuraciones', to='core.domicilio')),
+                (
+                    "idconfiguracion",
+                    models.AutoField(primary_key=True, serialize=False),
+                ),
+                ("nombre", models.CharField(max_length=255)),
+                ("notificaciones_email", models.BooleanField(default=True)),
+                (
+                    "prioridad",
+                    models.CharField(
+                        choices=[
+                            ("electrica", "Electrica"),
+                            ("solar", "Solar"),
+                            ("auto", "Auto"),
+                        ],
+                        default="auto",
+                        max_length=10,
+                    ),
+                ),
+                (
+                    "alertas_activas",
+                    models.ManyToManyField(
+                        blank=True, related_name="configuraciones", to="alerta.alerta"
+                    ),
+                ),
+                (
+                    "domicilio",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="configuraciones",
+                        to="core.domicilio",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Configuración de Usuario',
-                'verbose_name_plural': 'Configuraciones de Usuario',
-                'db_table': 'configuracion_usuario',
+                "verbose_name": "Configuración de Usuario",
+                "verbose_name_plural": "Configuraciones de Usuario",
+                "db_table": "configuracion_usuario",
             },
         ),
         migrations.AddField(
-            model_name='ciudad',
-            name='estado',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='ciudades', to='core.estado'),
+            model_name="ciudad",
+            name="estado",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="ciudades",
+                to="core.estado",
+            ),
         ),
         migrations.AddField(
-            model_name='estado',
-            name='pais',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='estados', to='core.pais'),
+            model_name="estado",
+            name="pais",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="estados",
+                to="core.pais",
+            ),
         ),
     ]

@@ -9,19 +9,29 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('alerta', '0001_initial'),
-        ('core', '0001_initial'),
+        ("alerta", "0001_initial"),
+        ("core", "0001_initial"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='alerta',
-            name='domicilio',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='alertas', to='core.domicilio'),
+            model_name="alerta",
+            name="domicilio",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE,
+                related_name="alertas",
+                to="core.domicilio",
+            ),
         ),
         migrations.AddField(
-            model_name='alerta',
-            name='tipoalerta',
-            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.PROTECT, related_name='alertas', to='alerta.tipoalerta'),
+            model_name="alerta",
+            name="tipoalerta",
+            field=models.ForeignKey(
+                blank=True,
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                related_name="alertas",
+                to="alerta.tipoalerta",
+            ),
         ),
     ]

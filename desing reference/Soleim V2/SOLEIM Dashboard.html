@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SOLEIM — Plataforma de monitoreo solar empresarial</title>
+  <link rel="stylesheet" href="soleim.css" />
+
+  <!-- React + Babel -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <!-- Charts: SVG propio, sin dependencias externas -->
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* Extra page-level tweaks not in soleim.css */
+    .page-tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 var(--content-pad);
+      background: var(--bg-card);
+      overflow-x: auto;
+    }
+    .page-tab {
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gray-500);
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: color .12s;
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      font-family: var(--font-base);
+    }
+    .page-tab:hover { color: var(--gray-800); }
+    .page-tab.active { color: var(--c-blue); border-bottom: 2px solid var(--c-blue); font-weight: 600; }
+
+    /* Placeholder pages */
+    .placeholder-page {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      color: var(--gray-400);
+      padding: 60px 20px;
+    }
+    .placeholder-page .ph-icon { font-size: 48px; opacity: .4; }
+    .placeholder-page h2 { font-size: 18px; font-weight: 600; color: var(--gray-600); }
+    .placeholder-page p { font-size: 14px; color: var(--gray-400); text-align: center; max-width: 360px; line-height: 1.6; }
+
+    /* Fade-in animation for page transitions */
+    @keyframes fadein { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .page-content, .placeholder-page { animation: fadein .18s ease; }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--gray-400); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- Load shared components first -->
+  <script type="text/babel" src="soleim-shared.jsx"></script>
+  <script type="text/babel" src="soleim-charts.jsx"></script>
+  <!-- Load pages -->
+  <script type="text/babel" src="soleim-dashboard.jsx"></script>
+  <script type="text/babel" src="soleim-instalacion.jsx"></script>
+  <script type="text/babel" src="soleim-operaciones.jsx"></script>
+  <script type="text/babel" src="soleim-mantenimiento.jsx"></script>
+  <script type="text/babel" src="soleim-analitica.jsx"></script>
+  <script type="text/babel" src="soleim-telemetria.jsx"></script>
+  <script type="text/babel" src="soleim-alertas.jsx"></script>
+  <script type="text/babel" src="soleim-tecnicos.jsx"></script>
+  <script type="text/babel" src="soleim-reportes.jsx"></script>
+  <script type="text/babel" src="soleim-notificaciones.jsx"></script>
+  <script type="text/babel" src="soleim-configuracion.jsx"></script>
+
+  <!-- Main App -->
+  <script type="text/babel">
+    const PAGE_TITLES = {
+      dashboard:      'Centro de control',
+      instalaciones:  'Instalaciones',
+      instalacion:    'Detalle de instalación',
+      telemetria:     'Telemetría',
+      alertas:        'Alertas',
+      ordenes:        'Centro de operaciones',
+      mantenimiento:  'Mantenimiento y técnicos',
+      tecnicos:       'Técnicos',
+      analitica:      'Analítica y reportes',
+      reportes:       'Reportes',
+      notificaciones: 'Notificaciones',
+      configuracion:  'Configuración',
+    };
+
+    function PlaceholderPage({ id, onNav }) {
+      const icons = {
+        instalaciones: '🏭', telemetria: '📡', alertas: '⚠️',
+        tecnicos: '👷', reportes: '📄', notificaciones: '🔔', configuracion: '⚙️',
+      };
+      const tips = {
+        instalaciones:  'Lista completa de instalaciones con métricas en tiempo real, filtros y acceso a detalle.',
+        telemetria:     'Visualización en tiempo real de telemetría por sensor, con WebSocket conectado al backend.',
+        alertas:        'Gestión completa de alertas activas: filtrar, escalar, resolver y analizar tendencias.',
+        tecnicos:       'Perfil de técnicos, especialidades, disponibilidad y zonas de cobertura.',
+        reportes:       'Generación y descarga de reportes PDF/CSV por período, instalación o métrica.',
+        notificaciones: 'Centro de notificaciones con estados leído/no leído y escalaciones automáticas.',
+        configuracion:  'Configuración de la plataforma: umbrales, usuarios, integraciones y preferencias.',
+      };
+      return (
+        <div className="placeholder-page">
+          <div className="ph-icon">{icons[id] || '📋'}</div>
+          <h2>{PAGE_TITLES[id]}</h2>
+          <p>{tips[id] || 'Esta sección está en desarrollo. Conectará con el backend de SOLEIM.'}</p>
+          <button className="btn btn-primary" onClick={() => onNav('dashboard')}>← Volver al resumen</button>
+        </div>
+      );
+    }
+
+    // Instalaciones list page — click any row → instalacion detail
+    function InstalacionesList({ onNav }) {
+      const rows = [
+        { id: 1, name: 'Planta Industrial Norte', cap: '2,5 MWp',  status: 'En línea', battery: 92,  power: '1.250 kW', gen: '612 MWh',  risk: 'Bajo' },
+        { id: 2, name: 'Centro Comercial Solar',  cap: '1,2 MWp',  status: 'En línea', battery: 88,  power: '830 kW',   gen: '398 MWh',  risk: 'Medio' },
+        { id: 3, name: 'Planta Logística Sur',    cap: '1,8 MWp',  status: 'En línea', battery: 78,  power: '640 kW',   gen: '287 MWh',  risk: 'Medio' },
+        { id: 4, name: 'Oficinas Corporativas',   cap: '500 kWp',  status: 'En línea', battery: 100, power: '420 kW',   gen: '186 MWh',  risk: 'Bajo' },
+        { id: 5, name: 'Sucursal Costa',          cap: '750 kWp',  status: 'Alerta',   battery: 45,  power: '120 kW',   gen: '52 MWh',   risk: 'Alto' },
+      ];
+      return (
+        <div className="page-content">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-secondary btn-sm"><Icons.filter />Filtrar</button>
+            </div>
+            <button className="btn btn-primary btn-sm"><Icons.plus />Nueva instalación</button>
+          </div>
+          <div className="card">
+            <div className="card-header">
+              <span className="card-title">Todas las instalaciones</span>
+              <span style={{ fontSize: 12, color: 'var(--gray-500)' }}>5 instalaciones</span>
+            </div>
+            <table className="data-table">
+              <thead>
+                <tr><th>Instalación</th><th>Estado</th><th>Batería</th><th>Potencia actual</th><th>Generación hoy</th><th>Riesgo</th><th>Acciones</th></tr>
+              </thead>
+              <tbody>
+                {rows.map(inst => (
+                  <tr key={inst.id} style={{ cursor: 'pointer' }} onClick={() => onNav('instalacion')}>
+                    <td>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{inst.name}</div>
+                      <div style={{ fontSize: 11, color: 'var(--gray-500)' }}>{inst.cap}</div>
+                    </td>
+                    <td><StatusBadge status={inst.status} /></td>
+                    <td style={{ minWidth: 130 }}><BatteryBar pct={inst.battery} /></td>
+                    <td className="mono">{inst.power}</td>
+                    <td className="mono">{inst.gen}</td>
+                    <td>
+                      <span className={`badge ${inst.risk === 'Bajo' ? 'badge-online' : inst.risk === 'Medio' ? 'badge-maint' : 'badge-alert'}`}>{inst.risk}</span>
+                    </td>
+                    <td>
+                      <div className="icon-actions">
+                        <button className="btn btn-icon btn-secondary" onClick={e => { e.stopPropagation(); onNav('instalacion'); }}><Icons.eye /></button>
+                        <button className="btn btn-icon btn-secondary" onClick={e => e.stopPropagation()}><Icons.moreVert /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    function App() {
+      const [page, setPage] = React.useState('dashboard');
+      const [collapsed, setCollapsed] = React.useState(false);
+
+      // Restore page from sessionStorage
+      React.useEffect(() => {
+        const saved = sessionStorage.getItem('soleim_page');
+        if (saved) setPage(saved);
+        const col = sessionStorage.getItem('soleim_collapsed');
+        if (col) setCollapsed(col === 'true');
+      }, []);
+
+      const navigate = (p) => {
+        setPage(p);
+        sessionStorage.setItem('soleim_page', p);
+      };
+      const toggleCollapsed = () => {
+        const next = !collapsed;
+        setCollapsed(next);
+        sessionStorage.setItem('soleim_collapsed', next);
+      };
+
+      const renderPage = () => {
+        switch(page) {
+          case 'dashboard':     return <Dashboard onNav={navigate} />;
+          case 'instalaciones': return <InstalacionesList onNav={navigate} />;
+          case 'instalacion':   return <InstalacionDetalle onNav={navigate} />;
+          case 'ordenes':       return <Operaciones />;
+          case 'mantenimiento': return <Mantenimiento />;
+          case 'analitica':     return <Analitica />;
+          case 'telemetria':    return <Telemetria />;
+          case 'alertas':       return <Alertas onNav={navigate} />;
+          case 'tecnicos':      return <Tecnicos onNav={navigate} />;
+          case 'reportes':      return <Reportes />;
+          case 'notificaciones':return <Notificaciones onNav={navigate} />;
+          case 'configuracion': return <Configuracion />;
+          default:              return <PlaceholderPage id={page} onNav={navigate} />;
+        }
+      };
+
+      const title = PAGE_TITLES[page] || 'SOLEIM';
+      const livePages = ['dashboard','instalacion','ordenes','mantenimiento','analitica'];
+
+      return (
+        <div className="app-shell">
+          <Sidebar active={page === 'instalacion' ? 'instalaciones' : page} onNav={navigate} collapsed={collapsed} onToggle={toggleCollapsed} />
+          <div className="main-area">
+            <Header title={title} liveLabel={livePages.includes(page)} onNav={navigate} />
+            {page === 'instalacion' && (
+              <div className="page-tab-bar">
+                {[['instalacion','Resumen'],['telemetria','Telemetría'],['alertas','Alertas'],['ordenes','Órdenes'],['mantenimiento','Mantenimiento']].map(([id, label]) => (
+                  <button key={id} className={`page-tab${page === id ? ' active' : ''}`} onClick={() => navigate(id)}>{label}</button>
+                ))}
+              </div>
+            )}
+            {renderPage()}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
