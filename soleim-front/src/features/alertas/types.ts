@@ -17,4 +17,5 @@ export interface AlertaFilterState {
   busqueda: string
   fechaInicio?: string
   fechaFin?: string
+  slaEstado?: string
 }

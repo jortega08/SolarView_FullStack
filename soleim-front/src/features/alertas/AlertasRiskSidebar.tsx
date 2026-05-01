@@ -140,9 +140,10 @@ export function RiskInstalacionesWidget({
 interface AtencionInmediataWidgetProps {
   alertas: AlertaEnriquecida[]
   loading: boolean
+  onVerAhora?: (filtro: { severidad?: string; slaEstado?: string }) => void
 }
 
-export function AtencionInmediataWidget({ alertas, loading }: AtencionInmediataWidgetProps) {
+export function AtencionInmediataWidget({ alertas, loading, onVerAhora }: AtencionInmediataWidgetProps) {
   const activas = alertas.filter((a) => a.estado === "activa")
 
   // Críticas sin asignar: todas las críticas activas (campo "asignado" no existe en backend)
@@ -167,6 +168,7 @@ export function AtencionInmediataWidget({ alertas, loading }: AtencionInmediataW
           iconBg="bg-[var(--color-danger-50)]"
           iconColor="text-[var(--color-danger-600)]"
           valueColor="text-[var(--color-danger-600)]"
+          onVerAhora={() => onVerAhora?.({ severidad: "critica" })}
         />
         <StatTile
           icon={Clock}
@@ -176,6 +178,7 @@ export function AtencionInmediataWidget({ alertas, loading }: AtencionInmediataW
           iconBg="bg-[var(--color-warning-50)]"
           iconColor="text-[var(--color-warning-600)]"
           valueColor="text-[var(--color-warning-600)]"
+          onVerAhora={() => onVerAhora?.({ slaEstado: "en_riesgo" })}
         />
         <StatTile
           icon={AlertOctagon}
@@ -185,6 +188,7 @@ export function AtencionInmediataWidget({ alertas, loading }: AtencionInmediataW
           iconBg="bg-[var(--color-sla-50)]"
           iconColor="text-[var(--color-sla-600)]"
           valueColor="text-[var(--color-sla-600)]"
+          onVerAhora={() => onVerAhora?.({ slaEstado: "incumplida" })}
         />
       </div>
     </ChartCard>
@@ -214,6 +218,7 @@ function StatTile({
   iconBg,
   iconColor,
   valueColor,
+  onVerAhora,
 }: {
   icon: React.ElementType
   value: number
@@ -222,6 +227,7 @@ function StatTile({
   iconBg: string
   iconColor: string
   valueColor: string
+  onVerAhora?: () => void
 }) {
   return (
     <div className="flex flex-col gap-2 rounded-[var(--radius-md)] border border-[var(--color-border)] p-3">
@@ -233,9 +239,13 @@ function StatTile({
       </div>
       <div className="flex items-end justify-between gap-1">
         <p className="text-xs text-[var(--color-text-secondary)] leading-tight">{label}</p>
-        <span className="whitespace-nowrap text-xs font-medium text-[var(--color-primary-600)] hover:underline cursor-pointer">
+        <button
+          type="button"
+          onClick={onVerAhora}
+          className="whitespace-nowrap text-xs font-medium text-[var(--color-primary-600)] hover:underline cursor-pointer bg-transparent border-none p-0"
+        >
           {linkLabel} →
-        </span>
+        </button>
       </div>
     </div>
   )

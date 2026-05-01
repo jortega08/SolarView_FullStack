@@ -1,28 +1,32 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "./styles/pages.css";
 
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
-   Solein Design Tokens — Light mode
+   SOLEIM Design Tokens — Light mode
    ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  /* Paleta principal */
-  --solein-navy:        #1A2740;
-  --solein-navy-hover:  #243552;
-  --solein-navy-light:  #223147;
-  --solein-gold:        #E0B63D;
+  /* Paleta principal SOLEIM */
+  --solein-navy:        #1e3a8a;   /* azul oscuro — texto headings, elementos oscuros */
+  --solein-navy-hover:  #1e40af;
+  --solein-navy-light:  #1d4ed8;
+  --solein-gold:        #E0B63D;   /* acento dorado — badges, indicadores de estado */
   --solein-gold-dark:   #9B7720;
   --solein-gold-bg:     #fdf6e3;
-  --solein-teal:        #2B4B5E;
-  --solein-teal-hover:  #3A6070;
-  --solein-teal-bg:     #e0eef4;
+  --solein-teal:        #1d4ed8;   /* azul primario SOLEIM — focus, active, links */
+  --solein-teal-hover:  #1e40af;
+  --solein-teal-bg:     #eff6ff;
 
   /* Superficies */
-  --solein-bg:          #EDF2F7;
+  --solein-bg:          #f1f5f9;
   --solein-white:       #FFFFFF;
-  --solein-border:      #dde4ed;
+  --solein-border:      #e2e8f0;
 
   /* Texto */
-  --solein-text:        #1A2740;
+  --solein-text:        #1e293b;
   --solein-text-muted:  #64748b;
 
   /* Semánticos */
@@ -33,20 +37,16 @@
   --radius-sm:  6px;
   --radius-md:  10px;
   --radius-lg:  14px;
-  --shadow-sm:  0 1px 4px rgba(26,39,64,.07);
-  --shadow-md:  0 4px 14px rgba(26,39,64,.10);
+  --shadow-sm:  0 1px 4px rgba(15,23,42,.07);
+  --shadow-md:  0 4px 14px rgba(15,23,42,.10);
 
-  /* Botones de acción primaria (fondo navy fijo — no cambia en dark) */
-  --btn-navy-bg:    #1A2740;
-  --btn-navy-hover: #243552;
+  /* Botones de acción primaria — azul SOLEIM fijo */
+  --btn-navy-bg:    #1d4ed8;
+  --btn-navy-hover: #1e40af;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Dark mode tokens
-   Solo cambian superficies, bordes y texto.
-   Los colores de acento (gold, teal) y el fondo del sidebar se mantienen.
-   --solein-navy se vuelve claro para que sirva como color de TEXTO legible.
-   Los fondos que usan navy (sidebar, botones) están hardcodeados en su CSS.
    ═══════════════════════════════════════════════════════════════════════════ */
 [data-theme="dark"] {
   --solein-bg:          #0d1829;
@@ -55,15 +55,15 @@
   --solein-text:        #d8e4f0;
   --solein-text-muted:  #8899b0;
   --solein-gold-bg:     #211c0a;
-  --solein-teal-bg:     #0c2030;
+  --solein-teal-bg:     #0c1f40;
 
-  /* Navy → claro para que el texto sea legible sobre fondo oscuro */
-  --solein-navy:        #b8cde0;
-  --solein-navy-hover:  #cad8e9;
+  /* Navy → claro para texto legible en dark */
+  --solein-navy:        #93c5fd;
+  --solein-navy-hover:  #bfdbfe;
 
-  /* Botones primarios: se mantienen oscuros en dark mode */
-  --btn-navy-bg:    #1D3D52;
-  --btn-navy-hover: #2B4F65;
+  /* Botones primarios: azul SOLEIM más claro para contrastar en dark */
+  --btn-navy-bg:    #2563eb;
+  --btn-navy-hover: #1d4ed8;
 
   --shadow-sm:  0 1px 4px rgba(0,0,0,.45);
   --shadow-md:  0 4px 16px rgba(0,0,0,.55);
@@ -82,14 +82,14 @@
 [data-theme="dark"] .auth-btn,
 [data-theme="dark"] .save-btn,
 [data-theme="dark"] .reporte-dl-btn {
-  background: #1D3D52 !important;   /* teal oscuro fijo */
+  background: #2563eb !important;
   color: #ffffff !important;
 }
 
 [data-theme="dark"] .auth-btn:hover:not(:disabled),
 [data-theme="dark"] .save-btn:hover,
 [data-theme="dark"] .reporte-dl-btn:hover:not(:disabled) {
-  background: #2B4F65 !important;
+  background: #1d4ed8 !important;
 }
 
 [data-theme="dark"] .save-btn.saved {

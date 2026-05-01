@@ -46,3 +46,14 @@ export function useMarcarLeida() {
     },
   })
 }
+
+export function useMarcarTodasLeidas() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => notificacionesService.marcarTodasLeidas(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notificaciones"] })
+      qc.invalidateQueries({ queryKey: ["notificaciones-count"] })
+    },
+  })
+}

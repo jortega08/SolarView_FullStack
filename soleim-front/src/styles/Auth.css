@@ -11,8 +11,8 @@
   --solein-border:      #dde4ed;
   --solein-text:        #1A2740;
   --solein-text-muted:  #64748b;
-  --solein-navy:        #1A2740;
-  --solein-navy-hover:  #243552;
+  --solein-navy:        #1e3a8a;
+  --solein-navy-hover:  #1e40af;
   --solein-gold-bg:     #fdf6e3;
   --solein-teal-bg:     #e0eef4;
   --shadow-sm:          0 1px 4px rgba(26,39,64,.07);
@@ -261,10 +261,10 @@
 
 .auth-brand {
   flex: 1;
-  background: #1A2740;   /* hardcodeado: no cambia con dark mode */
+  background: #0f172a;   /* SOLEIM dark — hardcodeado */
   /* Dot-grid sutil */
   background-image:
-    radial-gradient(circle, rgba(63, 104, 122, 0.28) 1px, transparent 1px);
+    radial-gradient(circle, rgba(29, 78, 216, 0.25) 1px, transparent 1px);
   background-size: 22px 22px;
   display: flex;
   align-items: center;
@@ -280,7 +280,7 @@
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse 70% 70% at 50% 45%,
-    rgba(63, 104, 122, 0.22) 0%,
+    rgba(29, 78, 216, 0.25) 0%,
     transparent 70%);
   pointer-events: none;
 }

@@ -248,6 +248,9 @@ def panel_empresa(request):
                     if instalacion.ultimo_registro
                     else None
                 ),
+                "imagen": (
+                    instalacion.imagen.url if instalacion.imagen else None
+                ),
             }
         )
 
@@ -394,6 +397,9 @@ def listar_instalaciones(request):
                     "ciudad": instalacion.ciudad.nombre if instalacion.ciudad else None,
                     "estado": instalacion.estado,
                     "tipo_sistema": instalacion.tipo_sistema,
+                    "imagen": (
+                        instalacion.imagen.url if instalacion.imagen else None
+                    ),
                 }
                 for instalacion in instalaciones
             ],
@@ -503,6 +509,9 @@ def detalle_instalacion(request, pk):
                 else None
             ),
             "eficiencia": round(eficiencia, 2) if eficiencia is not None else None,
+            "imagen": (
+                instalacion.imagen.url if instalacion.imagen else None
+            ),
         },
         "bateria": (
             {

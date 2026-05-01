@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git show *)",
+      "Read(//tmp/**)",
+      "Bash(git rm *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(docker compose *)",
+      "Bash(docker info *)",
+      "Bash(docker context *)",
+      "Bash(docker exec solarview_fullstack-django-1 python manage.py shell -c ' *)",
+      "Bash(docker exec *)",
+      "Bash(findstr /i \"starting\\\\|started\\\\|error\\\\|exception\\\\|gunicorn\\\\|worker\")"
+    ]
+  }
+}

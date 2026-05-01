@@ -122,6 +122,71 @@ class OrdenTrabajoViewSet(viewsets.ModelViewSet):
             request=self.request,
         )
 
+        # Notificar al creador que la orden fue registrada
+        try:
+            from notificaciones.api import notificar
+
+            notificar(
+                usuario_id=self.request.user.idusuario,
+                canal="in_app",
+                plantilla="orden_creada",
+                context={
+                    "codigo": orden.codigo,
+                    "titulo": orden.titulo,
+                    "instalacion": orden.instalacion.nombre,
+                    "orden_id": orden.idorden,
+                },
+            )
+        except Exception:
+            logger.exception("No se pudo crear notificación de orden creada %s", orden.codigo)
+
+        # Asignación inmediata opcional: si viene tecnico_id en el payload
+        tecnico_id = self.request.data.get("tecnico_id")
+        if tecnico_id:
+            try:
+                tecnico = Usuario.objects.get(idusuario=tecnico_id)
+                orden.asignado_a = tecnico
+                orden.estado = "asignada"
+                orden.asignada_at = timezone.now()
+                orden.save(update_fields=["asignado_a", "estado", "asignada_at"])
+                registrar_evento(
+                    usuario=self.request.user,
+                    accion="asignar_orden",
+                    entidad="OrdenTrabajo",
+                    entidad_id=orden.idorden,
+                    detalle={"tecnico_id": tecnico.idusuario, "codigo": orden.codigo},
+                    request=self.request,
+                )
+                logger.info(
+                    "Orden %s asignada a %s al momento de creación",
+                    orden.codigo,
+                    tecnico.email,
+                )
+                # Notificar al técnico asignado
+                try:
+                    notificar(
+                        usuario_id=tecnico.idusuario,
+                        canal="in_app",
+                        plantilla="orden_asignada",
+                        context={
+                            "codigo": orden.codigo,
+                            "titulo": orden.titulo,
+                            "orden_id": orden.idorden,
+                        },
+                    )
+                except Exception:
+                    logger.exception(
+                        "No se pudo notificar al técnico %s sobre orden %s",
+                        tecnico.idusuario,
+                        orden.codigo,
+                    )
+            except Usuario.DoesNotExist:
+                logger.warning(
+                    "tecnico_id=%s no encontrado al crear orden %s",
+                    tecnico_id,
+                    orden.codigo,
+                )
+
     # ---------------------------------------------------------------------
     # Acciones de transición de estado
     # ---------------------------------------------------------------------

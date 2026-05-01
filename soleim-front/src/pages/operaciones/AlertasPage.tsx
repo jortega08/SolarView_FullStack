@@ -76,6 +76,20 @@ export default function AlertasPage() {
     setSheetOpen(true)
   }
 
+  function handleVerAhora(filtro: { severidad?: string; slaEstado?: string }) {
+    setFilters((prev) => ({
+      ...prev,
+      severidad: filtro.severidad ?? "",
+      slaEstado: filtro.slaEstado ?? "",
+      estado: "activa",
+      rango: "24h",
+    }))
+    // Scroll suave a la tabla de prioridad
+    setTimeout(() => {
+      document.getElementById("alertas-priority-table")?.scrollIntoView({ behavior: "smooth", block: "start" })
+    }, 50)
+  }
+
   function handleCrearOrden(alerta: AlertaEnriquecida) {
     setCrearOrden({
       open: true,
@@ -144,10 +158,10 @@ export default function AlertasPage() {
         <div className="xl:col-span-2">
           <AlertasSlaDonut breakdown={slaBreakdown} loading={isLoading} />
         </div>
-        <AtencionInmediataWidget alertas={enriched} loading={isLoading} />
+        <AtencionInmediataWidget alertas={enriched} loading={isLoading} onVerAhora={handleVerAhora} />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+      <div id="alertas-priority-table" className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <AlertasPriorityTable
             alertas={prioritized}

@@ -6,6 +6,7 @@ import { X } from "lucide-react"
 import { useEffect } from "react"
 import { useInstalaciones } from "@/hooks/useInstalaciones"
 import { useCrearOrden } from "@/hooks/useOrdenes"
+import { useTecnicos } from "@/hooks/useTecnicos"
 import { cn } from "@/lib/cn"
 
 const schema = z.object({
@@ -15,6 +16,7 @@ const schema = z.object({
   prioridad: z.enum(["urgente", "alta", "media", "baja"]),
   tipo: z.enum(["correctivo", "preventivo", "inspeccion", "instalacion"]).optional(),
   alerta: z.coerce.number().int().positive().optional(),
+  tecnico_id: z.coerce.number().int().positive().optional().or(z.literal(0)).transform(v => v || undefined),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -39,6 +41,7 @@ export function CrearOrdenDialog({
   onCreated,
 }: CrearOrdenDialogProps) {
   const { data: instalaciones } = useInstalaciones()
+  const { data: tecnicos } = useTecnicos()
   const { mutateAsync: crear, isPending } = useCrearOrden()
 
   const {
@@ -56,6 +59,7 @@ export function CrearOrdenDialog({
       prioridad: "media",
       tipo: "correctivo",
       alerta: defaultAlertaId,
+      tecnico_id: 0,
     },
   })
 
@@ -68,6 +72,7 @@ export function CrearOrdenDialog({
         prioridad: "media",
         tipo: "correctivo",
         alerta: defaultAlertaId,
+        tecnico_id: 0,
       })
     }
   }, [open, defaultInstalacion, defaultAlertaId, defaultTitulo, defaultDescripcion, reset])
@@ -82,7 +87,8 @@ export function CrearOrdenDialog({
         tipo: values.tipo,
         estado: "abierta",
         ...(values.alerta ? { alerta: values.alerta } : {}),
-      })
+        ...(values.tecnico_id ? { tecnico_id: values.tecnico_id } : {}),
+      } as Parameters<typeof crear>[0] & { tecnico_id?: number })
       onCreated?.()
       onOpenChange(false)
     } catch {
@@ -101,7 +107,7 @@ export function CrearOrdenDialog({
                 Crear orden de trabajo
               </Dialog.Title>
               <Dialog.Description className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                Genera una orden y asignala más adelante a un técnico.
+                Puedes asignar un técnico de inmediato o hacerlo más adelante.
               </Dialog.Description>
             </div>
             <Dialog.Close className="text-[var(--color-neutral-500)] hover:text-[var(--color-text-primary)]">
@@ -202,6 +208,30 @@ export function CrearOrdenDialog({
                   <option value="instalacion">Instalación</option>
                 </select>
               </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">
+                Técnico asignado <span className="font-normal text-[var(--color-text-secondary)]">(opcional)</span>
+              </label>
+              <Controller
+                control={control}
+                name="tecnico_id"
+                render={({ field }) => (
+                  <select
+                    {...field}
+                    value={field.value ?? 0}
+                    className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
+                  >
+                    <option value={0}>Sin asignar por ahora</option>
+                    {(tecnicos ?? []).map((t) => (
+                      <option key={t.usuarioId ?? t.id} value={t.usuarioId ?? t.id}>
+                        {t.nombre}{t.disponible ? "" : " · No disponible"}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              />
             </div>
 
             <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border)] pt-4">

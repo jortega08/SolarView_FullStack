@@ -24,23 +24,67 @@ const authFetch = async (url, options = {}) => {
   return response
 }
 
+// ── Caché en memoria ──────────────────────────────────────────────────────────
+// Guarda { data, expires } por clave. Solo para GET. Las mutaciones invalidan
+// las entradas relevantes para que el siguiente fetch traiga datos frescos.
+
+const _cache = new Map()
+
+/** Obtiene del caché si existe y no expiró. */
+const _cacheGet = (key) => {
+  const entry = _cache.get(key)
+  if (!entry) return null
+  if (Date.now() > entry.expires) { _cache.delete(key); return null }
+  return entry.data
+}
+
+/** Guarda en caché con TTL en segundos. */
+const _cacheSet = (key, data, ttlSeconds) => {
+  _cache.set(key, { data, expires: Date.now() + ttlSeconds * 1000 })
+}
+
+/** Borra entradas cuya clave empiece con el prefijo dado. */
+const _cacheInvalidate = (prefix) => {
+  for (const key of _cache.keys()) {
+    if (key.startsWith(prefix)) _cache.delete(key)
+  }
+}
+
+/** Limpia toda la caché (usar al cerrar sesión). */
+export const clearApiCache = () => _cache.clear()
+
 // ── Empresa / Instalaciones ──────────────────────────────────────────────────
 
 export const fetchPanelEmpresa = async (empresaId = null) => {
   const params = new URLSearchParams()
   if (empresaId) params.append('empresa_id', empresaId)
+  const key = `panel:${empresaId ?? 'all'}`
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const response = await authFetch(`${API_BASE_URL}/empresa/panel/?${params}`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 30)
+  return data
 }
 
 export const fetchInstalaciones = async () => {
+  const key = 'instalaciones'
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const response = await authFetch(`${API_BASE_URL}/empresa/instalaciones/`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 30)
+  return data
 }
 
 export const fetchDetalleInstalacion = async (id) => {
+  const key = `instalacion:${id}`
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const response = await authFetch(`${API_BASE_URL}/empresa/instalacion/${id}/`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 30)
+  return data
 }
 
 // ── Analítica ────────────────────────────────────────────────────────────────
@@ -51,55 +95,92 @@ export const fetchActivities = async ({ periodo = "year", startDate, endDate, in
   if (startDate)     params.append("start_date", startDate)
   if (endDate)       params.append("end_date", endDate)
   if (instalacionId) params.append("instalacion_id", instalacionId)
+  const key = `activities:${params}`
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const response = await authFetch(`${API_BASE_URL}/analitica/actividades/?${params}`)
   const data = await response.json()
-  return data.data || data
+  const result = data.data || data
+  _cacheSet(key, result, 30)
+  return result
 }
 
 export const fetchTendencia = async (instalacionId, dias = 7) => {
   const params = new URLSearchParams({ instalacion_id: instalacionId, dias })
+  const key = `tendencia:${instalacionId}:${dias}`
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const response = await authFetch(`${API_BASE_URL}/analitica/tendencia/?${params}`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 30)
+  return data
 }
 
 export const fetchComparativa = async (empresaId) => {
+  const key = `comparativa:${empresaId}`
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const params = new URLSearchParams({ empresa_id: empresaId })
   const response = await authFetch(`${API_BASE_URL}/analitica/comparativa/?${params}`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 30)
+  return data
 }
 
 export const fetchAutonomia = async (instalacionId) => {
+  const key = `autonomia:${instalacionId}`
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const params = new URLSearchParams({ instalacion_id: instalacionId })
   const response = await authFetch(`${API_BASE_URL}/analitica/autonomia/?${params}`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 30)
+  return data
 }
 
 export const fetchBatteryStatus = async (instalacionId = null) => {
+  const key = `bateria:${instalacionId ?? 'all'}`
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const params = new URLSearchParams()
   if (instalacionId) params.append('instalacion_id', instalacionId)
   const response = await authFetch(`${API_BASE_URL}/analitica/bateria/?${params}`)
   const data = await response.json()
+  _cacheSet(key, data.data, 30)
   return data.data
 }
 
 // ── Alertas ──────────────────────────────────────────────────────────────────
 
 export const fetchUltimasAlertas = async (instalacionId = null) => {
+  const key = `alertas-ultimas:${instalacionId ?? 'all'}`
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const params = new URLSearchParams()
   if (instalacionId) params.append("instalacion_id", instalacionId)
   const response = await authFetch(`${API_BASE_URL}/alertas/ultimas/?${params}`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 15)
+  return data
 }
 
 export const resolverAlerta = async (id) => {
   const response = await authFetch(`${API_BASE_URL}/alertas/alertas/${id}/resolver/`, { method: 'POST' })
+  // Invalidar alertas para que la siguiente carga traiga datos frescos
+  _cacheInvalidate('alertas')
+  _cacheInvalidate('panel:')
   return response.json()
 }
 
 export const getAlertas = async (filters = {}) => {
   const params = new URLSearchParams(filters)
+  const key = `alertas-list:${params}`
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const response = await authFetch(`${API_BASE_URL}/alertas/alertas/?${params}`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 15)
+  return data
 }
 
 // ── Reportes CSV ─────────────────────────────────────────────────────────────
@@ -127,8 +208,13 @@ export const descargarReporteAlertas = (instalacionId, dias = 30) => {
 // ── Usuarios ──────────────────────────────────────────────────────────────────
 
 export const getUsers = async () => {
+  const key = 'usuarios'
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const response = await authFetch(`${API_BASE_URL}/core/usuarios/`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 30)
+  return data
 }
 
 export const createUser = async (userData) => {
@@ -136,6 +222,7 @@ export const createUser = async (userData) => {
     method: "POST",
     body: JSON.stringify(userData),
   })
+  _cacheInvalidate('usuarios')
   return response.json()
 }
 
@@ -144,19 +231,26 @@ export const updateUser = async (id, userData) => {
     method: "PUT",
     body: JSON.stringify(userData),
   })
+  _cacheInvalidate('usuarios')
   return response.json()
 }
 
 export const deleteUser = async (id) => {
   const response = await authFetch(`${API_BASE_URL}/core/usuarios/${id}/`, { method: "DELETE" })
+  _cacheInvalidate('usuarios')
   return response.ok
 }
 
 // ── Domicilios ────────────────────────────────────────────────────────────────
 
 export const getDomicilios = async () => {
+  const key = 'domicilios'
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const response = await authFetch(`${API_BASE_URL}/core/domicilios/`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 30)
+  return data
 }
 
 export const createDomicilio = async ({ usuario_id, ciudad_id }) => {
@@ -165,34 +259,56 @@ export const createDomicilio = async ({ usuario_id, ciudad_id }) => {
     body: JSON.stringify({ usuario_id, ciudad_id }),
   })
   if (!response.ok) throw new Error("Error al crear domicilio")
+  _cacheInvalidate('domicilios')
   return response.json()
 }
 
 export const deleteDomicilio = async (id) => {
   const response = await authFetch(`${API_BASE_URL}/core/domicilios/${id}/`, { method: "DELETE" })
+  _cacheInvalidate('domicilios')
   return response.ok
 }
 
 export const getPaises = async () => {
+  const key = 'paises'
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const response = await authFetch(`${API_BASE_URL}/core/paises/`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 300) // 5 min — datos casi estáticos
+  return data
 }
 
 export const getEstados = async (paisId) => {
+  const key = `estados:${paisId}`
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const response = await authFetch(`${API_BASE_URL}/core/estados/?pais_id=${paisId}`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 300)
+  return data
 }
 
 export const getCiudades = async (estadoId) => {
+  const key = `ciudades:${estadoId}`
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const response = await authFetch(`${API_BASE_URL}/core/ciudades/?estado_id=${estadoId}`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 300)
+  return data
 }
 
 // ── Misc ──────────────────────────────────────────────────────────────────────
 
 export const getTiposAlerta = async () => {
+  const key = 'tipos-alerta'
+  const cached = _cacheGet(key)
+  if (cached) return cached
   const response = await authFetch(`${API_BASE_URL}/alertas/tipos-alerta/`)
-  return response.json()
+  const data = await response.json()
+  _cacheSet(key, data, 300)
+  return data
 }
 
 export const fetchFacturaMensual = async ({ domicilioId, mes, ano }) => {
@@ -232,4 +348,5 @@ export default {
   getCiudades,
   getTiposAlerta,
   fetchFacturaMensual,
+  clearApiCache,
 }

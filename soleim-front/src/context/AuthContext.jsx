@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from 'react'
+import { clearApiCache } from '../services/api'
 
 const AuthContext = createContext(null)
 
@@ -95,6 +96,7 @@ export function AuthProvider({ children }) {
   const logout = () => {
     localStorage.removeItem(TOKEN_KEY)
     localStorage.removeItem(USER_KEY)
+    clearApiCache()
     setToken(null)
     setUser(null)
   }

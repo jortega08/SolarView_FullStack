@@ -123,8 +123,8 @@ services:
       - media_data:/app/media
     command: >
       sh -c "until python manage.py migrate --noinput; do echo '[Django] Esperando BD...'; sleep 3; done &&
-             python manage.py collectstatic --noinput --clear &&
-             daphne -b 0.0.0.0 -p 8000 soleimapp.asgi:application"
+            python manage.py collectstatic --noinput --clear &&
+            daphne -b 0.0.0.0 -p 8000 soleimapp.asgi:application"
     depends_on:
       pgbouncer:
         condition: service_healthy

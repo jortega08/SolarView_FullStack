@@ -77,6 +77,7 @@ export function filterAlertas(
     if (filters.severidad && a.severidad !== filters.severidad) return false
     if (filters.estado && a.estado !== filters.estado) return false
     if (filters.instalacion && String(a.instalacionId) !== filters.instalacion) return false
+    if (filters.slaEstado && a.slaEstado !== filters.slaEstado) return false
     if (filters.busqueda) {
       const q = filters.busqueda.toLowerCase()
       const haystack = [a.descripcion, a.instalacionNombre, a.tipoAlertaNombre, a.causaProbable ?? ""]

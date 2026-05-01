@@ -62,15 +62,13 @@ function timeAgo(dateStr) {
   return `Hace ${Math.floor(diff / 1440)}d`
 }
 
-/* ── Marca Solein ─────────────────────────────────────────────────────────── */
+/* ── Marca SOLEIM ─────────────────────────────────────────────────────────── */
 function SoleinMark({ size = 34 }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-label="Solein">
-      <path d="M30 9 C30 9 22 8 16 13.5 C10 19 16 24 20 21.5" stroke="#E0B63D" strokeWidth="2.8" strokeLinecap="round" fill="none"/>
-      <path d="M20 21.5 C24 19 30 23.5 25 29 C20 34.5 11 33 11 33" stroke="#3F687A" strokeWidth="2.8" strokeLinecap="round" fill="none"/>
-      <circle cx="30" cy="9"    r="2.8" fill="#E0B63D"/>
-      <circle cx="20" cy="21.5" r="2.8" fill="#9B7720"/>
-      <circle cx="11" cy="33"   r="2.8" fill="#3F687A"/>
+    <svg width={size} height={size} viewBox="0 0 40 40" fill="none" aria-label="SOLEIM">
+      <rect width="40" height="40" rx="10" fill="#1d4ed8"/>
+      <circle cx="20" cy="20" r="11" stroke="rgba(255,255,255,0.25)" strokeWidth="1.5"/>
+      <path d="M22.5 9.5 L14 21.5 L19.5 21.5 L17.5 30.5 L26 18 L20.5 18 Z" fill="white"/>
     </svg>
   )
 }
@@ -93,8 +91,8 @@ function Topbar({ user, alertBadge, recentAlerts, onLogout, onToggleSidebar, isD
   })()
 
   const avatarUrl = user
-    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nombre)}&background=1E2F45&color=E0B63D&bold=true`
-    : `https://ui-avatars.com/api/?name=U&background=1E2F45&color=E0B63D&bold=true`
+    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nombre)}&background=1d4ed8&color=ffffff&bold=true`
+    : `https://ui-avatars.com/api/?name=U&background=1d4ed8&color=ffffff&bold=true`
 
   /* Cerrar dropdowns al hacer click fuera */
   useEffect(() => {
@@ -488,8 +486,8 @@ export default function Layout({ children }) {
   const handleLogout = () => { logout(); navigate("/login") }
 
   const avatarUrl = user
-    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nombre)}&background=1E2F45&color=E0B63D&bold=true`
-    : `https://ui-avatars.com/api/?name=U&background=1E2F45&color=E0B63D&bold=true`
+    ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.nombre)}&background=1d4ed8&color=ffffff&bold=true`
+    : `https://ui-avatars.com/api/?name=U&background=1d4ed8&color=ffffff&bold=true`
 
   const W = isCollapsed ? W_CLOSED : W_OPEN
 
@@ -499,7 +497,7 @@ export default function Layout({ children }) {
       {/* ── Sidebar ───────────────────────────────────────────────────────── */}
       <aside style={{
         width: W, minWidth: W,
-        background: "#1A2740",   /* hardcodeado: no cambia con dark mode */
+        background: "#0f172a",   /* SOLEIM dark — no cambia con dark mode */
         display: "flex", flexDirection: "column",
         position: "fixed", height: "100vh",
         zIndex: 200,
@@ -524,9 +522,9 @@ export default function Layout({ children }) {
             <div style={{ flexShrink: 0 }}><SoleinMark size={32} /></div>
             {!isCollapsed && (
               <div style={{ overflow: "hidden" }}>
-                <p style={{ color: "#fff", fontWeight: 700, fontSize: 16, margin: 0, letterSpacing: "-0.3px", whiteSpace: "nowrap" }}>Solein</p>
+                <p style={{ color: "#fff", fontWeight: 700, fontSize: 16, margin: 0, letterSpacing: "0.05em", whiteSpace: "nowrap" }}>SOLEIM</p>
                 <p style={{ color: "rgba(255,255,255,0.45)", fontSize: 9, fontWeight: 600, margin: "2px 0 0", letterSpacing: "0.12em", textTransform: "uppercase", whiteSpace: "nowrap" }}>
-                  Monitoreo Energético
+                  Control Solar B2B
                 </p>
               </div>
             )}
@@ -566,8 +564,8 @@ export default function Layout({ children }) {
                       gap: 10,
                       padding: isCollapsed ? "10px 0" : "9px 12px",
                       borderRadius: 10,
-                      color: isActive ? "#1E2F45" : "#94a3b8",
-                      background: isActive ? "var(--solein-gold)" : "transparent",
+                      color: isActive ? "#ffffff" : "#94a3b8",
+                      background: isActive ? "#1d4ed8" : "transparent",
                       textDecoration: "none",
                       fontSize: 13.5, fontWeight: isActive ? 600 : 500,
                       transition: "all .18s",
@@ -575,14 +573,14 @@ export default function Layout({ children }) {
                     })}
                     onMouseEnter={e => {
                       if (e.currentTarget.getAttribute("aria-current") !== "page") {
-                        e.currentTarget.style.background = "#243352"
+                        e.currentTarget.style.background = "rgba(255,255,255,0.08)"
                         e.currentTarget.style.color = "#fff"
                       }
                     }}
                     onMouseLeave={e => {
                       const active = e.currentTarget.getAttribute("aria-current") === "page"
-                      e.currentTarget.style.background = active ? "var(--solein-gold)" : "transparent"
-                      e.currentTarget.style.color = active ? "#1E2F45" : "#94a3b8"
+                      e.currentTarget.style.background = active ? "#1d4ed8" : "transparent"
+                      e.currentTarget.style.color = active ? "#ffffff" : "#94a3b8"
                     }}
                   >
                     <div style={{ position: "relative", flexShrink: 0 }}>
@@ -592,7 +590,7 @@ export default function Layout({ children }) {
                           position: "absolute", top: -4, right: -4,
                           width: 8, height: 8, borderRadius: "50%",
                           background: "var(--solein-red)",
-                          border: "1.5px solid #1A2740",
+                          border: "1.5px solid #0f172a",
                         }} />
                       )}
                     </div>
