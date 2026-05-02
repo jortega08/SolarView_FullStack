@@ -1,5 +1,6 @@
 import { apiClient } from "./apiClient"
 import type { ApiEspecialidad, ApiTecnico, PaginatedResponse } from "@/types/api"
+import type { Certificacion } from "@/types/domain"
 
 export interface TecnicosParams {
   empresa?: number
@@ -25,6 +26,10 @@ export interface TecnicoPayload {
   estudios?: string[]
   licencia_vence?: string | null
   notas?: string
+  titulo_academico?: string
+  nivel_educativo?: string
+  certificaciones?: Certificacion[]
+  capacidad_operacion?: string
 }
 
 export interface PerfilProfesionalPayload {
@@ -38,9 +43,13 @@ export interface PerfilProfesionalPayload {
   licencia_vence?: string | null
   notas?: string
   hoja_vida?: File | null
+  titulo_academico?: string
+  nivel_educativo?: string
+  certificaciones?: Certificacion[]
+  capacidad_operacion?: string
 }
 
-type TecnicosDisponiblesResponse = { count: number; results: ApiTecnico[] }
+type TecnicosListResponse = { count: number; results: ApiTecnico[] }
 
 function toProfileFormData(payload: PerfilProfesionalPayload): FormData {
   const form = new FormData()
@@ -72,7 +81,14 @@ export const tecnicosService = {
 
   disponibles: (params: TecnicosDisponiblesParams) =>
     apiClient
-      .get<TecnicosDisponiblesResponse>("/tecnicos/perfiles/disponibles/", { params })
+      .get<TecnicosListResponse>("/tecnicos/perfiles/disponibles/", { params })
+      .then((r) => r.data),
+
+  sugeridos: (instalacionId: number) =>
+    apiClient
+      .get<TecnicosListResponse>("/tecnicos/perfiles/sugeridos/", {
+        params: { instalacion_id: instalacionId },
+      })
       .then((r) => r.data),
 
   crear: (payload: TecnicoPayload) =>

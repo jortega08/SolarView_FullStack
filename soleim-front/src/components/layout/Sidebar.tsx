@@ -6,6 +6,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/cn"
 import { useAuth } from "@/contexts/useAuth"
+import { useI18n } from "@/contexts/I18nContext"
 import { useNoLeidasCount } from "@/hooks/useNotificaciones"
 import { useAlertas } from "@/hooks/useAlertas"
 import { LiveBadge } from "@/components/status/LiveBadge"
@@ -21,25 +22,26 @@ interface NavItem {
 function useSidebarItems() {
   const { data: notiCount } = useNoLeidasCount()
   const { data: alertas } = useAlertas({ estado: "activa" })
+  const { t } = useI18n()
 
   const items: NavItem[] = [
-    { to: "/", label: "Resumen", icon: <LayoutDashboard className="w-4 h-4" /> },
-    { to: "/instalaciones", label: "Instalaciones", icon: <Zap className="w-4 h-4" /> },
-    { to: "/telemetria", label: "Telemetría", icon: <Radio className="w-4 h-4" /> },
-    { to: "/alertas", label: "Alertas", icon: <Bell className="w-4 h-4" />, badge: alertas?.length },
-    { to: "/ordenes", label: "Órdenes", icon: <ClipboardList className="w-4 h-4" /> },
-    { to: "/mantenimiento", label: "Mantenimiento", icon: <Wrench className="w-4 h-4" /> },
-    { to: "/perfil-profesional", label: "Mi perfil", icon: <UserCog className="w-4 h-4" /> },
-    { to: "/tecnicos", label: "Técnicos", icon: <Users className="w-4 h-4" /> },
-    { to: "/analitica", label: "Analítica", icon: <BarChart2 className="w-4 h-4" /> },
-    { to: "/reportes", label: "Reportes", icon: <FileText className="w-4 h-4" /> },
+    { to: "/", label: t("nav.dashboard"), icon: <LayoutDashboard className="w-4 h-4" /> },
+    { to: "/instalaciones", label: t("nav.installations"), icon: <Zap className="w-4 h-4" /> },
+    { to: "/telemetria", label: t("nav.telemetry"), icon: <Radio className="w-4 h-4" /> },
+    { to: "/alertas", label: t("nav.alerts"), icon: <Bell className="w-4 h-4" />, badge: alertas?.length },
+    { to: "/ordenes", label: t("nav.orders"), icon: <ClipboardList className="w-4 h-4" /> },
+    { to: "/mantenimiento", label: t("nav.maintenance"), icon: <Wrench className="w-4 h-4" /> },
+    { to: "/perfil-profesional", label: t("nav.profile"), icon: <UserCog className="w-4 h-4" /> },
+    { to: "/tecnicos", label: t("nav.technicians"), icon: <Users className="w-4 h-4" /> },
+    { to: "/analitica", label: t("nav.analytics"), icon: <BarChart2 className="w-4 h-4" /> },
+    { to: "/reportes", label: t("nav.reports"), icon: <FileText className="w-4 h-4" /> },
     {
       to: "/notificaciones",
-      label: "Notificaciones",
+      label: t("nav.notifications"),
       icon: <Bell className="w-4 h-4" />,
       badge: notiCount && notiCount > 0 ? notiCount : undefined,
     },
-    { to: "/configuracion", label: "Configuración", icon: <Settings className="w-4 h-4" /> },
+    { to: "/configuracion", label: t("nav.settings"), icon: <Settings className="w-4 h-4" /> },
   ]
   return items
 }
@@ -47,6 +49,7 @@ function useSidebarItems() {
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const { user, logout } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
   const items = useSidebarItems()
 
@@ -122,7 +125,7 @@ export function Sidebar() {
           )}
         >
           <LogOut className="w-4 h-4 flex-shrink-0" />
-          {!collapsed && <span>Cerrar sesión</span>}
+          {!collapsed && <span>{t("nav.logout")}</span>}
         </button>
         <button
           onClick={() => setCollapsed((c) => !c)}

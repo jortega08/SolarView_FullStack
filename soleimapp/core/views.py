@@ -1,6 +1,7 @@
 from django.db.models import Q
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
+from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -108,6 +109,34 @@ class UsuarioViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="cambiar-contrasena")
+    def cambiar_contrasena(self, request, pk=None):
+        instance = self.get_object()
+        # Solo el propio usuario o un admin pueden cambiar la contraseña
+        if request.user.rol != "admin" and instance.idusuario != request.user.idusuario:
+            return Response({"error": "Sin permiso."}, status=403)
+
+        nueva = request.data.get("nueva_contrasena", "")
+        if not nueva or len(nueva) < 8:
+            return Response(
+                {"error": "La contraseña debe tener al menos 8 caracteres."}, status=400
+            )
+
+        import re
+        if not re.search(r"[A-Z]", nueva):
+            return Response(
+                {"error": "Debe incluir al menos una letra mayúscula."}, status=400
+            )
+        if not re.search(r"\d", nueva):
+            return Response(
+                {"error": "Debe incluir al menos un número."}, status=400
+            )
+
+        from django.contrib.auth.hashers import make_password
+        instance.contrasena = make_password(nueva)
+        instance.save(update_fields=["contrasena"])
+        return Response({"success": True, "message": "Contraseña actualizada correctamente."})
 
 
 class DomicilioViewSet(viewsets.ModelViewSet):

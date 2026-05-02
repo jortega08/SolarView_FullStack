@@ -55,6 +55,12 @@ export function normalizeTecnico(api: ApiTecnico): Tecnico {
     cargaTrabajo: api.carga_actual ?? api.carga_trabajo ?? null,
     licenciaVence: api.licencia_vence ?? null,
     notas: api.notas ?? null,
+    tituloAcademico: api.titulo_academico?.trim() || null,
+    nivelEducativo: api.nivel_educativo || null,
+    certificaciones: Array.isArray(api.certificaciones) ? api.certificaciones : [],
+    capacidadOperacion: api.capacidad_operacion || null,
+    score: api.score,
+    razones: api.razones,
   }
 }
 
@@ -143,6 +149,18 @@ export function useTecnicoMutations() {
       onSuccess: invalidate,
     }),
   }
+}
+
+export function useTecnicosSugeridos(instalacionId: number | undefined) {
+  return useQuery({
+    queryKey: ["tecnicos-sugeridos", instalacionId],
+    queryFn: () =>
+      tecnicosService
+        .sugeridos(instalacionId as number)
+        .then((d) => (d.results ?? []).map(normalizeTecnico)),
+    enabled: Boolean(instalacionId && instalacionId > 0),
+    staleTime: 30_000,
+  })
 }
 
 export function usePerfilProfesionalMutation() {

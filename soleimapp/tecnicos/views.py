@@ -194,6 +194,122 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
         data = PerfilTecnicoLigeroSerializer(qs, many=True).data
         return Response({"count": len(data), "results": data})
 
+    @action(detail=False, methods=["get"], url_path="sugeridos")
+    def sugeridos(self, request):
+        """
+        Devuelve hasta 3 técnicos sugeridos para atender una instalación,
+        ordenados por un score de afinidad.
+
+        Query params:
+          - instalacion_id  (requerido)
+        """
+        instalacion_id = request.query_params.get("instalacion_id")
+        if not instalacion_id:
+            return Response({"error": "instalacion_id es requerido."}, status=400)
+
+        from core.models import Instalacion
+        from django.db.models import Count, Q
+
+        try:
+            instalacion = Instalacion.objects.select_related("ciudad").get(
+                idinstalacion=instalacion_id
+            )
+        except Instalacion.DoesNotExist:
+            return Response({"error": "Instalación no encontrada."}, status=404)
+
+        ciudad = instalacion.ciudad
+        tipo_sistema = (instalacion.tipo_sistema or "").lower()
+
+        # Técnicos disponibles con carga annotada
+        qs = (
+            PerfilTecnico.objects.select_related("usuario", "empresa")
+            .prefetch_related("especialidades", "zonas")
+            .filter(disponible=True)
+            .annotate(
+                carga=Count(
+                    "usuario__ordenes_asignadas",
+                    filter=Q(
+                        usuario__ordenes_asignadas__estado__in=["asignada", "en_progreso"]
+                    ),
+                    distinct=True,
+                )
+            )
+        )
+
+        # Restringir por tenant
+        user = request.user
+        if user.rol != "admin":
+            if getattr(user, "prestador_id", None):
+                qs = qs.filter(prestador_id=user.prestador_id)
+            else:
+                from core.access import get_user_installation_queryset
+                empresas = list(
+                    get_user_installation_queryset(user).values_list(
+                        "empresa_id", flat=True
+                    )
+                )
+                qs = qs.filter(empresa_id__in=empresas)
+
+        # Palabras clave de tipo_sistema para matching de especialidad
+        tipo_keywords = set(tipo_sistema.replace("_", " ").split())
+
+        scored = []
+        for tecnico in qs:
+            score = 0
+            razones = []
+
+            # 1. Zona de cobertura
+            if ciudad and tecnico.zonas.filter(idciudad=ciudad.idciudad).exists():
+                score += 25
+                razones.append(f"Cubre {ciudad.nombre}")
+
+            # 2. Especialidad relevante al tipo de sistema
+            esp_nombres = [e.nombre.lower() for e in tecnico.especialidades.all()]
+            matched_esp = False
+            for esp in esp_nombres:
+                if any(kw in esp for kw in tipo_keywords):
+                    score += 30
+                    for e in tecnico.especialidades.all():
+                        if any(kw in e.nombre.lower() for kw in tipo_keywords):
+                            razones.append(e.nombre)
+                            break
+                    matched_esp = True
+                    break
+            if not matched_esp and esp_nombres:
+                score += 5  # Tiene especialidades aunque no coincidan exacto
+
+            # 3. Carga de trabajo
+            carga = tecnico.carga or 0
+            if carga == 0:
+                score += 15
+                razones.append("Sin órdenes activas")
+            elif carga <= 2:
+                score += 7
+                razones.append(f"{carga} orden{'es' if carga > 1 else ''} activa{'s' if carga > 1 else ''}")
+
+            # 4. Capacidad de operación en campo
+            if tecnico.capacidad_operacion in ("campo", "ambas"):
+                score += 10
+
+            # 5. Tiene título académico registrado (señal de perfil completo)
+            if tecnico.titulo_academico:
+                score += 5
+
+            scored.append((score, tecnico, razones))
+
+        # Top 3 por score
+        scored.sort(key=lambda x: x[0], reverse=True)
+        top3 = scored[:3]
+
+        results = []
+        for score, tecnico, razones in top3:
+            data = PerfilTecnicoLigeroSerializer(tecnico, context={"request": request}).data
+            data["score"] = score
+            data["razones"] = razones
+            results.append(data)
+
+        return Response({"count": len(results), "results": results})
+
     @action(detail=False, methods=["get", "patch"], url_path="me")
     def me(self, request):
         perfil = (

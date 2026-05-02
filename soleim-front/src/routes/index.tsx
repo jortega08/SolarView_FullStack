@@ -18,6 +18,7 @@ const PerfilProfesionalPage = lazy(() => import("@/pages/tecnicos/PerfilProfesio
 const AnaliticaPage = lazy(() => import("@/pages/analitica/AnaliticaPage"))
 const ReportesPage = lazy(() => import("@/pages/reportes/ReportesPage"))
 const NotificacionesPage = lazy(() => import("@/pages/comunicacion/NotificacionesPage"))
+const ConfiguracionPage = lazy(() => import("@/pages/configuracion/ConfiguracionPage"))
 const PlaceholderPage = lazy(() => import("@/pages/PlaceholderPage"))
 
 export const router = createBrowserRouter([
@@ -55,7 +56,7 @@ export const router = createBrowserRouter([
       { path: "analitica", element: <Suspense fallback={<PageLoader />}><AnaliticaPage /></Suspense> },
       { path: "reportes", element: <Suspense fallback={<PageLoader />}><ReportesPage /></Suspense> },
       { path: "notificaciones", element: <Suspense fallback={<PageLoader />}><NotificacionesPage /></Suspense> },
-      { path: "configuracion", element: <Suspense fallback={<PageLoader />}><PlaceholderPage title="Configuración" area="Sistema" /></Suspense> },
+      { path: "configuracion", element: <Suspense fallback={<PageLoader />}><ConfiguracionPage /></Suspense> },
     ],
   },
   { path: "*", element: <Navigate to="/" replace /> },

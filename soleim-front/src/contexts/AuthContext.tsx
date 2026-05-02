@@ -1,5 +1,6 @@
 import { useState } from "react"
 import { authService } from "@/services/auth.service"
+import { apiClient } from "@/services/apiClient"
 import { AuthContext } from "./auth-context"
 import type { ApiUser } from "@/types/api"
 import {
@@ -78,8 +79,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setUser(null)
   }
 
+  const updateUser = async (patch: Partial<ApiUser>) => {
+    if (!user) throw new Error("No hay sesión activa")
+    const userId = user.idusuario ?? user.id
+    const { data } = await apiClient.patch<ApiUser>(`/core/usuarios/${userId}/`, patch)
+    const updated = { ...user, ...data }
+    saveAuthSession(updated, getStoredAccessToken() ?? "", getStoredRefreshToken() ?? undefined)
+    setUser(updated)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, token, loading, error, isAuthenticated: !!token, login, register, logout }}>
+    <AuthContext.Provider value={{ user, token, loading, error, isAuthenticated: !!token, login, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

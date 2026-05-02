@@ -65,6 +65,11 @@ class PerfilTecnicoSerializer(serializers.ModelSerializer):
             "estudios",
             "licencia_vence",
             "notas",
+            # Formación y competencias
+            "titulo_academico",
+            "nivel_educativo",
+            "certificaciones",
+            "capacidad_operacion",
             "carga_actual",
             "creado_at",
             "actualizado_at",
@@ -124,7 +129,7 @@ class PerfilTecnicoSerializer(serializers.ModelSerializer):
 
 
 class PerfilTecnicoLigeroSerializer(serializers.ModelSerializer):
-    """Versión compacta para listados de despacho (`/disponibles/`)."""
+    """Versión compacta para listados de despacho (`/disponibles/` y `/sugeridos/`)."""
 
     usuario_nombre = serializers.CharField(source="usuario.nombre", read_only=True)
     usuario_email = serializers.CharField(source="usuario.email", read_only=True)
@@ -141,6 +146,10 @@ class PerfilTecnicoLigeroSerializer(serializers.ModelSerializer):
             "telefono",
             "disponible",
             "especialidades_nombres",
+            "area_profesional",
+            "titulo_academico",
+            "nivel_educativo",
+            "capacidad_operacion",
             "carga_actual",
         ]
 

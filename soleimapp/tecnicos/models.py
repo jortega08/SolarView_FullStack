@@ -1,6 +1,22 @@
 from django.db import models
 from django.db.models import Count, Q
 
+NIVEL_EDUCATIVO_CHOICES = [
+    ("bachiller",        "Bachiller"),
+    ("tecnico",          "Técnico"),
+    ("tecnologo",        "Tecnólogo"),
+    ("profesional",      "Profesional"),
+    ("especializacion",  "Especialización"),
+    ("maestria",         "Maestría"),
+    ("doctorado",        "Doctorado"),
+]
+
+CAPACIDAD_OPERACION_CHOICES = [
+    ("supervision", "Solo supervisión"),
+    ("campo",       "Trabajo en campo"),
+    ("ambas",       "Supervisión y campo"),
+]
+
 
 class Especialidad(models.Model):
     """Catálogo de especialidades técnicas (paneles, baterías, inversores, etc.)."""
@@ -103,6 +119,24 @@ class PerfilTecnico(models.Model):
     estudios = models.JSONField(default=list, blank=True)
     licencia_vence = models.DateField(null=True, blank=True)
     notas = models.TextField(blank=True)
+
+    # ── Formación y competencias ──────────────────────────────────────────
+    titulo_academico = models.CharField(
+        max_length=120, blank=True,
+        help_text="Ej: Ingeniero Electrónico, Técnico en Electricidad Industrial",
+    )
+    nivel_educativo = models.CharField(
+        max_length=32, choices=NIVEL_EDUCATIVO_CHOICES, blank=True,
+    )
+    certificaciones = models.JSONField(
+        default=list, blank=True,
+        help_text="Lista de {nombre, institucion, ano} de certificaciones adicionales.",
+    )
+    capacidad_operacion = models.CharField(
+        max_length=32, choices=CAPACIDAD_OPERACION_CHOICES, blank=True, default="campo",
+        help_text="Tipo de trabajo que puede realizar el técnico.",
+    )
+
     creado_at = models.DateTimeField(auto_now_add=True)
     actualizado_at = models.DateTimeField(auto_now=True)
 

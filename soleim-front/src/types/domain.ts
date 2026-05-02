@@ -220,6 +220,12 @@ export interface Especialidad {
   descripcion: string | null
 }
 
+export interface Certificacion {
+  nombre: string
+  institucion?: string
+  ano?: string
+}
+
 export interface Tecnico {
   id: number
   usuarioId: number | null
@@ -243,6 +249,14 @@ export interface Tecnico {
   cargaTrabajo: number | null
   licenciaVence: string | null
   notas: string | null
+  // Formación y competencias
+  tituloAcademico: string | null
+  nivelEducativo: string | null
+  certificaciones: Certificacion[]
+  capacidadOperacion: string | null
+  // Sugerencia (solo al venir de /sugeridos/)
+  score?: number
+  razones?: string[]
 }
 
 export interface Notificacion {

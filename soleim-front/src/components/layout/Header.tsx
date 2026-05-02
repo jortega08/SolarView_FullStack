@@ -1,9 +1,10 @@
-import { Bell, User, ChevronDown } from "lucide-react"
+import { Bell, User, ChevronDown, Sun, Moon } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "@/contexts/useAuth"
+import { useI18n } from "@/contexts/I18nContext"
 import { useNoLeidasCount } from "@/hooks/useNotificaciones"
 import { cn } from "@/lib/cn"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, useCallback } from "react"
 
 interface HeaderProps {
   title: string
@@ -13,10 +14,33 @@ interface HeaderProps {
 
 export function Header({ title, subtitle, actions }: HeaderProps) {
   const { user, logout } = useAuth()
+  const { t } = useI18n()
   const { data: notiCount } = useNoLeidasCount()
   const navigate = useNavigate()
   const [dropOpen, setDropOpen] = useState(false)
   const dropRef = useRef<HTMLDivElement>(null)
+  const [isDark, setIsDark] = useState<boolean>(
+    () => (localStorage.getItem("solein_theme") ?? "light") === "dark"
+  )
+
+  // Sincronizar cuando ConfiguracionPage u otro componente cambia el tema
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const theme = (e as CustomEvent<string>).detail
+      setIsDark(theme === "dark")
+    }
+    window.addEventListener("solein:theme-change", handler)
+    return () => window.removeEventListener("solein:theme-change", handler)
+  }, [])
+
+  const toggleTheme = useCallback(() => {
+    const next = isDark ? "light" : "dark"
+    localStorage.setItem("solein_theme", next)
+    // CORRECTO: el CSS usa [data-theme="dark"], no la clase .dark
+    document.documentElement.setAttribute("data-theme", next)
+    window.dispatchEvent(new CustomEvent("solein:theme-change", { detail: next }))
+    setIsDark(next === "dark")
+  }, [isDark])
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -66,6 +90,19 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
           )}
         </Link>
 
+        {/* Dark / Light toggle */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          title={isDark ? "Cambiar a modo claro" : "Cambiar a modo oscuro"}
+          className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[var(--color-neutral-100)] transition-colors"
+        >
+          {isDark
+            ? <Sun className="w-4 h-4 text-[var(--color-neutral-500)]" />
+            : <Moon className="w-4 h-4 text-[var(--color-neutral-500)]" />
+          }
+        </button>
+
         {/* Avatar + dropdown */}
         <div className="relative" ref={dropRef}>
           <button
@@ -91,21 +128,21 @@ export function Header({ title, subtitle, actions }: HeaderProps) {
                 className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-neutral-50)]"
                 onClick={() => setDropOpen(false)}
               >
-                Perfil profesional
+                {t("header.profile")}
               </Link>
               <Link
                 to="/configuracion"
                 className="flex items-center gap-2 px-3 py-2 text-xs text-[var(--color-text-primary)] hover:bg-[var(--color-neutral-50)]"
                 onClick={() => setDropOpen(false)}
               >
-                Configuración
+                {t("header.settings")}
               </Link>
               <div className="border-t border-[var(--color-border)] my-1" />
               <button
                 onClick={handleLogout}
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[var(--color-danger-600)] hover:bg-[var(--color-danger-50)]"
               >
-                Cerrar sesión
+                {t("nav.logout")}
               </button>
             </div>
           )}

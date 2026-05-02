@@ -10,6 +10,7 @@ export interface AuthContextValue {
   login: (email: string, contrasena: string) => Promise<void>
   register: (nombre: string, email: string, contrasena: string) => Promise<void>
   logout: () => void
+  updateUser: (patch: Partial<ApiUser>) => Promise<void>
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null)

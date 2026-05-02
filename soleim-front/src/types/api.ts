@@ -324,6 +324,14 @@ export interface ApiTecnico {
   carga_actual?: number
   licencia_vence?: string | null
   notas?: string
+  // Formación y competencias
+  titulo_academico?: string
+  nivel_educativo?: string
+  certificaciones?: Array<{ nombre: string; institucion?: string; ano?: string }>
+  capacidad_operacion?: string
+  // Sugerencia
+  score?: number
+  razones?: string[]
   creado_at?: string
   actualizado_at?: string
 }
