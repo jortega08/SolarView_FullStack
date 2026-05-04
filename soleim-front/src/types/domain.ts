@@ -10,12 +10,34 @@ export interface PanelEmpresa {
   instalacionesActivas: number
   generacionHoy: number | null
   ahorroEstimado: number | null
+  facturacionHoy: FacturacionHoy | null
   alertasCriticas: number
   ordenesAbiertas: number | null
   slaEnRiesgo: number | null
   instalaciones: InstalacionResumen[]
   clima: Clima | null
   fuentesEnergia: FuentesEnergia | null
+}
+
+export interface FacturacionHoy {
+  valorConsumo: number
+  valorAhorro: number
+  valorTotal: number
+  moneda: string
+}
+
+export interface Tarifa {
+  id: number
+  nombre: string
+  ciudadId: number | null
+  ciudadNombre: string | null
+  instalacionId: number | null
+  instalacionNombre: string | null
+  valorKwh: number
+  moneda: string
+  vigenteDesde: string
+  vigenteHasta: string | null
+  scope: "instalacion" | "ciudad" | "global"
 }
 
 export interface InstalacionResumen {

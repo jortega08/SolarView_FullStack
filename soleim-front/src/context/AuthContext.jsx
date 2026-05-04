@@ -70,18 +70,59 @@ export function AuthProvider({ children }) {
     }
   }
 
-  const register = async ({ nombre, email, contrasena }) => {
+  const register = async ({ nombre, email, contrasena, prestador }) => {
     setLoading(true)
     setError(null)
     try {
+      const payload = {
+        nombre: nombre.trim(),
+        email: email.trim(),
+        contrasena,
+      }
+      // Bloque opcional: si el usuario eligió crear su empresa prestadora
+      // en el mismo registro, el backend la crea y la vincula a usuario.prestador.
+      // Ver usuario/serializers.py::RegisterSerializer.
+      if (prestador?.nombre?.trim()) {
+        payload.prestador_nombre = prestador.nombre.trim()
+        if (prestador.nit?.trim()) payload.prestador_nit = prestador.nit.trim()
+        if (prestador.ciudad) payload.prestador_ciudad = Number(prestador.ciudad)
+      }
       const res = await fetch(`${API_BASE}/auth/register/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nombre.trim(), email: email.trim(), contrasena }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json().catch(() => null)
       if (!res.ok || !data?.success) {
         throw new Error(getApiErrorMessage(data, 'Error en el registro'))
+      }
+      _saveSession(data.user, data.tokens.access)
+      return data
+    } catch (err) {
+      setError(err.message)
+      throw err
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const registerConCodigo = async ({ nombre, email, contrasena, codigo }) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const res = await fetch(`${API_BASE}/auth/registrar-con-codigo/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          nombre: nombre.trim(),
+          email: email.trim(),
+          contrasena,
+          codigo: codigo.trim(),
+        }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok || !data?.success) {
+        throw new Error(getApiErrorMessage(data, 'No se pudo unir al prestador'))
       }
       _saveSession(data.user, data.tokens.access)
       return data
@@ -102,7 +143,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, error, login, register, logout, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ user, token, loading, error, login, register, registerConCodigo, logout, isAuthenticated: !!token }}>
       {children}
     </AuthContext.Provider>
   )

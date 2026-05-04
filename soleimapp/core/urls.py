@@ -13,6 +13,10 @@ router.register(r"ciudades", views.CiudadViewSet, basename="ciudad")
 router.register(r"empresas", views.EmpresaViewSet, basename="empresa")
 router.register(r"prestadores", views.PrestadorServicioViewSet, basename="prestador")
 router.register(r"instalaciones", views.InstalacionViewSet, basename="instalacion")
+router.register(r"tarifas", views.TarifaViewSet, basename="tarifa")
+router.register(
+    r"invitaciones", views.InvitacionPrestadorViewSet, basename="invitacion-prestador"
+)
 router.register(r"sensores", views.SensorViewSet, basename="sensor")
 
 urlpatterns = [

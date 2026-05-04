@@ -6,10 +6,12 @@ from .models import (
     Empresa,
     Estado,
     Instalacion,
+    InvitacionPrestador,
     Pais,
     PrestadorServicio,
     RolInstalacion,
     Sensor,
+    Tarifa,
     Usuario,
 )
 
@@ -208,6 +210,98 @@ class RolInstalacionSerializer(serializers.ModelSerializer):
             "rol",
         ]
         read_only_fields = ["id"]
+
+
+class InvitacionPrestadorSerializer(serializers.ModelSerializer):
+    prestador_nombre = serializers.CharField(
+        source="prestador.nombre", read_only=True
+    )
+    creado_por_nombre = serializers.CharField(
+        source="creado_por.nombre", read_only=True, default=None
+    )
+    usado_por_nombre = serializers.CharField(
+        source="usado_por.nombre", read_only=True, default=None
+    )
+    vigente = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InvitacionPrestador
+        fields = [
+            "idinvitacion",
+            "prestador",
+            "prestador_nombre",
+            "codigo",
+            "rol",
+            "email_destino",
+            "creado_por",
+            "creado_por_nombre",
+            "creado_at",
+            "vigente_hasta",
+            "usado_por",
+            "usado_por_nombre",
+            "usado_at",
+            "revocada",
+            "vigente",
+        ]
+        read_only_fields = [
+            "idinvitacion",
+            "codigo",
+            "creado_por",
+            "creado_at",
+            "usado_por",
+            "usado_at",
+            "prestador",  # se infiere del usuario que la crea
+        ]
+
+    def get_vigente(self, obj):
+        return obj.esta_vigente()
+
+
+class TarifaSerializer(serializers.ModelSerializer):
+    ciudad_nombre = serializers.CharField(source="ciudad.nombre", read_only=True)
+    instalacion_nombre = serializers.CharField(
+        source="instalacion.nombre", read_only=True
+    )
+
+    class Meta:
+        model = Tarifa
+        fields = [
+            "idtarifa",
+            "nombre",
+            "ciudad",
+            "ciudad_nombre",
+            "instalacion",
+            "instalacion_nombre",
+            "valor_kwh",
+            "moneda",
+            "vigente_desde",
+            "vigente_hasta",
+            "creado_at",
+            "actualizado_at",
+        ]
+        read_only_fields = ["idtarifa", "creado_at", "actualizado_at"]
+
+    def validate(self, attrs):
+        ciudad = attrs.get("ciudad")
+        instalacion = attrs.get("instalacion")
+        if ciudad is None and instalacion is None:
+            # Tarifa global por defecto: permitida pero advertir intención.
+            return attrs
+        if ciudad is not None and instalacion is not None:
+            raise serializers.ValidationError(
+                "Una tarifa aplica a ciudad O instalación, no a ambas."
+            )
+        vigente_desde = attrs.get("vigente_desde")
+        vigente_hasta = attrs.get("vigente_hasta")
+        if (
+            vigente_desde is not None
+            and vigente_hasta is not None
+            and vigente_hasta <= vigente_desde
+        ):
+            raise serializers.ValidationError(
+                "vigente_hasta debe ser posterior a vigente_desde."
+            )
+        return attrs
 
 
 class SensorSerializer(serializers.ModelSerializer):

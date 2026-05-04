@@ -20,6 +20,14 @@ function normalize(api: ApiPanelEmpresa): PanelEmpresa {
     instalacionesActivas: api.instalaciones_activas ?? (instalaciones.length > 0 ? activas : api.resumen?.total ?? 0),
     generacionHoy: api.total_generacion_hoy ?? null,
     ahorroEstimado: api.ahorro_estimado ?? null,
+    facturacionHoy: api.facturacion_hoy
+      ? {
+          valorConsumo: api.facturacion_hoy.valor_consumo,
+          valorAhorro: api.facturacion_hoy.valor_ahorro,
+          valorTotal: api.facturacion_hoy.valor_total,
+          moneda: api.facturacion_hoy.moneda,
+        }
+      : null,
     alertasCriticas: api.alertas_criticas ?? api.resumen?.con_alerta_critica ?? 0,
     ordenesAbiertas: api.ordenes_abiertas ?? null,
     slaEnRiesgo: api.sla_en_riesgo ?? null,

@@ -3,13 +3,13 @@ import { es } from "date-fns/locale"
 
 export function formatPower(value: number | null | undefined): string {
   if (value == null) return "—"
-  if (value >= 1000) return `${(value / 1000).toFixed(2)} MW`
+  if (value >= 1000) return `${(value / 1000).toFixed(1)} MW`
   return `${value.toFixed(1)} kW`
 }
 
 export function formatEnergy(value: number | null | undefined): string {
   if (value == null) return "—"
-  if (value >= 1000) return `${(value / 1000).toFixed(2)} GWh`
+  if (value >= 1000) return `${(value / 1000).toFixed(1)} GWh`
   return `${value.toFixed(1)} MWh`
 }
 
@@ -18,9 +18,19 @@ export function formatPercent(value: number | null | undefined, decimals = 0): s
   return `${value.toFixed(decimals)}%`
 }
 
-export function formatCurrency(value: number | null | undefined): string {
+export function formatCurrency(
+  value: number | null | undefined,
+  currency = "COP"
+): string {
   if (value == null) return "—"
-  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(value)
+  // Plataforma multi-tenant: la moneda viene en la respuesta del backend
+  // (ver `facturacion_hoy.moneda`). "COP" como default por mercado actual.
+  const safeCurrency = currency === "MIXED" ? "COP" : currency
+  return new Intl.NumberFormat("es-CO", {
+    style: "currency",
+    currency: safeCurrency,
+    maximumFractionDigits: 0,
+  }).format(value)
 }
 
 export function formatTemp(value: number | null | undefined): string {

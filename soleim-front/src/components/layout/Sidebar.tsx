@@ -1,7 +1,7 @@
 import { NavLink, useNavigate } from "react-router-dom"
 import {
   LayoutDashboard, Zap, Radio, Bell, ClipboardList,
-  Wrench, Users, UserCog, BarChart2, FileText, Settings,
+  Wrench, Users, UserCog, BarChart2, FileText, Settings, DollarSign,
   ChevronLeft, ChevronRight, LogOut
 } from "lucide-react"
 import { cn } from "@/lib/cn"
@@ -41,6 +41,7 @@ function useSidebarItems() {
       icon: <Bell className="w-4 h-4" />,
       badge: notiCount && notiCount > 0 ? notiCount : undefined,
     },
+    { to: "/tarifas", label: "Tarifas", icon: <DollarSign className="w-4 h-4" /> },
     { to: "/configuracion", label: t("nav.settings"), icon: <Settings className="w-4 h-4" /> },
   ]
   return items

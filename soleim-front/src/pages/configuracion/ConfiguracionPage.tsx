@@ -37,12 +37,22 @@ const LANGUAGES = [
   { code: "en" as Locale, label: "English", flag: "🇺🇸" },
 ]
 
-function loadThresholds() {
+interface AlertThresholds {
+  bateria_critica: number
+  bateria_advertencia: number
+}
+
+const DEFAULT_THRESHOLDS: AlertThresholds = {
+  bateria_critica: 15,
+  bateria_advertencia: 30,
+}
+
+function loadThresholds(): AlertThresholds {
   try {
     const raw = localStorage.getItem(THRESHOLD_KEY)
-    return raw ? JSON.parse(raw) : { bateria_critica: 15, bateria_advertencia: 30 }
+    return raw ? (JSON.parse(raw) as AlertThresholds) : DEFAULT_THRESHOLDS
   } catch {
-    return { bateria_critica: 15, bateria_advertencia: 30 }
+    return DEFAULT_THRESHOLDS
   }
 }
 

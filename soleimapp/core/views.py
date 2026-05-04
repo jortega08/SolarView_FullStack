@@ -3,7 +3,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS, BasePermission
 from rest_framework.response import Response
 
 from core.access import (
@@ -20,10 +20,12 @@ from .models import (
     Empresa,
     Estado,
     Instalacion,
+    InvitacionPrestador,
     Pais,
     PrestadorServicio,
     RolInstalacion,
     Sensor,
+    Tarifa,
     Usuario,
 )
 from .serializers import (
@@ -32,9 +34,11 @@ from .serializers import (
     EmpresaSerializer,
     EstadoSerializer,
     InstalacionSerializer,
+    InvitacionPrestadorSerializer,
     PaisSerializer,
     PrestadorServicioSerializer,
     SensorSerializer,
+    TarifaSerializer,
     UsuarioCreateSerializer,
     UsuarioSerializer,
 )
@@ -43,17 +47,42 @@ from .serializers import (
 _AUTHENTICATED = [IsAuthenticated, IsActiveUser]
 
 
+class _PublicReadAuthenticatedWrite(BasePermission):
+    """
+    Lectura pública (anónimos pueden GET) y escritura autenticada activa.
+
+    Usado en catálogos geográficos (países/estados/ciudades) para que el
+    formulario de registro pueda poblar selects sin un token.
+    """
+
+    def has_permission(self, request, view):
+        if request.method in SAFE_METHODS:
+            return True
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        if hasattr(user, "is_active") and not user.is_active:
+            return False
+        if hasattr(user, "is_locked") and user.is_locked():
+            return False
+        return True
+
+
 class PaisViewSet(viewsets.ModelViewSet):
+    """Catálogo público en lectura (lo usa el form de registro)."""
+
     queryset = Pais.objects.all()
     serializer_class = PaisSerializer
-    permission_classes = _AUTHENTICATED
+    permission_classes = [_PublicReadAuthenticatedWrite]
     pagination_class = None
 
 
 class EstadoViewSet(viewsets.ModelViewSet):
+    """Catálogo público en lectura."""
+
     queryset = Estado.objects.select_related("pais").all()
     serializer_class = EstadoSerializer
-    permission_classes = _AUTHENTICATED
+    permission_classes = [_PublicReadAuthenticatedWrite]
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["pais"]
@@ -67,9 +96,11 @@ class EstadoViewSet(viewsets.ModelViewSet):
 
 
 class CiudadViewSet(viewsets.ModelViewSet):
+    """Catálogo público en lectura."""
+
     queryset = Ciudad.objects.select_related("estado").all()
     serializer_class = CiudadSerializer
-    permission_classes = _AUTHENTICATED
+    permission_classes = [_PublicReadAuthenticatedWrite]
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["estado"]
@@ -157,7 +188,18 @@ class DomicilioViewSet(viewsets.ModelViewSet):
         return qs.filter(usuario=user)
 
 
-class EmpresaViewSet(viewsets.ReadOnlyModelViewSet):
+class EmpresaViewSet(viewsets.ModelViewSet):
+    """
+    Empresas-cliente atendidas por un prestador.
+
+    Lectura: filtrada por el alcance del usuario (admin global ve todo).
+    Escritura:
+      - admin global puede crear/editar cualquier empresa.
+      - Usuario con `prestador` asignado puede crear empresas-cliente
+        (las verá automáticamente cuando registre instalaciones para ellas).
+      - admin_empresa de una instalación puede actualizar la empresa de su scope.
+    """
+
     queryset = Empresa.objects.select_related("ciudad").all()
     serializer_class = EmpresaSerializer
     permission_classes = _AUTHENTICATED
@@ -171,14 +213,90 @@ class EmpresaViewSet(viewsets.ReadOnlyModelViewSet):
             return super().get_queryset()
         return get_user_client_queryset(user)
 
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            from rest_framework.permissions import BasePermission
 
-class PrestadorServicioViewSet(viewsets.ReadOnlyModelViewSet):
+            class _CanMutateEmpresa(BasePermission):
+                def has_permission(self, request, view):
+                    user = request.user
+                    if not (user and user.is_authenticated):
+                        return False
+                    if user.rol == "admin":
+                        return True
+                    # Un prestador puede registrar empresas-cliente que atiende.
+                    if getattr(user, "prestador_id", None):
+                        return True
+                    # admin_empresa puede actualizar empresas dentro de su scope.
+                    return RolInstalacion.objects.filter(
+                        usuario=user, rol="admin_empresa"
+                    ).exists()
+
+            return [IsAuthenticated(), IsActiveUser(), _CanMutateEmpresa()]
+        return super().get_permissions()
+
+
+class PrestadorServicioViewSet(viewsets.ModelViewSet):
+    """
+    PrestadorServicio = la empresa prestadora del usuario operativo.
+
+    Reglas de creación:
+      - admin global puede crear/editar cualquier prestador.
+      - Un usuario sin prestador asignado puede crear UNO (auto-link).
+        El recurso recién creado queda vinculado a `usuario.prestador`.
+      - Si el usuario ya tiene prestador, sólo puede actualizar el suyo.
+    """
+
     queryset = PrestadorServicio.objects.select_related("ciudad").all()
     serializer_class = PrestadorServicioSerializer
     permission_classes = _AUTHENTICATED
     pagination_class = None
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["ciudad", "activo"]
+
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            from rest_framework.permissions import BasePermission
+
+            class _CanMutatePrestador(BasePermission):
+                def has_permission(self, request, view):
+                    user = request.user
+                    if not (user and user.is_authenticated):
+                        return False
+                    if user.rol == "admin":
+                        return True
+                    # Cualquier usuario activo puede registrar SU prestador.
+                    return True
+
+                def has_object_permission(self, request, view, obj):
+                    user = request.user
+                    if user.rol == "admin":
+                        return True
+                    # Sólo el admin del prestador (quien lo creó / fue marcado)
+                    # puede editarlo.
+                    return (
+                        getattr(user, "prestador_id", None) == obj.idprestador
+                        and getattr(user, "es_admin_prestador", False)
+                    )
+
+            return [IsAuthenticated(), IsActiveUser(), _CanMutatePrestador()]
+        return super().get_permissions()
+
+    def perform_create(self, serializer):
+        from rest_framework.exceptions import PermissionDenied
+
+        user = self.request.user
+        if user.rol != "admin" and getattr(user, "prestador_id", None):
+            raise PermissionDenied(
+                "Ya tienes un prestador asignado; no puedes crear otro."
+            )
+        prestador = serializer.save()
+        # Auto-link: si el usuario aún no tiene prestador, queda vinculado al recién creado
+        # y queda marcado como admin de ese prestador (puede invitar empleados, etc.).
+        if user.rol != "admin" and not getattr(user, "prestador_id", None):
+            user.prestador = prestador
+            user.es_admin_prestador = True
+            user.save(update_fields=["prestador", "es_admin_prestador"])
 
 
 def _admin_empresa_ids(user):
@@ -292,6 +410,117 @@ class InstalacionViewSet(viewsets.ModelViewSet):
         if empresa.idempresa not in _admin_empresa_ids(user):
             raise PermissionDenied("No puedes editar instalaciones de esta empresa.")
         serializer.save(cliente=cliente)
+
+
+class InvitacionPrestadorViewSet(viewsets.ModelViewSet):
+    """
+    Códigos de invitación para que nuevos usuarios se unan al PrestadorServicio
+    como empleados, sin crear otro prestador.
+
+    - Sólo el admin del prestador (`es_admin_prestador=True`) puede emitir
+      invitaciones (POST), revocarlas (DELETE) o listarlas.
+    - Cada admin sólo ve las invitaciones de SU prestador.
+    - El código se genera automáticamente (random hex de 24 chars).
+    - El canje se hace en POST /api/auth/registrar-con-codigo/.
+    """
+
+    serializer_class = InvitacionPrestadorSerializer
+    permission_classes = _AUTHENTICATED
+    pagination_class = None
+    http_method_names = ["get", "post", "delete", "head", "options"]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = InvitacionPrestador.objects.select_related(
+            "prestador", "creado_por", "usado_por"
+        )
+        if getattr(user, "rol", None) == "admin":
+            return qs
+        prestador_id = getattr(user, "prestador_id", None)
+        if not prestador_id:
+            return qs.none()
+        return qs.filter(prestador_id=prestador_id)
+
+    def get_permissions(self):
+        if self.action in ("create", "destroy"):
+            from rest_framework.permissions import BasePermission
+
+            class _SoloAdminPrestador(BasePermission):
+                def has_permission(self, request, view):
+                    user = request.user
+                    if not (user and user.is_authenticated):
+                        return False
+                    if getattr(user, "rol", None) == "admin":
+                        return True
+                    return bool(
+                        getattr(user, "prestador_id", None)
+                        and getattr(user, "es_admin_prestador", False)
+                    )
+
+            return [IsAuthenticated(), IsActiveUser(), _SoloAdminPrestador()]
+        return super().get_permissions()
+
+    def perform_create(self, serializer):
+        from secrets import token_urlsafe
+
+        from rest_framework.exceptions import PermissionDenied, ValidationError
+
+        user = self.request.user
+        prestador_id = getattr(user, "prestador_id", None)
+        if not prestador_id and getattr(user, "rol", None) != "admin":
+            raise PermissionDenied("No tienes prestador asociado.")
+        # Si el body pasó un `prestador` distinto, lo ignoramos: la invitación
+        # es siempre para el prestador del admin que la emite.
+        if getattr(user, "rol", None) == "admin":
+            target_prestador = serializer.validated_data.get("prestador")
+            if target_prestador is None:
+                raise ValidationError(
+                    {"prestador": "Admin global debe especificar el prestador."}
+                )
+            target_prestador_id = target_prestador.idprestador
+        else:
+            target_prestador_id = prestador_id
+
+        codigo = token_urlsafe(18)[:24]  # ~24 chars URL-safe
+        serializer.save(
+            prestador_id=target_prestador_id,
+            codigo=codigo,
+            creado_por=user,
+        )
+
+
+class TarifaViewSet(viewsets.ModelViewSet):
+    """
+    CRUD de tarifas kWh.
+
+    Lectura: cualquier usuario autenticado puede consultar las tarifas que
+    afectan a sus instalaciones/ciudades.
+    Escritura: admin global y prestadores (cada prestador define las tarifas
+    que aplican a sus clientes/instalaciones).
+    """
+
+    queryset = Tarifa.objects.select_related("ciudad", "instalacion").all()
+    serializer_class = TarifaSerializer
+    permission_classes = _AUTHENTICATED
+    pagination_class = None
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["ciudad", "instalacion", "moneda"]
+
+    def get_permissions(self):
+        if self.action in ("create", "update", "partial_update", "destroy"):
+            from rest_framework.permissions import BasePermission
+
+            class _CanMutateTarifa(BasePermission):
+                def has_permission(self, request, view):
+                    user = request.user
+                    if not (user and user.is_authenticated):
+                        return False
+                    if user.rol == "admin":
+                        return True
+                    return bool(getattr(user, "prestador_id", None))
+
+            return [IsAuthenticated(), IsActiveUser(), _CanMutateTarifa()]
+        return super().get_permissions()
 
 
 class SensorViewSet(viewsets.ModelViewSet):

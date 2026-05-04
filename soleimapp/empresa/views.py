@@ -14,6 +14,7 @@ from auditoria.utils import registrar_evento
 from core.access import get_user_installation_queryset
 from core.models import Instalacion
 from core.permissions import IsActiveUser
+from core.tarifas import calcular_valores_energia, resolver_tarifa
 from ordenes.models import OrdenTrabajo
 from telemetria.models import Bateria, Consumo
 
@@ -172,6 +173,9 @@ def panel_empresa(request):
     en_mantenimiento = 0
     total_generacion_hoy = 0.0
     total_red_hoy = 0.0
+    total_valor_consumo = 0.0
+    total_valor_ahorro = 0.0
+    monedas_usadas = set()
     temperaturas = []
     irradiancias = []
 
@@ -196,6 +200,14 @@ def panel_empresa(request):
         red_kwh = float(instalacion.red_hoy or 0)
         total_generacion_hoy += generacion_hoy
         total_red_hoy += red_kwh
+
+        # Tarifa kWh aplicable a esta instalación + valores monetarios derivados
+        tarifa = resolver_tarifa(instalacion)
+        valores = calcular_valores_energia(generacion_hoy, red_kwh, tarifa)
+        total_valor_consumo += valores["valor_consumo"]
+        total_valor_ahorro += valores["valor_ahorro"]
+        monedas_usadas.add(valores["moneda"])
+
         if instalacion.bateria_temp is not None:
             temperaturas.append(float(instalacion.bateria_temp))
         irradiancia = _solar_irradiancia(
@@ -217,6 +229,11 @@ def panel_empresa(request):
                 "riesgo": riesgo,
                 "potencia_actual": _round_float(instalacion.potencia_actual),
                 "generacion_hoy": round(generacion_hoy, 2),
+                "valor_consumo": valores["valor_consumo"],
+                "valor_ahorro": valores["valor_ahorro"],
+                "valor_total": valores["valor_total"],
+                "tarifa_kwh": valores["tarifa_kwh"],
+                "moneda": valores["moneda"],
                 "tipo_sistema": instalacion.tipo_sistema,
                 "empresa": (
                     instalacion.cliente.nombre
@@ -309,7 +326,19 @@ def panel_empresa(request):
             1 for item in instalaciones_data if item["estado"] == "activa"
         ),
         "total_generacion_hoy": round(total_generacion_hoy, 2),
-        "ahorro_estimado": round(total_generacion_hoy * 800, 2),
+        # `ahorro_estimado` se mantiene por compatibilidad con clientes antiguos
+        # del frontend; coincide con `valor_ahorro` del nuevo bloque facturacion.
+        "ahorro_estimado": round(total_valor_ahorro, 2),
+        "facturacion_hoy": {
+            "valor_consumo": round(total_valor_consumo, 2),
+            "valor_ahorro": round(total_valor_ahorro, 2),
+            "valor_total": round(total_valor_consumo + total_valor_ahorro, 2),
+            "moneda": (
+                next(iter(monedas_usadas))
+                if len(monedas_usadas) == 1
+                else "MIXED"
+            ),
+        },
         "alertas_criticas": con_alerta_critica,
         "ordenes_abiertas": ordenes_abiertas,
         "sla_en_riesgo": sla_en_riesgo,

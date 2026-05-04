@@ -6,6 +6,7 @@ from rest_framework.decorators import api_view, permission_classes, throttle_cla
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
+from rest_framework.views import APIView
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -13,7 +14,13 @@ from auditoria.utils import registrar_evento
 from core.models import Usuario
 from core.permissions import IsActiveUser
 
-from .serializers import LoginSerializer, RegisterSerializer, UsuarioProfileSerializer
+from .serializers import (
+    CoreUsuarioTokenRefreshSerializer,
+    LoginSerializer,
+    RegisterConCodigoSerializer,
+    RegisterSerializer,
+    UsuarioProfileSerializer,
+)
 
 logger = logging.getLogger("soleim")
 
@@ -105,6 +112,49 @@ def register(request):
         {
             "success": True,
             "user": RegisterSerializer(usuario).data,
+            "tokens": _build_tokens(usuario),
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@throttle_classes([RegisterRateThrottle])
+def registrar_con_codigo(request):
+    """
+    POST /api/auth/registrar-con-codigo/
+    Body: { nombre, email, contrasena, codigo }
+
+    Registra un nuevo usuario que se UNE como empleado al PrestadorServicio
+    cuyo admin generó `codigo`. NO crea un nuevo prestador.
+    """
+    serializer = RegisterConCodigoSerializer(data=request.data)
+    if not serializer.is_valid():
+        return _validation_error_response(serializer)
+
+    usuario = serializer.save()
+    logger.info(
+        "Usuario unido a prestador: %s (id=%s, prestador_id=%s)",
+        usuario.email,
+        usuario.idusuario,
+        usuario.prestador_id,
+    )
+    registrar_evento(
+        usuario=usuario,
+        accion="register_con_codigo",
+        entidad="Usuario",
+        entidad_id=usuario.idusuario,
+        detalle={
+            "email": usuario.email,
+            "prestador_id": usuario.prestador_id,
+        },
+        request=request,
+    )
+    return Response(
+        {
+            "success": True,
+            "user": UsuarioProfileSerializer(usuario).data,
             "tokens": _build_tokens(usuario),
         },
         status=status.HTTP_201_CREATED,
@@ -249,6 +299,27 @@ def logout(request):
         request=request,
     )
     return Response({"success": True})
+
+
+class CoreUsuarioTokenRefreshView(APIView):
+    """
+    Refresh JWT que NO depende de `django.contrib.auth.models.User`.
+
+    Reemplaza al `TokenRefreshView` por defecto de SimpleJWT, cuyo serializer
+    invoca `get_user_model().objects.get(...)` y rompe en este proyecto
+    (modelo operativo `core.Usuario`, sin AUTH_USER_MODEL configurado).
+
+    Body: { "refresh": "<refresh_token>" }
+    Resp: { "access": "<nuevo_access_token>" }
+    """
+
+    authentication_classes = []
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = CoreUsuarioTokenRefreshSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 
 @api_view(["GET"])

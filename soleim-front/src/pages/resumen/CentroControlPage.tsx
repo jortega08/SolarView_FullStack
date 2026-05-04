@@ -88,6 +88,8 @@ export default function CentroControlPage() {
     ordenes?.filter((o) => o.slaEstado === "vencido" || o.slaEstado === "en_riesgo").length ??
     0
   const instalacionesConSoc = panel?.instalaciones.filter((i) => i.bateriaSoc != null) ?? []
+  const facturacion = panel?.facturacionHoy ?? null
+  const monedaPanel = facturacion?.moneda ?? "COP"
 
   return (
     <div className="space-y-5">
@@ -108,16 +110,6 @@ export default function CentroControlPage() {
           icon={Zap}
           iconBg="bg-[var(--color-primary-50)]"
           iconColor="text-[var(--color-primary-700)]"
-          loading={panelLoading}
-          error={panelError}
-          onRetry={refetchPanel}
-        />
-        <MetricCard
-          title="Ahorro estimado"
-          value={panelLoading ? "—" : formatCurrency(panel?.ahorroEstimado)}
-          icon={DollarSign}
-          iconBg="bg-[var(--color-energy-50)]"
-          iconColor="text-[var(--color-energy-700)]"
           loading={panelLoading}
           error={panelError}
           onRetry={refetchPanel}
@@ -149,6 +141,61 @@ export default function CentroControlPage() {
           iconBg="bg-[var(--color-sla-50)]"
           iconColor="text-[var(--color-sla-600)]"
           loading={panelLoading || ordenesLoading}
+          error={panelError}
+          onRetry={refetchPanel}
+        />
+        <MetricCard
+          title="Ahorro estimado hoy"
+          value={panelLoading ? "—" : formatCurrency(panel?.ahorroEstimado, monedaPanel)}
+          icon={DollarSign}
+          iconBg="bg-[var(--color-energy-50)]"
+          iconColor="text-[var(--color-energy-700)]"
+          loading={panelLoading}
+          error={panelError}
+          onRetry={refetchPanel}
+        />
+      </section>
+
+      <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <MetricCard
+          title="Valor consumo (red)"
+          value={
+            panelLoading
+              ? "—"
+              : formatCurrency(facturacion?.valorConsumo, monedaPanel)
+          }
+          icon={Zap}
+          iconBg="bg-[var(--color-primary-50)]"
+          iconColor="text-[var(--color-primary-700)]"
+          loading={panelLoading}
+          error={panelError}
+          onRetry={refetchPanel}
+        />
+        <MetricCard
+          title="Valor ahorro (solar)"
+          value={
+            panelLoading
+              ? "—"
+              : formatCurrency(facturacion?.valorAhorro, monedaPanel)
+          }
+          icon={Sun}
+          iconBg="bg-[var(--color-energy-50)]"
+          iconColor="text-[var(--color-energy-700)]"
+          loading={panelLoading}
+          error={panelError}
+          onRetry={refetchPanel}
+        />
+        <MetricCard
+          title="Valor total (sin paneles)"
+          value={
+            panelLoading
+              ? "—"
+              : formatCurrency(facturacion?.valorTotal, monedaPanel)
+          }
+          icon={DollarSign}
+          iconBg="bg-[var(--color-solar-50)]"
+          iconColor="text-[var(--color-solar-600)]"
+          loading={panelLoading}
           error={panelError}
           onRetry={refetchPanel}
         />

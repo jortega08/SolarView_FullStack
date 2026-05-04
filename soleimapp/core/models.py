@@ -79,6 +79,16 @@ class Usuario(models.Model):
         help_text="Desactiva la cuenta sin eliminarla.",
     )
 
+    # ---------- rol dentro del prestador ----------
+    # True para el usuario que CREA un PrestadorServicio (vía registro o
+    # POST /api/core/prestadores/). Habilita gestionar la empresa, invitar
+    # empleados y editar tarifas. No es lo mismo que `rol="admin"` (admin
+    # global de plataforma).
+    es_admin_prestador = models.BooleanField(
+        default=False,
+        help_text="True si es el admin de su PrestadorServicio (puede invitar empleados).",
+    )
+
     # ---------- protección anti-fuerza-bruta ----------
     failed_login_attempts = models.IntegerField(
         default=0,
@@ -330,6 +340,158 @@ class Sensor(models.Model):
 
     def __str__(self):
         return f"{self.nombre} ({self.codigo})"
+
+
+class InvitacionPrestador(models.Model):
+    """
+    Código de invitación para que un nuevo Usuario se una a un PrestadorServicio
+    existente como empleado, sin tener que crear otro prestador.
+
+    Flujo:
+      1. Admin del prestador crea una invitación → se genera `codigo`.
+      2. El admin comparte el código por fuera (email, WhatsApp...).
+      3. El nuevo usuario va a Register, elige "Unirme con código",
+         envía POST /api/auth/registrar-con-codigo/ con {nombre, email,
+         contrasena, codigo}.
+      4. Backend valida vigencia + no usado, crea Usuario con
+         prestador_id = invitacion.prestador_id, marca la invitación.
+
+    Una invitación es de un solo uso (`usado_por` queda set).
+    """
+
+    ROLES = (
+        ("admin_empresa", "Admin de empresa"),
+        ("operador", "Operador"),
+        ("viewer", "Viewer"),
+    )
+
+    idinvitacion = models.AutoField(primary_key=True)
+    prestador = models.ForeignKey(
+        "PrestadorServicio",
+        on_delete=models.CASCADE,
+        related_name="invitaciones",
+    )
+    codigo = models.CharField(
+        max_length=32,
+        unique=True,
+        help_text="Token aleatorio compartido por el admin con el invitado.",
+    )
+    rol = models.CharField(
+        max_length=20,
+        choices=ROLES,
+        default="operador",
+        help_text="Rol operativo que tendrá el invitado al unirse.",
+    )
+    email_destino = models.EmailField(
+        blank=True,
+        help_text="Opcional: email esperado del invitado (sólo informativo).",
+    )
+    creado_por = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="invitaciones_emitidas",
+    )
+    creado_at = models.DateTimeField(auto_now_add=True)
+    vigente_hasta = models.DateTimeField(
+        help_text="Después de esta fecha la invitación deja de ser canjeable.",
+    )
+    usado_por = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="invitacion_usada",
+    )
+    usado_at = models.DateTimeField(null=True, blank=True)
+    revocada = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = "invitacion_prestador"
+        ordering = ["-creado_at"]
+        verbose_name = "Invitación de prestador"
+        verbose_name_plural = "Invitaciones de prestador"
+        indexes = [
+            models.Index(fields=["codigo"], name="idx_invitacion_codigo"),
+            models.Index(fields=["prestador"], name="idx_invitacion_prestador"),
+        ]
+
+    def __str__(self):
+        return f"{self.codigo} → {self.prestador.nombre} ({self.rol})"
+
+    def esta_vigente(self) -> bool:
+        if self.revocada or self.usado_por_id:
+            return False
+        return self.vigente_hasta > timezone.now()
+
+
+class Tarifa(models.Model):
+    """
+    Tarifa de energía eléctrica por kWh (moneda local).
+
+    Se resuelve en cascada:
+      1. Tarifa específica para una instalación (`instalacion` no nulo).
+      2. Tarifa de la ciudad (`ciudad` no nulo, `instalacion` nulo).
+      3. Tarifa global por defecto (ambos nulos) — fallback final.
+
+    Sólo se usan tarifas con `vigente_desde <= now` y (`vigente_hasta` nulo
+    o `vigente_hasta > now`).
+    """
+
+    idtarifa = models.AutoField(primary_key=True)
+    nombre = models.CharField(
+        max_length=120,
+        help_text="Etiqueta humana, p.ej. 'Bogotá - Estrato 4 - 2026 Q1'.",
+    )
+    ciudad = models.ForeignKey(
+        Ciudad,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="tarifas",
+        help_text="Si se define, aplica a todas las instalaciones de la ciudad.",
+    )
+    instalacion = models.ForeignKey(
+        "Instalacion",
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="tarifas",
+        help_text="Override puntual para una instalación.",
+    )
+    valor_kwh = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Costo del kWh en moneda local (ej. COP).",
+    )
+    moneda = models.CharField(max_length=8, default="COP")
+    vigente_desde = models.DateTimeField()
+    vigente_hasta = models.DateTimeField(null=True, blank=True)
+    creado_at = models.DateTimeField(auto_now_add=True)
+    actualizado_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "tarifa"
+        ordering = ["-vigente_desde", "-idtarifa"]
+        verbose_name = "Tarifa de energía"
+        verbose_name_plural = "Tarifas de energía"
+        indexes = [
+            models.Index(
+                fields=["ciudad", "vigente_desde"], name="idx_tarifa_ciudad_desde"
+            ),
+            models.Index(
+                fields=["instalacion", "vigente_desde"],
+                name="idx_tarifa_inst_desde",
+            ),
+        ]
+
+    def __str__(self):
+        scope = (
+            f"instalación {self.instalacion_id}"
+            if self.instalacion_id
+            else (f"ciudad {self.ciudad_id}" if self.ciudad_id else "global")
+        )
+        return f"{self.nombre} ({self.valor_kwh} {self.moneda}/kWh - {scope})"
 
 
 class RolInstalacion(models.Model):

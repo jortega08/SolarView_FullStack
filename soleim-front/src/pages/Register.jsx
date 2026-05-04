@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { Eye, EyeOff } from 'lucide-react'
+import { Building2, Eye, EyeOff, KeyRound } from 'lucide-react'
 import usePageTitle from '../hooks/usePageTitle'
 import '../styles/Auth.css'
+
+const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 function SoleinMark({ size = 32 }) {
   return (
@@ -28,31 +30,56 @@ function SolarIllustration() {
       <line x1="120" y1="156" x2="120" y2="178" stroke="#1d4ed8" strokeWidth="2"   strokeLinecap="round" opacity="0.75"/>
       <line x1="84"  y1="120" x2="62"  y2="120" stroke="#1d4ed8" strokeWidth="2"   strokeLinecap="round" opacity="0.75"/>
       <line x1="156" y1="120" x2="178" y2="120" stroke="#1d4ed8" strokeWidth="2"   strokeLinecap="round" opacity="0.75"/>
-      <line x1="100" y1="100" x2="84"  y2="84"  stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" opacity="0.45"/>
-      <line x1="140" y1="100" x2="156" y2="84"  stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" opacity="0.45"/>
-      <line x1="100" y1="140" x2="84"  y2="156" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" opacity="0.45"/>
-      <line x1="140" y1="140" x2="156" y2="156" stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" opacity="0.45"/>
-      <path d="M 30 185 Q 120 85  210 160" stroke="#60a5fa" strokeWidth="1.5" fill="none" strokeLinecap="round" opacity="0.55"/>
-      <path d="M 18 148 Q 120 48  222 132" stroke="#60a5fa" strokeWidth="1"   fill="none" strokeLinecap="round" opacity="0.28"/>
-      <circle cx="30"  cy="185" r="3.5" fill="#3b82f6" opacity="0.65"/>
-      <circle cx="210" cy="160" r="3.5" fill="#3b82f6" opacity="0.65"/>
-      <circle cx="120" cy="92"  r="2.5" fill="#60a5fa" opacity="0.35"/>
-      <circle cx="38"  cy="38"  r="2" fill="rgba(29,78,216,0.25)"/>
-      <circle cx="202" cy="38"  r="2" fill="rgba(29,78,216,0.25)"/>
-      <circle cx="38"  cy="202" r="2" fill="rgba(59,130,246,0.35)"/>
-      <circle cx="202" cy="202" r="2" fill="rgba(59,130,246,0.35)"/>
     </svg>
   )
 }
 
+const MODES = {
+  EMPRESA: 'empresa',
+  CODIGO: 'codigo',
+}
+
 export default function Register() {
   usePageTitle("Crear cuenta")
-  const [form, setForm] = useState({ nombre: '', email: '', contrasena: '', confirmContrasena: '' })
-  const [showPass,    setShowPass]    = useState(false)
+  // Modo del formulario:
+  //   EMPRESA → registro de un nuevo PrestadorServicio (el primer usuario = la empresa).
+  //   CODIGO  → unirse como empleado a un prestador existente con código de invitación.
+  const [mode, setMode] = useState(MODES.EMPRESA)
+
+  const [form, setForm] = useState({
+    nombre: '',
+    email: '',
+    contrasena: '',
+    confirmContrasena: '',
+    // EMPRESA
+    prestadorNombre: '',
+    prestadorNit: '',
+    prestadorCiudad: '',
+    // CODIGO
+    codigo: '',
+  })
+  const [showPass, setShowPass] = useState(false)
   const [showConfirm, setShowConfirm] = useState(false)
-  const [err,  setErr]  = useState('')
-  const { register, loading } = useAuth()
+  const [ciudades, setCiudades] = useState([])
+  const [err, setErr] = useState('')
+
+  const { register, registerConCodigo, loading } = useAuth()
   const navigate = useNavigate()
+
+  // Cargamos ciudades sólo cuando el usuario está creando una nueva empresa.
+  useEffect(() => {
+    if (mode !== MODES.EMPRESA || ciudades.length > 0) return
+    let aborted = false
+    fetch(`${API_BASE}/core/ciudades/`)
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => {
+        if (aborted) return
+        const list = Array.isArray(data) ? data : data?.results ?? []
+        setCiudades(list)
+      })
+      .catch(() => { /* fallback a input texto */ })
+    return () => { aborted = true }
+  }, [mode, ciudades.length])
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -62,7 +89,26 @@ export default function Register() {
       return
     }
     try {
-      await register({ nombre: form.nombre, email: form.email, contrasena: form.contrasena })
+      if (mode === MODES.EMPRESA) {
+        await register({
+          nombre: form.nombre,
+          email: form.email,
+          contrasena: form.contrasena,
+          // En este modo el bloque prestador es REQUERIDO.
+          prestador: {
+            nombre: form.prestadorNombre,
+            nit: form.prestadorNit,
+            ciudad: form.prestadorCiudad || null,
+          },
+        })
+      } else {
+        await registerConCodigo({
+          nombre: form.nombre,
+          email: form.email,
+          contrasena: form.contrasena,
+          codigo: form.codigo,
+        })
+      }
       navigate('/')
     } catch (error) {
       setErr(error.message)
@@ -76,7 +122,6 @@ export default function Register() {
 
       {/* ── Panel izquierdo: formulario ─────────────────────────────────── */}
       <div className="auth-form-panel">
-
         <div className="auth-logo-anchor">
           <SoleinMark size={30} />
           <span className="auth-logo-name">SOLEIM</span>
@@ -84,11 +129,58 @@ export default function Register() {
 
         <div className="auth-form-container">
           <h2 className="auth-heading">Crea tu cuenta.</h2>
-          <p className="auth-subtitle">Empieza a monitorear tus instalaciones solares</p>
+          <p className="auth-subtitle">
+            {mode === MODES.EMPRESA
+              ? 'Eres el primer usuario: registras tu empresa prestadora.'
+              : 'Únete a una empresa existente con tu código de invitación.'}
+          </p>
+
+          {/* Selector de modo: dos cards visibles desde el primer momento */}
+          <div
+            role="tablist"
+            aria-label="Tipo de registro"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '0.5rem',
+              marginBottom: '1rem',
+            }}
+          >
+            <ModeCard
+              active={mode === MODES.EMPRESA}
+              icon={<Building2 size={16} />}
+              title="Nueva empresa"
+              hint="Registras tu prestadora"
+              onClick={() => setMode(MODES.EMPRESA)}
+            />
+            <ModeCard
+              active={mode === MODES.CODIGO}
+              icon={<KeyRound size={16} />}
+              title="Tengo código"
+              hint="Unirme a una empresa"
+              onClick={() => setMode(MODES.CODIGO)}
+            />
+          </div>
 
           {err && <div className="auth-error">{err}</div>}
 
           <form onSubmit={handleSubmit} className="auth-form">
+            {mode === MODES.CODIGO && (
+              <div className="form-group">
+                <label htmlFor="reg-codigo">Código de invitación</label>
+                <input
+                  id="reg-codigo"
+                  type="text"
+                  name="codigo"
+                  value={form.codigo}
+                  onChange={handleChange}
+                  placeholder="Pegado por tu administrador"
+                  required
+                  autoFocus
+                />
+              </div>
+            )}
+
             <div className="form-group">
               <label htmlFor="reg-nombre">Nombre completo</label>
               <input
@@ -99,7 +191,7 @@ export default function Register() {
                 onChange={handleChange}
                 placeholder="Ana García"
                 required
-                autoFocus
+                autoFocus={mode === MODES.EMPRESA}
               />
             </div>
 
@@ -165,8 +257,84 @@ export default function Register() {
               </div>
             </div>
 
+            {/* Datos de la empresa prestadora — sólo en modo EMPRESA */}
+            {mode === MODES.EMPRESA && (
+              <div
+                style={{
+                  borderTop: '1px solid #e2e8f0',
+                  marginTop: '0.25rem',
+                  paddingTop: '0.75rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.75rem',
+                }}
+              >
+                <p style={{ margin: 0, color: '#64748b', fontSize: '0.75rem' }}>
+                  Estos datos crean tu empresa prestadora. Después podrás invitar
+                  a tus empleados con un código y dar de alta a tus clientes.
+                </p>
+                <div className="form-group">
+                  <label htmlFor="reg-prestador-nombre">Nombre de la empresa prestadora</label>
+                  <input
+                    id="reg-prestador-nombre"
+                    type="text"
+                    name="prestadorNombre"
+                    value={form.prestadorNombre}
+                    onChange={handleChange}
+                    placeholder="Solar Andes SAS"
+                    required
+                    maxLength={150}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="reg-prestador-nit">NIT (opcional)</label>
+                  <input
+                    id="reg-prestador-nit"
+                    type="text"
+                    name="prestadorNit"
+                    value={form.prestadorNit}
+                    onChange={handleChange}
+                    placeholder="900-555-1"
+                    maxLength={50}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="reg-prestador-ciudad">Ciudad (opcional)</label>
+                  {ciudades.length > 0 ? (
+                    <select
+                      id="reg-prestador-ciudad"
+                      name="prestadorCiudad"
+                      value={form.prestadorCiudad}
+                      onChange={handleChange}
+                    >
+                      <option value="">Sin ciudad</option>
+                      {ciudades.map((c) => (
+                        <option key={c.idciudad} value={c.idciudad}>
+                          {c.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      id="reg-prestador-ciudad"
+                      type="text"
+                      name="prestadorCiudad"
+                      value={form.prestadorCiudad}
+                      onChange={handleChange}
+                      placeholder="ID de ciudad (numérico)"
+                      inputMode="numeric"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+
             <button type="submit" className="auth-btn" disabled={loading}>
-              {loading ? 'Creando cuenta...' : 'Crear cuenta'}
+              {loading
+                ? 'Creando cuenta...'
+                : mode === MODES.EMPRESA
+                  ? 'Crear empresa y cuenta'
+                  : 'Unirme con código'}
             </button>
           </form>
 
@@ -193,7 +361,44 @@ export default function Register() {
           </div>
         </div>
       </div>
-
     </div>
+  )
+}
+
+function ModeCard({ active, icon, title, hint, onClick }) {
+  return (
+    <button
+      type="button"
+      role="tab"
+      aria-selected={active}
+      onClick={onClick}
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        gap: '0.25rem',
+        padding: '0.65rem 0.75rem',
+        borderRadius: 8,
+        border: active ? '1px solid #1d4ed8' : '1px solid #e2e8f0',
+        background: active ? 'rgba(29,78,216,0.06)' : '#fff',
+        cursor: 'pointer',
+        textAlign: 'left',
+      }}
+    >
+      <span
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          gap: '0.4rem',
+          color: active ? '#1d4ed8' : '#0f172a',
+          fontSize: '0.85rem',
+          fontWeight: 600,
+        }}
+      >
+        {icon}
+        {title}
+      </span>
+      <span style={{ color: '#64748b', fontSize: '0.7rem' }}>{hint}</span>
+    </button>
   )
 }

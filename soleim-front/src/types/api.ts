@@ -36,12 +36,35 @@ export interface ApiPanelEmpresa {
   instalaciones_activas?: number
   total_generacion_hoy?: number
   ahorro_estimado?: number
+  facturacion_hoy?: ApiFacturacionHoy | null
   alertas_criticas?: number
   ordenes_abiertas?: number
   sla_en_riesgo?: number
   instalaciones: ApiInstalacionResumen[]
   clima?: ApiClima | null
   fuentes_energia?: ApiFuentesEnergia | null
+}
+
+export interface ApiFacturacionHoy {
+  valor_consumo: number
+  valor_ahorro: number
+  valor_total: number
+  moneda: string
+}
+
+export interface ApiTarifa {
+  idtarifa: number
+  nombre: string
+  ciudad: number | null
+  ciudad_nombre?: string | null
+  instalacion: number | null
+  instalacion_nombre?: string | null
+  valor_kwh: string  // backend serializa Decimal como string
+  moneda: string
+  vigente_desde: string
+  vigente_hasta: string | null
+  creado_at?: string
+  actualizado_at?: string
 }
 
 export interface ApiInstalacionResumen {
