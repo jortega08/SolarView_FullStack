@@ -18,7 +18,6 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-
 REGISTER_URL = "/api/auth/register/"
 REGISTER_CODIGO_URL = "/api/auth/registrar-con-codigo/"
 PRESTADORES_URL = "/api/core/prestadores/"

@@ -9,7 +9,6 @@ poblar user_id en OutstandingToken, evitando el IntegrityError.
 """
 
 import pytest
-from rest_framework.test import APIClient
 from rest_framework_simplejwt.token_blacklist.models import (
     BlacklistedToken,
     OutstandingToken,

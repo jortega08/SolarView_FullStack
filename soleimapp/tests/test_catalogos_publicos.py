@@ -7,7 +7,6 @@ las mutaciones siguen requiriendo usuario autenticado activo.
 import pytest
 from rest_framework.test import APIClient
 
-
 PAISES_URL = "/api/core/paises/"
 ESTADOS_URL = "/api/core/estados/"
 CIUDADES_URL = "/api/core/ciudades/"

@@ -14,7 +14,6 @@ from auditoria.utils import registrar_evento
 from core.models import Usuario
 from core.permissions import IsActiveUser
 
-from .utils import CoreRefreshToken
 from .serializers import (
     CoreUsuarioTokenRefreshSerializer,
     LoginSerializer,
@@ -23,6 +22,7 @@ from .serializers import (
     RegisterSerializer,
     UsuarioProfileSerializer,
 )
+from .utils import CoreRefreshToken
 
 logger = logging.getLogger("soleim")
 

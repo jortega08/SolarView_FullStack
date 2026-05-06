@@ -207,8 +207,9 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
         if not instalacion_id:
             return Response({"error": "instalacion_id es requerido."}, status=400)
 
-        from core.models import Instalacion
         from django.db.models import Count, Q
+
+        from core.models import Instalacion
 
         try:
             instalacion = Instalacion.objects.select_related("ciudad").get(

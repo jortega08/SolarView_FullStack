@@ -4,10 +4,9 @@ from rest_framework import status, viewsets
 from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.permissions import (
-    AllowAny,
-    IsAuthenticated,
     SAFE_METHODS,
     BasePermission,
+    IsAuthenticated,
 )
 from rest_framework.response import Response
 
@@ -48,9 +47,9 @@ from .serializers import (
     PrestadorServicioSerializer,
     SensorSerializer,
     TarifaSerializer,
-    UsuarioEquipoPrestadorSerializer,
     UsuarioClienteSerializer,
     UsuarioCreateSerializer,
+    UsuarioEquipoPrestadorSerializer,
     UsuarioSerializer,
 )
 

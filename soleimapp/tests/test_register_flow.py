@@ -10,10 +10,8 @@ Escenarios:
 """
 
 import pytest
-from django.contrib.auth.hashers import make_password
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
-
 
 REGISTER_URL = "/api/auth/register/"
 EMPRESAS_URL = "/api/core/empresas/"
@@ -115,7 +113,6 @@ def test_usuario_sin_prestador_puede_crear_y_se_autolinkea(usuario, ciudad):
     )
     assert response.status_code == 201, response.content
 
-    from core.models import Usuario
 
     usuario.refresh_from_db()
     assert usuario.prestador_id == response.data["idprestador"]

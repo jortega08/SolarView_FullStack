@@ -14,7 +14,6 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-
 TARIFAS_URL = "/api/core/tarifas/"
 PANEL_URL = "/api/empresa/panel/"
 

@@ -12,7 +12,6 @@ from django.contrib.auth.hashers import make_password
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
-
 REFRESH_URL = "/api/auth/refresh/"
 LOGIN_URL = "/api/auth/login/"
 PERFILES_URL = "/api/tecnicos/perfiles/"

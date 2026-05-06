@@ -22,7 +22,6 @@ from django.utils import timezone
 
 from core.models import Tarifa
 
-
 # Fallback final cuando no hay ninguna Tarifa configurada (COP/kWh).
 # Mantener cerca del valor histórico hardcodeado (800) para no romper dashboards
 # existentes mientras se cargan tarifas reales.
