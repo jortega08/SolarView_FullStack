@@ -8,6 +8,7 @@ import {
   type ReactNode,
   type SetStateAction,
 } from "react"
+import axios from "axios"
 import {
   Camera,
   Cpu,
@@ -38,6 +39,26 @@ import {
 } from "@/hooks/useInstalacionesCrud"
 import type { InstalacionCrud, SensorInstalacion } from "@/types/domain"
 import type { InstalacionPayload, SensorPayload } from "@/services/instalaciones-crud.service"
+
+function formatApiError(value: unknown): string {
+  if (Array.isArray(value)) return value.map(formatApiError).filter(Boolean).join(" ")
+  if (value && typeof value === "object")
+    return Object.values(value).map(formatApiError).filter(Boolean).join(" ")
+  return typeof value === "string" ? value : ""
+}
+
+function getRequestErrorMessage(error: unknown, fallback: string): string {
+  if (axios.isAxiosError(error)) {
+    const data = (error.response?.data as Record<string, unknown> | undefined) ?? {}
+    return (
+      formatApiError(data.detail) ||
+      formatApiError(data.error) ||
+      formatApiError(data.errors) ||
+      fallback
+    )
+  }
+  return error instanceof Error ? error.message : fallback
+}
 
 const TIPOS_SISTEMA = [
   { value: "hibrido", label: "Hibrido" },
@@ -241,7 +262,7 @@ export default function InstalacionesListPage() {
         setCreating(false)
       }
     } catch (error) {
-      setLocalError(error instanceof Error ? error.message : "No se pudo guardar la instalacion")
+      setLocalError(getRequestErrorMessage(error, "No se pudo guardar la instalacion"))
     }
   }
 

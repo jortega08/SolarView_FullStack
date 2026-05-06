@@ -49,9 +49,13 @@ def get_user_client_queryset(user):
     )
     scope = Q(idempresa__in=cliente_ids) | Q(idempresa__in=legacy_ids)
 
+    prestador_id = getattr(user, "prestador_id", None)
+    if prestador_id:
+        scope |= Q(prestador_id=prestador_id)
+
     empresa_cliente_id = getattr(user, "empresa_cliente_id", None)
     if empresa_cliente_id:
-        scope |= Q(idempresa=empresa_cliente_id)
+        return qs.filter(idempresa=empresa_cliente_id)
 
     return qs.filter(scope).distinct()
 
@@ -67,6 +71,11 @@ def get_user_provider_queryset(user):
     prestador_id = getattr(user, "prestador_id", None)
     if prestador_id:
         scope = Q(idprestador=prestador_id)
+
+    empresa_cliente = getattr(user, "empresa_cliente", None)
+    if empresa_cliente and getattr(empresa_cliente, "prestador_id", None):
+        client_scope = Q(idprestador=empresa_cliente.prestador_id)
+        scope = client_scope if scope is None else scope | client_scope
 
     visible_provider_ids = (
         get_user_installation_queryset(user)

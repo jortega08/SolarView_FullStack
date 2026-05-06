@@ -1,5 +1,6 @@
 import { createContext } from "react"
 import type { ApiUser } from "@/types/api"
+import type { RegisterConCodigoPayload, RegisterPayload } from "@/services/auth.service"
 
 export interface AuthContextValue {
   user: ApiUser | null
@@ -8,7 +9,8 @@ export interface AuthContextValue {
   error: string | null
   isAuthenticated: boolean
   login: (email: string, contrasena: string) => Promise<void>
-  register: (nombre: string, email: string, contrasena: string) => Promise<void>
+  register: (payload: RegisterPayload) => Promise<void>
+  registerConCodigo: (payload: RegisterConCodigoPayload) => Promise<void>
   logout: () => void
   updateUser: (patch: Partial<ApiUser>) => Promise<void>
 }

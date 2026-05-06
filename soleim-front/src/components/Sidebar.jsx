@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from "react-router-dom"
-import { Home, AlertTriangle, FileDown, Settings, LogOut, Users } from "lucide-react"
+import { Home, AlertTriangle, FileDown, Settings, LogOut, Users, Building2 } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
 import "../styles/Sidebar.css"
 
@@ -8,6 +8,8 @@ const navItems = [
   { to: "/alertas",      icon: AlertTriangle,  label: "Alertas" },
   { to: "/reportes",     icon: FileDown,       label: "Reportes" },
   { to: "/users",        icon: Users,          label: "Usuarios" },
+  { to: "/mi-empresa",   icon: Building2,      label: "Mi empresa", requiresPrestador: true },
+  { to: "/equipo",       icon: Users,          label: "Equipo", requiresPrestador: true },
   { to: "/configuracion",icon: Settings,       label: "Configuración" },
 ]
 
@@ -33,7 +35,9 @@ const Sidebar = () => {
       </div>
 
       <nav className="sidebar-nav">
-        {navItems.map(({ to, icon: Icon, label, end }) => (
+        {navItems
+          .filter(item => !item.requiresPrestador || user?.prestador_id || user?.es_admin_prestador)
+          .map(({ to, icon: Icon, label, end }) => (
           <NavLink
             key={to}
             to={to}

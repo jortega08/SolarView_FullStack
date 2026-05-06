@@ -6,7 +6,13 @@ from rest_framework import serializers
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from core.models import Ciudad, InvitacionPrestador, PrestadorServicio, Usuario
+from core.models import (
+    Ciudad,
+    InvitacionCliente,
+    InvitacionPrestador,
+    PrestadorServicio,
+    Usuario,
+)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -93,9 +99,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         if value in (None, ""):
             return value
         if PrestadorServicio.objects.filter(nit=value).exists():
-            raise serializers.ValidationError(
-                "Ya existe un prestador con este NIT."
-            )
+            raise serializers.ValidationError("Ya existe un prestador con este NIT.")
         return value
 
     @transaction.atomic
@@ -131,10 +135,42 @@ class LoginSerializer(serializers.Serializer):
 
 
 class UsuarioProfileSerializer(serializers.ModelSerializer):
+    prestador_id = serializers.IntegerField(read_only=True)
+    prestador_nombre = serializers.CharField(source="prestador.nombre", read_only=True)
+    empresa_cliente_id = serializers.IntegerField(read_only=True)
+    empresa_cliente_nombre = serializers.CharField(
+        source="empresa_cliente.nombre", read_only=True
+    )
+    tipo_usuario = serializers.SerializerMethodField()
+
     class Meta:
         model = Usuario
-        fields = ["idusuario", "nombre", "email", "rol", "fecha_registro", "is_active"]
+        fields = [
+            "idusuario",
+            "nombre",
+            "email",
+            "rol",
+            "fecha_registro",
+            "is_active",
+            "prestador_id",
+            "prestador_nombre",
+            "es_admin_prestador",
+            "empresa_cliente_id",
+            "empresa_cliente_nombre",
+            "tipo_usuario",
+        ]
         read_only_fields = ["idusuario", "fecha_registro", "is_active"]
+
+    def get_tipo_usuario(self, obj):
+        if obj.rol == "admin":
+            return "admin_global"
+        if obj.prestador_id and obj.es_admin_prestador:
+            return "admin_prestador"
+        if obj.prestador_id:
+            return "empleado_prestador"
+        if obj.empresa_cliente_id:
+            return "cliente"
+        return "usuario"
 
 
 class RegisterConCodigoSerializer(serializers.Serializer):
@@ -176,9 +212,9 @@ class RegisterConCodigoSerializer(serializers.Serializer):
     def validate_codigo(self, value):
         codigo = value.strip()
         try:
-            invitacion = InvitacionPrestador.objects.select_related(
-                "prestador"
-            ).get(codigo=codigo)
+            invitacion = InvitacionPrestador.objects.select_related("prestador").get(
+                codigo=codigo
+            )
         except InvitacionPrestador.DoesNotExist:
             raise serializers.ValidationError("Código de invitación inválido.")
         if invitacion.revocada:
@@ -205,6 +241,80 @@ class RegisterConCodigoSerializer(serializers.Serializer):
         invitacion.usado_por = usuario
         invitacion.usado_at = timezone.now()
         invitacion.save(update_fields=["usado_por", "usado_at"])
+        return usuario
+
+
+class RegisterClienteConCodigoSerializer(serializers.Serializer):
+    """
+    Registro de un contacto externo como usuario cliente mediante una
+    InvitacionCliente. No asigna prestador al usuario.
+    """
+
+    nombre = serializers.CharField(max_length=255)
+    email = serializers.EmailField()
+    contrasena = serializers.CharField(write_only=True, min_length=8)
+    codigo = serializers.CharField(max_length=128)
+
+    def validate_email(self, value):
+        normalized = value.strip().lower()
+        if Usuario.objects.filter(email__iexact=normalized).exists():
+            raise serializers.ValidationError("Ya existe un usuario con este email.")
+        return normalized
+
+    def validate_contrasena(self, value):
+        try:
+            validate_password(value)
+        except DjangoValidationError as exc:
+            raise serializers.ValidationError(list(exc.messages)) from exc
+        if not any(c.isupper() for c in value):
+            raise serializers.ValidationError(
+                "La contraseÃ±a debe contener al menos una letra mayÃºscula."
+            )
+        if not any(c.isdigit() for c in value):
+            raise serializers.ValidationError(
+                "La contraseÃ±a debe contener al menos un nÃºmero."
+            )
+        return value
+
+    def validate_codigo(self, value):
+        codigo = value.strip()
+        try:
+            invitacion = InvitacionCliente.objects.select_related(
+                "prestador", "empresa_cliente"
+            ).get(codigo=codigo)
+        except InvitacionCliente.DoesNotExist:
+            raise serializers.ValidationError("CÃ³digo de invitaciÃ³n invÃ¡lido.")
+        if invitacion.revocada:
+            raise serializers.ValidationError("Esta invitaciÃ³n fue revocada.")
+        if invitacion.usado_por_id is not None:
+            raise serializers.ValidationError("Esta invitaciÃ³n ya fue usada.")
+        if invitacion.vigente_hasta <= timezone.now():
+            raise serializers.ValidationError("Esta invitaciÃ³n expirÃ³.")
+        if (
+            invitacion.empresa_cliente.prestador_id
+            and invitacion.empresa_cliente.prestador_id != invitacion.prestador_id
+        ):
+            raise serializers.ValidationError(
+                "La invitaciÃ³n no corresponde al prestador de la empresa cliente."
+            )
+        self.context["invitacion"] = invitacion
+        return codigo
+
+    @transaction.atomic
+    def create(self, validated_data):
+        invitacion = self.context["invitacion"]
+        usuario = Usuario.objects.create(
+            nombre=validated_data["nombre"],
+            email=validated_data["email"],
+            contrasena=validated_data["contrasena"],
+            rol="user",
+            prestador=None,
+            empresa_cliente=invitacion.empresa_cliente,
+            es_admin_prestador=False,
+        )
+        invitacion.usado_por = usuario
+        invitacion.fecha_uso = timezone.now()
+        invitacion.save(update_fields=["usado_por", "fecha_uso"])
         return usuario
 
 

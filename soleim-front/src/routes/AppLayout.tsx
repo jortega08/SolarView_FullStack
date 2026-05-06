@@ -16,6 +16,8 @@ const PAGE_TITLES: Record<string, { title: string; subtitle?: string }> = {
   "/reportes": { title: "Reportes", subtitle: "Exportación y análisis de datos" },
   "/notificaciones": { title: "Notificaciones", subtitle: "Bandeja de notificaciones" },
   "/tarifas": { title: "Tarifas de energía", subtitle: "Valor del kWh por ciudad o instalación" },
+  "/mi-empresa": { title: "Mi empresa", subtitle: "Datos del prestador de servicio" },
+  "/equipo": { title: "Equipo", subtitle: "Usuarios e invitaciones del prestador" },
   "/configuracion": { title: "Configuración", subtitle: "Ajustes del sistema" },
 }
 

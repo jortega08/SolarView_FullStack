@@ -14,9 +14,11 @@ from auditoria.utils import registrar_evento
 from core.models import Usuario
 from core.permissions import IsActiveUser
 
+from .utils import CoreRefreshToken
 from .serializers import (
     CoreUsuarioTokenRefreshSerializer,
     LoginSerializer,
+    RegisterClienteConCodigoSerializer,
     RegisterConCodigoSerializer,
     RegisterSerializer,
     UsuarioProfileSerializer,
@@ -163,6 +165,49 @@ def registrar_con_codigo(request):
 
 @api_view(["POST"])
 @permission_classes([AllowAny])
+@throttle_classes([RegisterRateThrottle])
+def registrar_cliente_con_codigo(request):
+    """
+    POST /api/auth/registrar-cliente-con-codigo/
+    Body: { nombre, email, contrasena, codigo }
+
+    Registra un usuario cliente externo. El usuario queda vinculado solo a la
+    empresa cliente de la invitacion y no al equipo interno del prestador.
+    """
+    serializer = RegisterClienteConCodigoSerializer(data=request.data)
+    if not serializer.is_valid():
+        return _validation_error_response(serializer)
+
+    usuario = serializer.save()
+    logger.info(
+        "Usuario cliente registrado: %s (id=%s, empresa_cliente_id=%s)",
+        usuario.email,
+        usuario.idusuario,
+        usuario.empresa_cliente_id,
+    )
+    registrar_evento(
+        usuario=usuario,
+        accion="register_cliente_con_codigo",
+        entidad="Usuario",
+        entidad_id=usuario.idusuario,
+        detalle={
+            "email": usuario.email,
+            "empresa_cliente_id": usuario.empresa_cliente_id,
+        },
+        request=request,
+    )
+    return Response(
+        {
+            "success": True,
+            "user": UsuarioProfileSerializer(usuario).data,
+            "tokens": _build_tokens(usuario),
+        },
+        status=status.HTTP_201_CREATED,
+    )
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
 @throttle_classes([LoginRateThrottle])
 def login(request):
     serializer = LoginSerializer(data=request.data)
@@ -280,7 +325,7 @@ def logout(request):
         )
 
     try:
-        token = RefreshToken(refresh_token)
+        token = CoreRefreshToken(refresh_token)
         token.blacklist()
     except TokenError:
         return Response(

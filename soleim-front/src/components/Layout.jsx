@@ -4,7 +4,7 @@ import {
   Home, AlertTriangle, FileDown, Settings,
   LogOut, Users, MapPin,
   Bell, ChevronDown, User, CheckCircle,
-  Menu, Sun, Moon,
+  Menu, Sun, Moon, Building2,
 } from "lucide-react"
 import { useAuth } from "../context/AuthContext"
 import { useToast } from "../context/ToastContext"
@@ -31,6 +31,8 @@ const navGroups = [
     items: [
       { to: "/users",         icon: Users,    label: "Usuarios" },
       { to: "/domicilios",    icon: MapPin,   label: "Domicilios" },
+      { to: "/mi-empresa",    icon: Building2,label: "Mi empresa", requiresPrestador: true },
+      { to: "/equipo",        icon: Users,    label: "Equipo", requiresPrestador: true },
       { to: "/configuracion", icon: Settings, label: "Configuración" },
     ],
   },
@@ -44,6 +46,8 @@ const ROUTE_LABELS = {
   "/configuracion": "Configuración",
   "/users":         "Usuarios",
   "/domicilios":    "Domicilios",
+  "/mi-empresa":    "Mi empresa",
+  "/equipo":        "Equipo",
   "/perfil":        "Mi Perfil",
 }
 
@@ -550,7 +554,9 @@ export default function Layout({ children }) {
               {isCollapsed && gi > 0 && (
                 <div style={{ height: 1, background: "rgba(255,255,255,0.07)", margin: "8px 12px" }} />
               )}
-              {group.items.map(({ to, icon: Icon, label, end, badge }) => {
+              {group.items
+                .filter(item => !item.requiresPrestador || user?.prestador_id || user?.es_admin_prestador)
+                .map(({ to, icon: Icon, label, end, badge }) => {
                 const badgeCount = badge ? alertBadge : 0
                 return (
                   <NavLink

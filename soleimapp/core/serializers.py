@@ -6,6 +6,7 @@ from .models import (
     Empresa,
     Estado,
     Instalacion,
+    InvitacionCliente,
     InvitacionPrestador,
     Pais,
     PrestadorServicio,
@@ -84,7 +85,7 @@ class UsuarioCreateSerializer(serializers.ModelSerializer):
 class _PaisNestedSerializer(serializers.ModelSerializer):
     class Meta:
         model = Pais
-        fields = ['idpais', 'nombre']
+        fields = ["idpais", "nombre"]
 
 
 class _EstadoNestedSerializer(serializers.ModelSerializer):
@@ -92,7 +93,7 @@ class _EstadoNestedSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Estado
-        fields = ['idestado', 'nombre', 'pais']
+        fields = ["idestado", "nombre", "pais"]
 
 
 class _CiudadNestedSerializer(serializers.ModelSerializer):
@@ -100,28 +101,29 @@ class _CiudadNestedSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Ciudad
-        fields = ['idciudad', 'nombre', 'estado']
+        fields = ["idciudad", "nombre", "estado"]
 
 
 class DomicilioSerializer(serializers.ModelSerializer):
     usuario = UsuarioSerializer(read_only=True)
-    ciudad  = _CiudadNestedSerializer(read_only=True)
+    ciudad = _CiudadNestedSerializer(read_only=True)
 
     # campos de escritura para recibir IDs del frontend
     usuario_id = serializers.PrimaryKeyRelatedField(
-        queryset=Usuario.objects.all(), source='usuario', write_only=True
+        queryset=Usuario.objects.all(), source="usuario", write_only=True
     )
     ciudad_id = serializers.PrimaryKeyRelatedField(
-        queryset=Ciudad.objects.all(), source='ciudad', write_only=True
+        queryset=Ciudad.objects.all(), source="ciudad", write_only=True
     )
 
     class Meta:
         model = Domicilio
-        fields = ['iddomicilio', 'usuario', 'ciudad', 'usuario_id', 'ciudad_id']
+        fields = ["iddomicilio", "usuario", "ciudad", "usuario_id", "ciudad_id"]
 
 
 class EmpresaSerializer(serializers.ModelSerializer):
     ciudad_nombre = serializers.CharField(source="ciudad.nombre", read_only=True)
+    prestador_nombre = serializers.CharField(source="prestador.nombre", read_only=True)
 
     class Meta:
         model = Empresa
@@ -130,11 +132,44 @@ class EmpresaSerializer(serializers.ModelSerializer):
             "nombre",
             "nit",
             "sector",
+            "prestador",
+            "prestador_nombre",
             "ciudad",
             "ciudad_nombre",
             "fecha_registro",
         ]
-        read_only_fields = ["idempresa", "fecha_registro"]
+        read_only_fields = ["idempresa", "prestador", "fecha_registro"]
+
+
+class ClienteSerializer(serializers.ModelSerializer):
+    ciudad_nombre = serializers.CharField(source="ciudad.nombre", read_only=True)
+    prestador_nombre = serializers.CharField(source="prestador.nombre", read_only=True)
+    usuarios_count = serializers.IntegerField(read_only=True)
+    instalaciones_count = serializers.IntegerField(read_only=True)
+
+    class Meta:
+        model = Empresa
+        fields = [
+            "idempresa",
+            "nombre",
+            "nit",
+            "sector",
+            "prestador",
+            "prestador_nombre",
+            "ciudad",
+            "ciudad_nombre",
+            "fecha_registro",
+            "usuarios_count",
+            "instalaciones_count",
+        ]
+        read_only_fields = [
+            "idempresa",
+            "prestador",
+            "prestador_nombre",
+            "fecha_registro",
+            "usuarios_count",
+            "instalaciones_count",
+        ]
 
 
 class PrestadorServicioSerializer(serializers.ModelSerializer):
@@ -152,6 +187,58 @@ class PrestadorServicioSerializer(serializers.ModelSerializer):
             "fecha_registro",
         ]
         read_only_fields = ["idprestador", "fecha_registro"]
+
+
+class MiPrestadorSerializer(serializers.ModelSerializer):
+    ciudad_nombre = serializers.CharField(source="ciudad.nombre", read_only=True)
+
+    class Meta:
+        model = PrestadorServicio
+        fields = [
+            "idprestador",
+            "nombre",
+            "nit",
+            "ciudad",
+            "ciudad_nombre",
+            "activo",
+            "fecha_registro",
+        ]
+        read_only_fields = ["idprestador", "activo", "fecha_registro"]
+
+
+class UsuarioEquipoPrestadorSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Usuario
+        fields = [
+            "idusuario",
+            "nombre",
+            "email",
+            "rol",
+            "es_admin_prestador",
+            "fecha_registro",
+            "is_active",
+        ]
+        read_only_fields = fields
+
+
+class UsuarioClienteSerializer(serializers.ModelSerializer):
+    empresa_cliente_nombre = serializers.CharField(
+        source="empresa_cliente.nombre", read_only=True
+    )
+
+    class Meta:
+        model = Usuario
+        fields = [
+            "idusuario",
+            "nombre",
+            "email",
+            "rol",
+            "empresa_cliente",
+            "empresa_cliente_nombre",
+            "fecha_registro",
+            "is_active",
+        ]
+        read_only_fields = fields
 
 
 class InstalacionSerializer(serializers.ModelSerializer):
@@ -213,9 +300,7 @@ class RolInstalacionSerializer(serializers.ModelSerializer):
 
 
 class InvitacionPrestadorSerializer(serializers.ModelSerializer):
-    prestador_nombre = serializers.CharField(
-        source="prestador.nombre", read_only=True
-    )
+    prestador_nombre = serializers.CharField(source="prestador.nombre", read_only=True)
     creado_por_nombre = serializers.CharField(
         source="creado_por.nombre", read_only=True, default=None
     )
@@ -251,6 +336,61 @@ class InvitacionPrestadorSerializer(serializers.ModelSerializer):
             "usado_por",
             "usado_at",
             "prestador",  # se infiere del usuario que la crea
+        ]
+
+    def get_vigente(self, obj):
+        return obj.esta_vigente()
+
+
+class InvitacionClienteSerializer(serializers.ModelSerializer):
+    prestador_nombre = serializers.CharField(source="prestador.nombre", read_only=True)
+    empresa_cliente_nombre = serializers.CharField(
+        source="empresa_cliente.nombre", read_only=True
+    )
+    creada_por_nombre = serializers.CharField(
+        source="creada_por.nombre", read_only=True, default=None
+    )
+    usado_por_nombre = serializers.CharField(
+        source="usado_por.nombre", read_only=True, default=None
+    )
+    vigente = serializers.SerializerMethodField()
+
+    class Meta:
+        model = InvitacionCliente
+        fields = [
+            "idinvitacion",
+            "codigo",
+            "prestador",
+            "prestador_nombre",
+            "empresa_cliente",
+            "empresa_cliente_nombre",
+            "email_destinatario",
+            "tipo_acceso",
+            "vigente_hasta",
+            "usado_por",
+            "usado_por_nombre",
+            "creada_por",
+            "creada_por_nombre",
+            "revocada",
+            "fecha_creacion",
+            "fecha_uso",
+            "vigente",
+        ]
+        read_only_fields = [
+            "idinvitacion",
+            "codigo",
+            "prestador",
+            "prestador_nombre",
+            "empresa_cliente",
+            "empresa_cliente_nombre",
+            "usado_por",
+            "usado_por_nombre",
+            "creada_por",
+            "creada_por_nombre",
+            "revocada",
+            "fecha_creacion",
+            "fecha_uso",
+            "vigente",
         ]
 
     def get_vigente(self, obj):

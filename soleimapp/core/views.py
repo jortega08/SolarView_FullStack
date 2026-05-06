@@ -1,9 +1,14 @@
-from django.db.models import Q
+from django.db.models import Count, Q
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import viewsets
-from rest_framework.decorators import action
+from rest_framework import status, viewsets
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
-from rest_framework.permissions import AllowAny, IsAuthenticated, SAFE_METHODS, BasePermission
+from rest_framework.permissions import (
+    AllowAny,
+    IsAuthenticated,
+    SAFE_METHODS,
+    BasePermission,
+)
 from rest_framework.response import Response
 
 from core.access import (
@@ -20,6 +25,7 @@ from .models import (
     Empresa,
     Estado,
     Instalacion,
+    InvitacionCliente,
     InvitacionPrestador,
     Pais,
     PrestadorServicio,
@@ -30,15 +36,20 @@ from .models import (
 )
 from .serializers import (
     CiudadSerializer,
+    ClienteSerializer,
     DomicilioSerializer,
     EmpresaSerializer,
     EstadoSerializer,
     InstalacionSerializer,
+    InvitacionClienteSerializer,
     InvitacionPrestadorSerializer,
+    MiPrestadorSerializer,
     PaisSerializer,
     PrestadorServicioSerializer,
     SensorSerializer,
     TarifaSerializer,
+    UsuarioEquipoPrestadorSerializer,
+    UsuarioClienteSerializer,
     UsuarioCreateSerializer,
     UsuarioSerializer,
 )
@@ -155,25 +166,27 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             )
 
         import re
+
         if not re.search(r"[A-Z]", nueva):
             return Response(
                 {"error": "Debe incluir al menos una letra mayúscula."}, status=400
             )
         if not re.search(r"\d", nueva):
-            return Response(
-                {"error": "Debe incluir al menos un número."}, status=400
-            )
+            return Response({"error": "Debe incluir al menos un número."}, status=400)
 
         from django.contrib.auth.hashers import make_password
+
         instance.contrasena = make_password(nueva)
         instance.save(update_fields=["contrasena"])
-        return Response({"success": True, "message": "Contraseña actualizada correctamente."})
+        return Response(
+            {"success": True, "message": "Contraseña actualizada correctamente."}
+        )
 
 
 class DomicilioViewSet(viewsets.ModelViewSet):
     queryset = Domicilio.objects.select_related(
-        'usuario',
-        'ciudad__estado__pais',
+        "usuario",
+        "ciudad__estado__pais",
     ).all()
     serializer_class = DomicilioSerializer
     permission_classes = _AUTHENTICATED
@@ -224,7 +237,6 @@ class EmpresaViewSet(viewsets.ModelViewSet):
                         return False
                     if user.rol == "admin":
                         return True
-                    # Un prestador puede registrar empresas-cliente que atiende.
                     if getattr(user, "prestador_id", None):
                         return True
                     # admin_empresa puede actualizar empresas dentro de su scope.
@@ -234,6 +246,250 @@ class EmpresaViewSet(viewsets.ModelViewSet):
 
             return [IsAuthenticated(), IsActiveUser(), _CanMutateEmpresa()]
         return super().get_permissions()
+
+    def perform_create(self, serializer):
+        user = self.request.user
+        if user.rol == "admin":
+            serializer.save()
+            return
+        if getattr(user, "prestador_id", None):
+            serializer.save(prestador_id=user.prestador_id)
+            return
+        serializer.save()
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        if user.rol == "admin":
+            serializer.save()
+            return
+        if getattr(user, "prestador_id", None):
+            serializer.save(prestador_id=user.prestador_id)
+            return
+        serializer.save()
+
+
+class ClienteViewSet(viewsets.ModelViewSet):
+    """
+    Empresas cliente administradas por el prestador del usuario.
+
+    El modelo real es Empresa; este ViewSet expone la superficie multi-tenant
+    especifica de Fase 4C para clientes, usuarios cliente e invitaciones.
+    """
+
+    serializer_class = ClienteSerializer
+    permission_classes = _AUTHENTICATED
+    pagination_class = None
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ["ciudad"]
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = get_user_client_queryset(user).annotate(
+            usuarios_count=Count("usuarios_cliente", distinct=True),
+            instalaciones_count=Count("instalaciones_cliente", distinct=True),
+        )
+        return qs.order_by("nombre", "idempresa")
+
+    def get_permissions(self):
+        if self.action in (
+            "create",
+            "update",
+            "partial_update",
+            "destroy",
+            "invitaciones",
+            "quitar_acceso_usuario",
+        ):
+            from rest_framework.permissions import BasePermission
+
+            class _SoloAdminPrestador(BasePermission):
+                def has_permission(self, request, view):
+                    user = request.user
+                    if not (user and user.is_authenticated):
+                        return False
+                    if getattr(user, "rol", None) == "admin":
+                        return True
+                    return bool(
+                        getattr(user, "prestador_id", None)
+                        and getattr(user, "es_admin_prestador", False)
+                    )
+
+            return [IsAuthenticated(), IsActiveUser(), _SoloAdminPrestador()]
+        return super().get_permissions()
+
+    def perform_create(self, serializer):
+        from rest_framework.exceptions import PermissionDenied, ValidationError
+
+        user = self.request.user
+        if user.rol == "admin":
+            prestador_id = self.request.data.get("prestador")
+            if prestador_id:
+                serializer.save(prestador_id=prestador_id)
+            else:
+                serializer.save()
+            return
+        if not getattr(user, "prestador_id", None):
+            raise PermissionDenied("No tienes prestador asociado.")
+        if getattr(user, "empresa_cliente_id", None):
+            raise PermissionDenied("Un usuario cliente no puede crear clientes.")
+        if not getattr(user, "es_admin_prestador", False):
+            raise PermissionDenied("Solo el admin del prestador puede crear clientes.")
+        try:
+            serializer.save(prestador_id=user.prestador_id)
+        except ValueError as exc:
+            raise ValidationError(str(exc)) from exc
+
+    def perform_update(self, serializer):
+        user = self.request.user
+        if user.rol == "admin":
+            serializer.save()
+            return
+        serializer.save(prestador_id=user.prestador_id)
+
+    @action(detail=True, methods=["get"], url_path="usuarios")
+    def usuarios(self, request, pk=None):
+        cliente = self.get_object()
+        user = request.user
+        if user.rol != "admin" and not _empresa_belongs_to_prestador(
+            cliente, getattr(user, "prestador_id", None)
+        ):
+            return Response(
+                {"detail": "Cliente fuera de tu prestador."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        usuarios = Usuario.objects.filter(
+            empresa_cliente=cliente,
+            prestador__isnull=True,
+        ).order_by("nombre", "idusuario")
+        return Response(UsuarioClienteSerializer(usuarios, many=True).data)
+
+    @action(detail=True, methods=["get", "post"], url_path="invitaciones")
+    def invitaciones(self, request, pk=None):
+        cliente = self.get_object()
+        user = request.user
+        if user.rol != "admin" and not _empresa_belongs_to_prestador(
+            cliente, getattr(user, "prestador_id", None)
+        ):
+            return Response(
+                {"detail": "Cliente fuera de tu prestador."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if request.method == "GET":
+            invitaciones = InvitacionCliente.objects.select_related(
+                "prestador", "empresa_cliente", "creada_por", "usado_por"
+            ).filter(empresa_cliente=cliente)
+            if user.rol != "admin":
+                invitaciones = invitaciones.filter(prestador_id=user.prestador_id)
+            return Response(
+                InvitacionClienteSerializer(invitaciones, many=True).data
+            )
+
+        serializer = InvitacionClienteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        if user.rol == "admin":
+            target_prestador_id = cliente.prestador_id
+            if not target_prestador_id:
+                return Response(
+                    {"detail": "La empresa cliente no tiene prestador asignado."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        else:
+            target_prestador_id = user.prestador_id
+            if not cliente.prestador_id:
+                cliente.prestador_id = target_prestador_id
+                cliente.save(update_fields=["prestador"])
+
+        from secrets import token_urlsafe
+
+        codigo = token_urlsafe(24)
+        invitacion = serializer.save(
+            codigo=codigo,
+            prestador_id=target_prestador_id,
+            empresa_cliente=cliente,
+            creada_por=user,
+        )
+        return Response(
+            InvitacionClienteSerializer(invitacion).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path=r"usuarios/(?P<idusuario>[^/.]+)/quitar-acceso",
+    )
+    def quitar_acceso_usuario(self, request, pk=None, idusuario=None):
+        cliente = self.get_object()
+        user = request.user
+        if user.rol != "admin" and not _empresa_belongs_to_prestador(
+            cliente, getattr(user, "prestador_id", None)
+        ):
+            return Response(
+                {"detail": "Cliente fuera de tu prestador."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            usuario = Usuario.objects.get(
+                idusuario=idusuario,
+                empresa_cliente=cliente,
+                prestador__isnull=True,
+            )
+        except Usuario.DoesNotExist:
+            return Response(
+                {"detail": "Usuario cliente no encontrado en esta empresa."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        usuario.empresa_cliente = None
+        usuario.save(update_fields=["empresa_cliente"])
+        return Response(
+            {
+                "success": True,
+                "message": "Acceso de cliente retirado correctamente.",
+                "usuario": UsuarioClienteSerializer(usuario).data,
+            }
+        )
+
+
+class InvitacionClienteViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = InvitacionClienteSerializer
+    permission_classes = _AUTHENTICATED
+    pagination_class = None
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = InvitacionCliente.objects.select_related(
+            "prestador", "empresa_cliente", "creada_por", "usado_por"
+        )
+        if getattr(user, "rol", None) == "admin":
+            return qs
+        prestador_id = getattr(user, "prestador_id", None)
+        if not prestador_id:
+            return qs.none()
+        return qs.filter(prestador_id=prestador_id)
+
+    @action(detail=True, methods=["post"], url_path="revocar")
+    def revocar(self, request, pk=None):
+        invitacion = self.get_object()
+        user = request.user
+        if user.rol != "admin" and not (
+            getattr(user, "prestador_id", None) == invitacion.prestador_id
+            and getattr(user, "es_admin_prestador", False)
+        ):
+            return Response(
+                {"detail": "Solo el admin del prestador puede revocar invitaciones."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        if invitacion.usado_por_id:
+            return Response(
+                {"detail": "No puedes revocar una invitacion que ya fue usada."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not invitacion.revocada:
+            invitacion.revocada = True
+            invitacion.save(update_fields=["revocada"])
+        return Response(InvitacionClienteSerializer(invitacion).data)
 
 
 class PrestadorServicioViewSet(viewsets.ModelViewSet):
@@ -274,10 +530,9 @@ class PrestadorServicioViewSet(viewsets.ModelViewSet):
                         return True
                     # Sólo el admin del prestador (quien lo creó / fue marcado)
                     # puede editarlo.
-                    return (
-                        getattr(user, "prestador_id", None) == obj.idprestador
-                        and getattr(user, "es_admin_prestador", False)
-                    )
+                    return getattr(
+                        user, "prestador_id", None
+                    ) == obj.idprestador and getattr(user, "es_admin_prestador", False)
 
             return [IsAuthenticated(), IsActiveUser(), _CanMutatePrestador()]
         return super().get_permissions()
@@ -299,6 +554,104 @@ class PrestadorServicioViewSet(viewsets.ModelViewSet):
             user.save(update_fields=["prestador", "es_admin_prestador"])
 
 
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated, IsActiveUser])
+def mi_prestador(request):
+    """
+    Consulta y edicion acotada del PrestadorServicio vinculado al usuario actual.
+
+    GET: cualquier usuario vinculado al prestador puede leerlo.
+    PATCH: solo el admin del prestador puede editar campos seguros.
+    """
+
+    user = request.user
+    if not getattr(user, "prestador_id", None):
+        return Response(
+            {"detail": "No tienes un prestador asociado."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    prestador = PrestadorServicio.objects.select_related("ciudad").get(
+        idprestador=user.prestador_id
+    )
+
+    if request.method == "GET":
+        return Response(MiPrestadorSerializer(prestador).data)
+
+    if not getattr(user, "es_admin_prestador", False):
+        return Response(
+            {"detail": "Solo el administrador del prestador puede editar estos datos."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    serializer = MiPrestadorSerializer(prestador, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+    return Response(serializer.data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated, IsActiveUser])
+def equipo_prestador(request):
+    """Lista usuarios vinculados al mismo PrestadorServicio del usuario actual."""
+
+    user = request.user
+    prestador_id = getattr(user, "prestador_id", None)
+    if not prestador_id:
+        return Response(
+            {"detail": "No tienes un prestador asociado."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    usuarios = Usuario.objects.filter(prestador_id=prestador_id).order_by(
+        "-es_admin_prestador", "nombre", "idusuario"
+    )
+    return Response(UsuarioEquipoPrestadorSerializer(usuarios, many=True).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated, IsActiveUser])
+def quitar_acceso_prestador(request, idusuario):
+    """Desvincula a un empleado del prestador sin eliminar su cuenta."""
+
+    user = request.user
+    prestador_id = getattr(user, "prestador_id", None)
+    if not prestador_id:
+        return Response(
+            {"detail": "No tienes un prestador asociado."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+    if not getattr(user, "es_admin_prestador", False):
+        return Response(
+            {"detail": "Solo el administrador del prestador puede quitar accesos."},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+    if int(idusuario) == user.idusuario:
+        return Response(
+            {"detail": "No puedes quitar tu propio acceso al prestador."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        empleado = Usuario.objects.get(idusuario=idusuario, prestador_id=prestador_id)
+    except Usuario.DoesNotExist:
+        return Response(
+            {"detail": "Usuario no encontrado en tu prestador."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    empleado.prestador = None
+    empleado.es_admin_prestador = False
+    empleado.save(update_fields=["prestador", "es_admin_prestador"])
+    return Response(
+        {
+            "success": True,
+            "message": "Acceso al prestador retirado correctamente.",
+            "usuario": UsuarioEquipoPrestadorSerializer(empleado).data,
+        }
+    )
+
+
 def _admin_empresa_ids(user):
     return list(
         RolInstalacion.objects.filter(usuario=user, rol="admin_empresa")
@@ -309,6 +662,27 @@ def _admin_empresa_ids(user):
 
 def _is_provider_user(user):
     return bool(getattr(user, "prestador_id", None))
+
+
+def _is_provider_admin(user):
+    return bool(
+        getattr(user, "rol", None) == "admin"
+        or (
+            getattr(user, "prestador_id", None)
+            and getattr(user, "es_admin_prestador", False)
+        )
+    )
+
+
+def _empresa_belongs_to_prestador(empresa, prestador_id):
+    if not empresa or not prestador_id:
+        return False
+    if getattr(empresa, "prestador_id", None) == prestador_id:
+        return True
+    return Instalacion.objects.filter(
+        Q(cliente=empresa) | Q(empresa=empresa),
+        prestador_id=prestador_id,
+    ).exists()
 
 
 class InstalacionViewSet(viewsets.ModelViewSet):
@@ -340,6 +714,11 @@ class InstalacionViewSet(viewsets.ModelViewSet):
             from rest_framework.permissions import BasePermission
 
             class _CanMutateInstalacion(BasePermission):
+                message = (
+                    "Necesitas estar asociado a un prestador o tener rol "
+                    "admin_empresa para crear o editar instalaciones."
+                )
+
                 def has_permission(self, request, view):
                     user = request.user
                     if not (user and user.is_authenticated):
@@ -487,6 +866,18 @@ class InvitacionPrestadorViewSet(viewsets.ModelViewSet):
             codigo=codigo,
             creado_por=user,
         )
+
+    def destroy(self, request, *args, **kwargs):
+        invitacion = self.get_object()
+        if invitacion.usado_por_id:
+            return Response(
+                {"detail": "No puedes revocar una invitacion que ya fue usada."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not invitacion.revocada:
+            invitacion.revocada = True
+            invitacion.save(update_fields=["revocada"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TarifaViewSet(viewsets.ModelViewSet):

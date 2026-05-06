@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from "react-router-dom"
 import {
   LayoutDashboard, Zap, Radio, Bell, ClipboardList,
   Wrench, Users, UserCog, BarChart2, FileText, Settings, DollarSign,
-  ChevronLeft, ChevronRight, LogOut
+  ChevronLeft, ChevronRight, LogOut, Building2
 } from "lucide-react"
 import { cn } from "@/lib/cn"
 import { useAuth } from "@/contexts/useAuth"
@@ -17,6 +17,7 @@ interface NavItem {
   label: string
   icon: React.ReactNode
   badge?: number
+  requiresPrestador?: boolean
 }
 
 function useSidebarItems() {
@@ -42,6 +43,8 @@ function useSidebarItems() {
       badge: notiCount && notiCount > 0 ? notiCount : undefined,
     },
     { to: "/tarifas", label: "Tarifas", icon: <DollarSign className="w-4 h-4" /> },
+    { to: "/mi-empresa", label: "Mi empresa", icon: <Building2 className="w-4 h-4" />, requiresPrestador: true },
+    { to: "/equipo", label: "Equipo", icon: <Users className="w-4 h-4" />, requiresPrestador: true },
     { to: "/configuracion", label: t("nav.settings"), icon: <Settings className="w-4 h-4" /> },
   ]
   return items
@@ -52,7 +55,10 @@ export function Sidebar() {
   const { user, logout } = useAuth()
   const { t } = useI18n()
   const navigate = useNavigate()
-  const items = useSidebarItems()
+  const items = useSidebarItems().filter((item) => {
+    if (!item.requiresPrestador) return true
+    return Boolean(user?.prestador_id || user?.es_admin_prestador)
+  })
 
   const handleLogout = () => {
     logout()

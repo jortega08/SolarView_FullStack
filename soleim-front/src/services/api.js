@@ -185,6 +185,73 @@ export const getAlertas = async (filters = {}) => {
 
 // ── Reportes CSV ─────────────────────────────────────────────────────────────
 
+export const fetchMiPrestador = async () => {
+  const key = 'mi-prestador'
+  const cached = _cacheGet(key)
+  if (cached) return cached
+  const response = await authFetch(`${API_BASE_URL}/core/mi-prestador/`)
+  const data = await response.json()
+  _cacheSet(key, data, 30)
+  return data
+}
+
+export const updateMiPrestador = async (payload) => {
+  const response = await authFetch(`${API_BASE_URL}/core/mi-prestador/`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
+  })
+  const data = await response.json()
+  _cacheInvalidate('mi-prestador')
+  return data
+}
+
+export const fetchEquipoPrestador = async () => {
+  const key = 'equipo-prestador'
+  const cached = _cacheGet(key)
+  if (cached) return cached
+  const response = await authFetch(`${API_BASE_URL}/core/equipo-prestador/`)
+  const data = await response.json()
+  _cacheSet(key, data, 30)
+  return data
+}
+
+export const quitarAccesoEmpleado = async (idusuario) => {
+  const response = await authFetch(`${API_BASE_URL}/core/equipo-prestador/${idusuario}/quitar-acceso/`, {
+    method: 'POST',
+  })
+  const data = await response.json()
+  _cacheInvalidate('equipo-prestador')
+  return data
+}
+
+export const fetchInvitaciones = async () => {
+  const key = 'invitaciones-prestador'
+  const cached = _cacheGet(key)
+  if (cached) return cached
+  const response = await authFetch(`${API_BASE_URL}/core/invitaciones/`)
+  const data = await response.json()
+  _cacheSet(key, data, 30)
+  return data
+}
+
+export const crearInvitacion = async (payload) => {
+  const response = await authFetch(`${API_BASE_URL}/core/invitaciones/`, {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+  const data = await response.json()
+  _cacheInvalidate('invitaciones-prestador')
+  return data
+}
+
+export const revocarInvitacion = async (id) => {
+  const response = await authFetch(`${API_BASE_URL}/core/invitaciones/${id}/`, {
+    method: 'DELETE',
+  })
+  _cacheInvalidate('invitaciones-prestador')
+  return response.ok
+}
+
 export const descargarReporteConsumo = (instalacionId, dias = 30) => {
   const params = new URLSearchParams({ instalacion_id: instalacionId, dias })
   const a = document.createElement('a')
@@ -334,6 +401,13 @@ export default {
   fetchUltimasAlertas,
   resolverAlerta,
   getAlertas,
+  fetchMiPrestador,
+  updateMiPrestador,
+  fetchEquipoPrestador,
+  quitarAccesoEmpleado,
+  fetchInvitaciones,
+  crearInvitacion,
+  revocarInvitacion,
   descargarReporteConsumo,
   descargarReporteAlertas,
   getUsers,

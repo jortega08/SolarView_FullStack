@@ -184,6 +184,14 @@ class Empresa(models.Model):
     nombre = models.CharField(max_length=255)
     nit = models.CharField(max_length=20, unique=True)
     sector = models.CharField(max_length=100, blank=True)
+    prestador = models.ForeignKey(
+        "PrestadorServicio",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="clientes",
+        help_text="Prestador que administra esta empresa cliente.",
+    )
     ciudad = models.ForeignKey(
         Ciudad,
         on_delete=models.SET_NULL,
@@ -418,6 +426,76 @@ class InvitacionPrestador(models.Model):
 
     def __str__(self):
         return f"{self.codigo} → {self.prestador.nombre} ({self.rol})"
+
+    def esta_vigente(self) -> bool:
+        if self.revocada or self.usado_por_id:
+            return False
+        return self.vigente_hasta > timezone.now()
+
+
+class InvitacionCliente(models.Model):
+    """
+    Codigo de invitacion para que un contacto externo se registre como usuario
+    cliente de una Empresa administrada por un PrestadorServicio.
+
+    No vincula al usuario al equipo interno del prestador: al canjearse, el
+    Usuario queda con empresa_cliente asignada y prestador nulo.
+    """
+
+    TIPOS_ACCESO = (
+        ("cliente", "Cliente"),
+        ("viewer", "Visor"),
+    )
+
+    idinvitacion = models.AutoField(primary_key=True)
+    codigo = models.CharField(max_length=64, unique=True)
+    prestador = models.ForeignKey(
+        "PrestadorServicio",
+        on_delete=models.CASCADE,
+        related_name="invitaciones_cliente",
+    )
+    empresa_cliente = models.ForeignKey(
+        "Empresa",
+        on_delete=models.CASCADE,
+        related_name="invitaciones_cliente",
+    )
+    email_destinatario = models.EmailField(blank=True)
+    tipo_acceso = models.CharField(
+        max_length=20,
+        choices=TIPOS_ACCESO,
+        default="cliente",
+    )
+    vigente_hasta = models.DateTimeField()
+    usado_por = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="invitacion_cliente_usada",
+    )
+    creada_por = models.ForeignKey(
+        Usuario,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="invitaciones_cliente_emitidas",
+    )
+    revocada = models.BooleanField(default=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_uso = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "invitacion_cliente"
+        ordering = ["-fecha_creacion"]
+        verbose_name = "Invitacion de cliente"
+        verbose_name_plural = "Invitaciones de cliente"
+        indexes = [
+            models.Index(fields=["codigo"], name="idx_inv_cliente_codigo"),
+            models.Index(fields=["prestador"], name="idx_inv_cliente_prestador"),
+            models.Index(fields=["empresa_cliente"], name="idx_inv_cliente_empresa"),
+        ]
+
+    def __str__(self):
+        return f"{self.codigo} -> {self.empresa_cliente.nombre}"
 
     def esta_vigente(self) -> bool:
         if self.revocada or self.usado_por_id:

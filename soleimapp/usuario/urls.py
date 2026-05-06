@@ -9,6 +9,11 @@ urlpatterns = [
         views.registrar_con_codigo,
         name="auth_register_con_codigo",
     ),
+    path(
+        "api/auth/registrar-cliente-con-codigo/",
+        views.registrar_cliente_con_codigo,
+        name="auth_register_cliente_con_codigo",
+    ),
     path("api/auth/login/", views.login, name="auth_login"),
     path("api/auth/logout/", views.logout, name="auth_logout"),
     path(

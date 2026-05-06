@@ -22,8 +22,49 @@ export interface ApiUser {
   email: string
   rol: string
   empresa?: number
+  prestador_id?: number | null
+  prestador_nombre?: string | null
+  es_admin_prestador?: boolean
   fecha_registro?: string
   is_active?: boolean
+}
+
+export interface ApiPrestadorServicio {
+  idprestador: number
+  nombre: string
+  nit?: string | null
+  ciudad?: number | null
+  ciudad_nombre?: string | null
+  activo: boolean
+  fecha_registro?: string
+}
+
+export interface ApiUsuarioEquipoPrestador {
+  idusuario: number
+  nombre: string
+  email: string
+  rol: string
+  es_admin_prestador: boolean
+  fecha_registro?: string
+  is_active: boolean
+}
+
+export interface ApiInvitacionPrestador {
+  idinvitacion: number
+  prestador: number
+  prestador_nombre?: string | null
+  codigo: string
+  rol: string
+  email_destino?: string
+  creado_por?: number | null
+  creado_por_nombre?: string | null
+  creado_at?: string
+  vigente_hasta: string
+  usado_por?: number | null
+  usado_por_nombre?: string | null
+  usado_at?: string | null
+  revocada: boolean
+  vigente: boolean
 }
 
 export interface ApiPanelEmpresa {

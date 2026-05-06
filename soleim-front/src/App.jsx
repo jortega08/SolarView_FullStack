@@ -17,6 +17,8 @@ const Configuracion     = lazy(() => import("./pages/Configuracion"))
 const Users             = lazy(() => import("./pages/Users"))
 const Domicilios        = lazy(() => import("./pages/Domicilios"))
 const Perfil            = lazy(() => import("./pages/Perfil"))
+const MiEmpresa         = lazy(() => import("./pages/MiEmpresa.jsx"))
+const Equipo            = lazy(() => import("./pages/Equipo.jsx"))
 const Login             = lazy(() => import("./pages/Login"))
 const Register          = lazy(() => import("./pages/Register"))
 const NotFound          = lazy(() => import("./pages/NotFound"))
@@ -64,6 +66,8 @@ function App() {
                             <Route path="/users"           element={<Users />} />
                             <Route path="/domicilios"      element={<Domicilios />} />
                             <Route path="/perfil"          element={<Perfil />} />
+                            <Route path="/mi-empresa"      element={<MiEmpresa />} />
+                            <Route path="/equipo"          element={<Equipo />} />
                             <Route path="*"                element={<NotFound />} />
                           </Routes>
                         </Suspense>

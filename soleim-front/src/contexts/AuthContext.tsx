@@ -1,8 +1,10 @@
 import { useState } from "react"
+import axios from "axios"
 import { authService } from "@/services/auth.service"
 import { apiClient } from "@/services/apiClient"
 import { AuthContext } from "./auth-context"
 import type { ApiUser } from "@/types/api"
+import type { RegisterConCodigoPayload, RegisterPayload } from "@/services/auth.service"
 import {
   clearAuthSession,
   getStoredAccessToken,
@@ -27,6 +29,16 @@ function getApiErrorMessage(data: Record<string, unknown> | null, fallback: stri
   )
 }
 
+function getRequestErrorMessage(err: unknown, fallback: string): string {
+  if (axios.isAxiosError(err)) {
+    return getApiErrorMessage(
+      (err.response?.data as Record<string, unknown> | null) ?? null,
+      fallback
+    )
+  }
+  return err instanceof Error ? err.message : fallback
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<ApiUser | null>(() => getStoredUser<ApiUser>())
   const [token, setToken] = useState<string | null>(() => getStoredAccessToken())
@@ -44,28 +56,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null)
     try {
       const data = await authService.login(email.trim(), contrasena)
-      if (!data.success) throw new Error(getApiErrorMessage(data as unknown as Record<string, unknown>, "Credenciales inválidas"))
+      if (!data.success) {
+        throw new Error(
+          getApiErrorMessage(data as unknown as Record<string, unknown>, "Credenciales invalidas")
+        )
+      }
       persistSession(data.user, data.tokens.access, data.tokens.refresh)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error al iniciar sesión"
+      const msg = getRequestErrorMessage(err, "Error al iniciar sesion")
       setError(msg)
-      throw err
+      throw new Error(msg)
     } finally {
       setLoading(false)
     }
   }
 
-  const register = async (nombre: string, email: string, contrasena: string) => {
+  const register = async (payload: RegisterPayload) => {
     setLoading(true)
     setError(null)
     try {
-      const data = await authService.register(nombre.trim(), email.trim(), contrasena)
-      if (!data.success) throw new Error(getApiErrorMessage(data as unknown as Record<string, unknown>, "Error en el registro"))
+      const data = await authService.register({
+        ...payload,
+        nombre: payload.nombre.trim(),
+        email: payload.email.trim(),
+      })
+      if (!data.success) {
+        throw new Error(
+          getApiErrorMessage(data as unknown as Record<string, unknown>, "Error en el registro")
+        )
+      }
       persistSession(data.user, data.tokens.access, data.tokens.refresh)
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Error al registrarse"
+      const msg = getRequestErrorMessage(err, "Error al registrarse")
       setError(msg)
-      throw err
+      throw new Error(msg)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const registerConCodigo = async (payload: RegisterConCodigoPayload) => {
+    setLoading(true)
+    setError(null)
+    try {
+      const data = await authService.registerConCodigo({
+        ...payload,
+        nombre: payload.nombre.trim(),
+        email: payload.email.trim(),
+        codigo: payload.codigo.trim(),
+      })
+      if (!data.success) {
+        throw new Error(
+          getApiErrorMessage(
+            data as unknown as Record<string, unknown>,
+            "No se pudo unir al prestador"
+          )
+        )
+      }
+      persistSession(data.user, data.tokens.access, data.tokens.refresh)
+    } catch (err: unknown) {
+      const msg = getRequestErrorMessage(err, "Error al registrarse")
+      setError(msg)
+      throw new Error(msg)
     } finally {
       setLoading(false)
     }
@@ -80,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const updateUser = async (patch: Partial<ApiUser>) => {
-    if (!user) throw new Error("No hay sesión activa")
+    if (!user) throw new Error("No hay sesion activa")
     const userId = user.idusuario ?? user.id
     const { data } = await apiClient.patch<ApiUser>(`/core/usuarios/${userId}/`, patch)
     const updated = { ...user, ...data }
@@ -89,7 +141,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, error, isAuthenticated: !!token, login, register, logout, updateUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        loading,
+        error,
+        isAuthenticated: !!token,
+        login,
+        register,
+        registerConCodigo,
+        logout,
+        updateUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

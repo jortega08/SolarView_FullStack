@@ -9,6 +9,7 @@ Convention:
 
 import pytest
 from django.contrib.auth.hashers import make_password
+from django.core.cache import cache
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -25,6 +26,17 @@ def test_cache(settings):
             "LOCATION": "soleim-tests",
         }
     }
+    settings.REST_FRAMEWORK = {
+        **settings.REST_FRAMEWORK,
+        "DEFAULT_THROTTLE_RATES": {
+            **settings.REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"],
+            "login": "1000/minute",
+            "register": "1000/hour",
+        },
+    }
+    cache.clear()
+    yield
+    cache.clear()
 
 
 @pytest.fixture(autouse=True)
