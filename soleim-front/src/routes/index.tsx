@@ -23,6 +23,7 @@ const TarifasPage = lazy(() => import("@/pages/tarifas/TarifasPage"))
 const MiEmpresaPage = lazy(() => import("@/pages/MiEmpresa.tsx"))
 const EquipoPage = lazy(() => import("@/pages/Equipo.tsx"))
 const PlaceholderPage = lazy(() => import("@/pages/PlaceholderPage"))
+const TelemetriaPage  = lazy(() => import("@/pages/telemetria/TelemetriaPage"))
 
 export const router = createBrowserRouter([
   {
@@ -49,7 +50,7 @@ export const router = createBrowserRouter([
           { path: ":id", element: <Suspense fallback={<PageLoader />}><InstalacionDetallePage /></Suspense> },
         ],
       },
-      { path: "telemetria", element: <Suspense fallback={<PageLoader />}><PlaceholderPage title="Telemetría" area="Observabilidad operativa" /></Suspense> },
+      { path: "telemetria", element: <Suspense fallback={<PageLoader />}><TelemetriaPage /></Suspense> },
       { path: "alertas", element: <Suspense fallback={<PageLoader />}><AlertasPage /></Suspense> },
       { path: "ordenes", element: <Suspense fallback={<PageLoader />}><OrdenesPage /></Suspense> },
       { path: "operaciones", element: <Suspense fallback={<PageLoader />}><CentroOperacionesPage /></Suspense> },
