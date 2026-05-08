@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom"
+import { Link, NavLink, useNavigate } from "react-router-dom"
 import {
   LayoutDashboard, Zap, Radio, Bell, ClipboardList,
   Wrench, Users, UserCog, BarChart2, FileText, Settings, DollarSign,
@@ -10,7 +10,7 @@ import { useI18n } from "@/contexts/I18nContext"
 import { useNoLeidasCount } from "@/hooks/useNotificaciones"
 import { useAlertas } from "@/hooks/useAlertas"
 import { LiveBadge } from "@/components/status/LiveBadge"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 interface NavItem {
   to: string
@@ -53,6 +53,14 @@ function useSidebarItems() {
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const { user, logout } = useAuth()
+
+  // Sincroniza el ancho del sidebar como CSS variable para que AppLayout se ajuste
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--sidebar-current-width",
+      collapsed ? "64px" : "232px"
+    )
+  }, [collapsed])
   const { t } = useI18n()
   const navigate = useNavigate()
   const items = useSidebarItems().filter((item) => {
@@ -68,22 +76,30 @@ export function Sidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 h-screen z-30 flex flex-col bg-[var(--color-neutral-900)] transition-all duration-200",
+        "fixed left-0 top-0 h-screen z-30 flex flex-col bg-[var(--sidebar-bg)] transition-[width] duration-200 ease-in-out",
         collapsed ? "w-16" : "w-[232px]"
       )}
     >
-      {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-[var(--header-height)] border-b border-[var(--color-neutral-800)] flex-shrink-0">
+      {/* Logo → navega al dashboard */}
+      <Link
+        to="/"
+        className="flex items-center gap-3 px-4 h-[var(--header-height)] border-b border-[var(--sidebar-border)] flex-shrink-0 hover:opacity-80 transition-opacity"
+      >
         <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-600)] flex items-center justify-center flex-shrink-0">
           <Zap className="w-4 h-4 text-white" />
         </div>
         {!collapsed && (
           <span className="text-white font-bold text-lg tracking-tight">SOLEIM</span>
         )}
-      </div>
+      </Link>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+      <nav
+        className={cn(
+          "flex-1 py-3 px-2 space-y-0.5",
+          collapsed ? "overflow-hidden" : "overflow-y-auto overflow-x-hidden"
+        )}
+      >
         {items.map((item) => (
           <NavLink
             key={item.to}
@@ -94,7 +110,7 @@ export function Sidebar() {
                 "flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] text-sm transition-colors relative group",
                 isActive
                   ? "bg-[var(--color-primary-600)] text-white font-medium"
-                  : "text-[var(--color-neutral-400)] hover:bg-[var(--color-neutral-800)] hover:text-white"
+                  : "text-[var(--sidebar-text)] hover:bg-[var(--sidebar-item-hover)] hover:text-white"
               )
             }
           >
@@ -106,7 +122,7 @@ export function Sidebar() {
               </span>
             )}
             {collapsed && (
-              <span className="absolute left-full ml-2 px-2 py-1 bg-[var(--color-neutral-800)] text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">
+              <span className="absolute left-full ml-2 px-2 py-1 bg-[var(--sidebar-tooltip-bg)] text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">
                 {item.label}
               </span>
             )}
@@ -115,20 +131,20 @@ export function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-[var(--color-neutral-800)] p-2 space-y-2 flex-shrink-0">
+      <div className="border-t border-[var(--sidebar-border)] p-2 space-y-2 flex-shrink-0">
         <div className="px-3 py-2">
-          <LiveBadge className="text-[var(--color-neutral-400)]" />
+          <LiveBadge className="text-[var(--sidebar-text)]" />
         </div>
         {!collapsed && user && (
-          <div className="px-3 py-2 rounded-[var(--radius-md)] bg-[var(--color-neutral-800)]">
+          <div className="px-3 py-2 rounded-[var(--radius-md)] bg-[var(--sidebar-item-hover)]">
             <p className="text-xs font-medium text-white truncate">{user.nombre}</p>
-            <p className="text-xs text-[var(--color-neutral-500)] truncate capitalize">{user.rol}</p>
+            <p className="text-xs text-[var(--sidebar-text)] truncate capitalize">{user.rol}</p>
           </div>
         )}
         <button
           onClick={handleLogout}
           className={cn(
-            "flex items-center gap-3 px-3 py-2 w-full rounded-[var(--radius-md)] text-sm text-[var(--color-neutral-400)] hover:bg-[var(--color-neutral-800)] hover:text-white transition-colors",
+            "flex items-center gap-3 px-3 py-2 w-full rounded-[var(--radius-md)] text-sm text-[var(--sidebar-text)] hover:bg-[var(--sidebar-item-hover)] hover:text-white transition-colors",
           )}
         >
           <LogOut className="w-4 h-4 flex-shrink-0" />
@@ -136,7 +152,7 @@ export function Sidebar() {
         </button>
         <button
           onClick={() => setCollapsed((c) => !c)}
-          className="flex items-center justify-center w-full py-1.5 text-[var(--color-neutral-500)] hover:text-white transition-colors"
+          className="flex items-center justify-center w-full py-1.5 text-[var(--sidebar-text)] hover:text-white transition-colors"
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>

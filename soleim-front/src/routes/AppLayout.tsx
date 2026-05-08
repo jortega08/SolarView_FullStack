@@ -1,28 +1,30 @@
 import { Outlet, useLocation } from "react-router-dom"
 import { Sidebar } from "@/components/layout/Sidebar"
 import { Header } from "@/components/layout/Header"
-
-const PAGE_TITLES: Record<string, { title: string; subtitle?: string }> = {
-  "/": { title: "Centro de control", subtitle: "Resumen operativo en tiempo real" },
-  "/instalaciones": { title: "Instalaciones", subtitle: "Gestión de instalaciones solares" },
-  "/telemetria": { title: "Telemetría", subtitle: "Datos en tiempo real de sensores" },
-  "/alertas": { title: "Alertas", subtitle: "Centro de operaciones" },
-  "/ordenes": { title: "Órdenes de trabajo", subtitle: "Centro de operaciones" },
-  "/operaciones": { title: "Centro de operaciones", subtitle: "Alertas y órdenes de trabajo" },
-  "/mantenimiento": { title: "Mantenimiento", subtitle: "Calendario, contratos y planes de servicio" },
-  "/perfil-profesional": { title: "Perfil profesional", subtitle: "Hoja de vida y disponibilidad tecnica" },
-  "/tecnicos": { title: "Técnicos", subtitle: "Directorio y disponibilidad del equipo técnico" },
-  "/analitica": { title: "Analítica", subtitle: "Inteligencia energética y operativa" },
-  "/reportes": { title: "Reportes", subtitle: "Exportación y análisis de datos" },
-  "/notificaciones": { title: "Notificaciones", subtitle: "Bandeja de notificaciones" },
-  "/tarifas": { title: "Tarifas de energía", subtitle: "Valor del kWh por ciudad o instalación" },
-  "/mi-empresa": { title: "Mi empresa", subtitle: "Datos del prestador de servicio" },
-  "/equipo": { title: "Equipo", subtitle: "Usuarios e invitaciones del prestador" },
-  "/configuracion": { title: "Configuración", subtitle: "Ajustes del sistema" },
-}
+import { useI18n } from "@/contexts/I18nContext"
 
 export function AppLayout() {
   const { pathname } = useLocation()
+  const { t } = useI18n()
+
+  const PAGE_TITLES: Record<string, { title: string; subtitle?: string }> = {
+    "/": { title: t("page.dashboard"), subtitle: t("page.dashboard.sub") },
+    "/instalaciones": { title: t("page.installations"), subtitle: t("page.installations.sub") },
+    "/telemetria": { title: t("page.telemetry"), subtitle: t("page.telemetry.sub") },
+    "/alertas": { title: t("page.alerts"), subtitle: t("page.alerts.sub") },
+    "/ordenes": { title: t("page.orders"), subtitle: t("page.orders.sub") },
+    "/operaciones": { title: t("page.operations"), subtitle: t("page.operations.sub") },
+    "/mantenimiento": { title: t("page.maintenance"), subtitle: t("page.maintenance.sub") },
+    "/perfil-profesional": { title: t("page.profile"), subtitle: t("page.profile.sub") },
+    "/tecnicos": { title: t("page.technicians"), subtitle: t("page.technicians.sub") },
+    "/analitica": { title: t("page.analytics"), subtitle: t("page.analytics.sub") },
+    "/reportes": { title: t("page.reports"), subtitle: t("page.reports.sub") },
+    "/notificaciones": { title: t("page.notifications"), subtitle: t("page.notifications.sub") },
+    "/tarifas": { title: t("page.tariffs"), subtitle: t("page.tariffs.sub") },
+    "/mi-empresa": { title: t("page.company"), subtitle: t("page.company.sub") },
+    "/equipo": { title: t("page.team"), subtitle: t("page.team.sub") },
+    "/configuracion": { title: t("page.settings"), subtitle: t("page.settings.sub") },
+  }
 
   const basePath = "/" + pathname.split("/")[1]
   const meta = PAGE_TITLES[basePath] ?? { title: "SOLEIM" }
@@ -31,8 +33,8 @@ export function AppLayout() {
     <div className="min-h-screen bg-[var(--color-background)]">
       <Sidebar />
       <div
-        className="flex flex-col min-h-screen transition-all duration-200"
-        style={{ paddingLeft: "232px" }}
+        className="flex flex-col min-h-screen transition-[padding-left] duration-200 ease-in-out"
+        style={{ paddingLeft: "var(--sidebar-current-width)" }}
       >
         <Header title={meta.title} subtitle={meta.subtitle} />
         <main

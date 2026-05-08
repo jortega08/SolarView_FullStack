@@ -27,6 +27,7 @@ import { useMantenimientos } from "@/hooks/useMantenimientos"
 import { usePanelEmpresa } from "@/hooks/usePanelEmpresa"
 import { useEmpresas } from "@/hooks/useReportes"
 import type { Alerta, MantenimientoProgramado } from "@/types/domain"
+import { useI18n } from "@/contexts/I18nContext"
 
 const DEFAULT_FILTERS: AnalyticsFilterState = {
   periodo: "month",
@@ -92,6 +93,7 @@ function countCompletedMantenimientos(items: MantenimientoProgramado[]): number 
 }
 
 export default function AnaliticaPage() {
+  const { t } = useI18n()
   const [draftFilters, setDraftFilters] = useState<AnalyticsFilterState>(DEFAULT_FILTERS)
   const [appliedFilters, setAppliedFilters] = useState<AnalyticsFilterState>(DEFAULT_FILTERS)
 
@@ -172,8 +174,8 @@ export default function AnaliticaPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Analítica"
-        description="Indicadores energéticos, comparativas, tendencias y desempeño operativo."
+        title={t("analytic.title")}
+        description={t("analytic.desc")}
         actions={
           <>
             <button
@@ -182,7 +184,7 @@ export default function AnaliticaPage() {
               className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-neutral-50)]"
             >
               <RefreshCw className="h-3.5 w-3.5" />
-              Actualizar
+              {t("analytic.btn.refresh")}
             </button>
             <button
               type="button"
@@ -190,14 +192,14 @@ export default function AnaliticaPage() {
               className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-neutral-50)]"
             >
               <Download className="h-3.5 w-3.5" />
-              Exportar vista
+              {t("analytic.btn.export")}
             </button>
             <Link
               to="/reportes"
               className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--color-primary-600)] px-3 text-xs font-semibold text-white hover:bg-[var(--color-primary-700)]"
             >
               <FileText className="h-3.5 w-3.5" />
-              Ir a reportes
+              {t("analytic.btn.reports")}
             </Link>
           </>
         }

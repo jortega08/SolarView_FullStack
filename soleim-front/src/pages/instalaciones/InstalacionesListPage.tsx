@@ -39,6 +39,7 @@ import {
 } from "@/hooks/useInstalacionesCrud"
 import type { InstalacionCrud, SensorInstalacion } from "@/types/domain"
 import type { InstalacionPayload, SensorPayload } from "@/services/instalaciones-crud.service"
+import { useI18n } from "@/contexts/I18nContext"
 
 function formatApiError(value: unknown): string {
   if (Array.isArray(value)) return value.map(formatApiError).filter(Boolean).join(" ")
@@ -105,6 +106,7 @@ interface SensorFormState {
 }
 
 export default function InstalacionesListPage() {
+  const { t } = useI18n()
   const [query, setQuery] = useState("")
   const [editing, setEditing] = useState<InstalacionCrud | null>(null)
   const [creating, setCreating] = useState(false)
@@ -145,7 +147,7 @@ export default function InstalacionesListPage() {
   const columns: DataTableColumn<InstalacionCrud>[] = [
     {
       id: "nombre",
-      header: "Instalacion",
+      header: t("inst.col.name"),
       cell: (inst) => (
         <div className="flex min-w-64 items-center gap-3">
           <div className="h-12 w-16 overflow-hidden rounded-[var(--radius-md)] bg-[var(--color-neutral-100)]">
@@ -162,7 +164,7 @@ export default function InstalacionesListPage() {
               {inst.nombre}
             </p>
             <p className="truncate text-xs text-[var(--color-text-muted)]">
-              {inst.empresaNombre ?? "Sin empresa"} - {inst.ciudadNombre ?? "Sin ciudad"}
+              {inst.empresaNombre ?? t("inst.no_company")} - {inst.ciudadNombre ?? t("inst.no_city")}
             </p>
           </div>
         </div>
@@ -170,12 +172,12 @@ export default function InstalacionesListPage() {
     },
     {
       id: "estado",
-      header: "Estado",
+      header: t("inst.col.status"),
       cell: (inst) => <StatusBadge estado={inst.estado} />,
     },
     {
       id: "tipo",
-      header: "Tipo",
+      header: t("inst.col.type"),
       cell: (inst) => (
         <span className="text-xs capitalize text-[var(--color-text-secondary)]">
           {inst.tipoSistema.replace("_", " ")}
@@ -184,7 +186,7 @@ export default function InstalacionesListPage() {
     },
     {
       id: "capacidad",
-      header: "Capacidad",
+      header: t("inst.col.capacity"),
       cell: (inst) => (
         <span className="tabular text-xs text-[var(--color-text-secondary)]">
           {inst.capacidadPanelKw} kWp / {inst.capacidadBateriaKwh} kWh
@@ -193,7 +195,7 @@ export default function InstalacionesListPage() {
     },
     {
       id: "sensores",
-      header: "Sensores",
+      header: t("inst.col.sensors"),
       cell: (inst) => (
         <button
           type="button"
@@ -207,7 +209,7 @@ export default function InstalacionesListPage() {
     },
     {
       id: "fecha",
-      header: "Instalada",
+      header: t("inst.col.installed"),
       cell: (inst) => (
         <span className="tabular text-xs text-[var(--color-text-secondary)]">
           {inst.fechaInstalacion ? formatDate(inst.fechaInstalacion) : "N/D"}
@@ -216,7 +218,7 @@ export default function InstalacionesListPage() {
     },
     {
       id: "acciones",
-      header: "Acciones",
+      header: t("inst.col.actions"),
       className: "text-right",
       headerClassName: "text-right",
       cell: (inst) => (
@@ -224,7 +226,7 @@ export default function InstalacionesListPage() {
           <Link
             to={`/instalaciones/${inst.id}`}
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-neutral-500)] hover:bg-[var(--color-neutral-100)]"
-            title="Ver detalle"
+            title={t("inst.action.view")}
           >
             <Eye className="h-4 w-4" />
           </Link>
@@ -232,7 +234,7 @@ export default function InstalacionesListPage() {
             type="button"
             onClick={() => setEditing(inst)}
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-neutral-500)] hover:bg-[var(--color-neutral-100)]"
-            title="Editar"
+            title={t("inst.action.edit")}
           >
             <Pencil className="h-4 w-4" />
           </button>
@@ -242,7 +244,7 @@ export default function InstalacionesListPage() {
               if (window.confirm(`Eliminar ${inst.nombre}?`)) void eliminar.mutateAsync(inst.id)
             }}
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-danger-500)] hover:bg-[var(--color-danger-50)]"
-            title="Eliminar"
+            title={t("inst.action.delete")}
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -262,16 +264,16 @@ export default function InstalacionesListPage() {
         setCreating(false)
       }
     } catch (error) {
-      setLocalError(getRequestErrorMessage(error, "No se pudo guardar la instalacion"))
+      setLocalError(getRequestErrorMessage(error, t("inst.error.save")))
     }
   }
 
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Inventario"
-        title="Instalaciones"
-        description="CRUD operativo de instalaciones, fotos de sitio y sensores asociados."
+        eyebrow={t("inst.eyebrow")}
+        title={t("inst.title")}
+        description={t("inst.desc")}
         actions={
           <button
             type="button"
@@ -279,7 +281,7 @@ export default function InstalacionesListPage() {
             className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary-600)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-700)]"
           >
             <Plus className="h-4 w-4" />
-            Nueva instalacion
+            {t("inst.btn.new")}
           </button>
         }
       />
@@ -289,7 +291,7 @@ export default function InstalacionesListPage() {
         <input
           value={query}
           onChange={(event) => setQuery(event.target.value)}
-          placeholder="Buscar por instalacion, empresa, ciudad, direccion o tipo"
+          placeholder={t("inst.search.placeholder")}
           className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-muted)]"
         />
       </div>
@@ -297,15 +299,15 @@ export default function InstalacionesListPage() {
       {localError && <ErrorState message={localError} onRetry={() => setLocalError(null)} />}
 
       {isError ? (
-        <ErrorState message="No se pudieron cargar las instalaciones" onRetry={() => refetch()} />
+        <ErrorState message={t("inst.error.load")} onRetry={() => refetch()} />
       ) : (
         <DataTable
           data={filtered}
           columns={columns}
           loading={isLoading}
           getRowKey={(inst) => inst.id}
-          emptyTitle="Sin instalaciones"
-          emptyDescription="Crea una instalacion o ajusta los filtros para verla aqui."
+          emptyTitle={t("inst.empty.title")}
+          emptyDescription={t("inst.empty.desc")}
         />
       )}
 
@@ -346,6 +348,7 @@ function InstalacionFormSheet({
   onOpenChange: (open: boolean) => void
   onSubmit: (payload: InstalacionPayload) => Promise<void>
 }) {
+  const { t } = useI18n()
   const { data: empresas = [] } = useEmpresasCrud()
   const { data: ciudades = [] } = useCiudades()
   const [form, setForm] = useState<InstalacionFormState>(() => toInstalacionForm(instalacion))
@@ -385,8 +388,8 @@ function InstalacionFormSheet({
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
-      title={instalacion ? "Editar instalacion" : "Nueva instalacion"}
-      description="Datos del sitio, capacidad y foto principal"
+      title={instalacion ? t("inst.form.edit") : t("inst.form.new")}
+      description={t("inst.form.desc")}
       className="max-w-3xl"
     >
       <form onSubmit={submit} className="space-y-5">
@@ -397,7 +400,7 @@ function InstalacionFormSheet({
             ) : (
               <span className="flex flex-col items-center gap-2 text-xs font-medium text-[var(--color-text-muted)]">
                 <ImagePlus className="h-6 w-6" />
-                Agregar foto
+                {t("inst.form.add_photo")}
               </span>
             )}
             <input
@@ -411,60 +414,60 @@ function InstalacionFormSheet({
           </label>
 
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Nombre">
+            <Field label={t("inst.form.name")}>
               <input required value={form.nombre} onChange={(e) => setFormField(setForm, "nombre", e.target.value)} className="input-ui" />
             </Field>
-            <Field label="Empresa">
+            <Field label={t("inst.form.company")}>
               <select required value={form.empresa} onChange={(e) => setFormField(setForm, "empresa", e.target.value)} className="input-ui">
-                <option value="">Seleccionar empresa</option>
+                <option value="">{t("inst.form.select_company")}</option>
                 {empresas.map((empresa) => (
                   <option key={empresa.id} value={empresa.id}>{empresa.nombre}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Ciudad">
+            <Field label={t("inst.form.city")}>
               <select value={form.ciudad} onChange={(e) => setFormField(setForm, "ciudad", e.target.value)} className="input-ui">
-                <option value="">Sin ciudad</option>
+                <option value="">{t("inst.form.no_city")}</option>
                 {ciudades.map((ciudad) => (
                   <option key={ciudad.id} value={ciudad.id}>{ciudad.nombre}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Estado">
+            <Field label={t("inst.form.status")}>
               <select value={form.estado} onChange={(e) => setFormField(setForm, "estado", e.target.value)} className="input-ui">
                 {ESTADOS_INSTALACION.map((estado) => (
                   <option key={estado.value} value={estado.value}>{estado.label}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Tipo de sistema">
+            <Field label={t("inst.form.type")}>
               <select value={form.tipo_sistema} onChange={(e) => setFormField(setForm, "tipo_sistema", e.target.value)} className="input-ui">
                 {TIPOS_SISTEMA.map((tipo) => (
                   <option key={tipo.value} value={tipo.value}>{tipo.label}</option>
                 ))}
               </select>
             </Field>
-            <Field label="Fecha instalacion">
+            <Field label={t("inst.form.date")}>
               <input type="date" value={form.fecha_instalacion} onChange={(e) => setFormField(setForm, "fecha_instalacion", e.target.value)} className="input-ui" />
             </Field>
-            <Field label="Capacidad panel kWp">
+            <Field label={t("inst.form.panel_cap")}>
               <input type="number" min="0" step="0.01" value={form.capacidad_panel_kw} onChange={(e) => setFormField(setForm, "capacidad_panel_kw", e.target.value)} className="input-ui" />
             </Field>
-            <Field label="Capacidad bateria kWh">
+            <Field label={t("inst.form.battery_cap")}>
               <input type="number" min="0" step="0.01" value={form.capacidad_bateria_kwh} onChange={(e) => setFormField(setForm, "capacidad_bateria_kwh", e.target.value)} className="input-ui" />
             </Field>
           </div>
         </div>
 
-        <Field label="Direccion">
+        <Field label={t("inst.form.address")}>
           <input value={form.direccion} onChange={(e) => setFormField(setForm, "direccion", e.target.value)} className="input-ui" />
         </Field>
 
         <div className="flex justify-end gap-2 border-t border-[var(--color-border)] pt-4">
-          <button type="button" onClick={() => onOpenChange(false)} className="btn-secondary">Cancelar</button>
+          <button type="button" onClick={() => onOpenChange(false)} className="btn-secondary">{t("common.cancel")}</button>
           <button type="submit" disabled={saving} className="btn-primary">
             <Save className="h-4 w-4" />
-            Guardar
+            {t("common.save.short")}
           </button>
         </div>
       </form>
@@ -481,6 +484,7 @@ function SensoresSheet({
   sensores: SensorInstalacion[]
   onOpenChange: (open: boolean) => void
 }) {
+  const { t } = useI18n()
   const [form, setForm] = useState<SensorFormState>({
     nombre: "",
     codigo: "",
@@ -514,16 +518,16 @@ function SensoresSheet({
     <Sheet
       open={Boolean(instalacion)}
       onOpenChange={onOpenChange}
-      title={instalacion?.nombre ?? "Sensores"}
-      description="Asignacion y CRUD de sensores de campo"
+      title={instalacion?.nombre ?? t("inst.col.sensors")}
+      description={t("inst.sensors.assigned")}
       className="max-w-3xl"
     >
       {instalacion ? (
         <div className="space-y-6">
           <section>
-            <h3 className="mb-2 text-sm font-semibold text-[var(--color-text-primary)]">Sensores asignados</h3>
+            <h3 className="mb-2 text-sm font-semibold text-[var(--color-text-primary)]">{t("inst.sensors.assigned")}</h3>
             {assigned.length === 0 ? (
-              <EmptyState icon={Radio} title="Sin sensores asignados" className="py-6" />
+              <EmptyState icon={Radio} title={t("inst.sensors.empty")} className="py-6" />
             ) : (
               <div className="space-y-2">
                 {assigned.map((sensor) => (
@@ -531,7 +535,8 @@ function SensoresSheet({
                     key={sensor.id}
                     sensor={sensor}
                     actionIcon={<Unlink className="h-4 w-4" />}
-                    actionLabel="Desasignar"
+                    actionLabel={t("inst.sensors.unassign")}
+                    deleteLabel={t("inst.sensor.delete")}
                     onAction={() => actualizar.mutate({ id: sensor.id, payload: { instalacion: null } })}
                     onDelete={() => eliminar.mutate(sensor.id)}
                   />
@@ -541,9 +546,9 @@ function SensoresSheet({
           </section>
 
           <section>
-            <h3 className="mb-2 text-sm font-semibold text-[var(--color-text-primary)]">Disponibles para asignar</h3>
+            <h3 className="mb-2 text-sm font-semibold text-[var(--color-text-primary)]">{t("inst.sensors.available")}</h3>
             {available.length === 0 ? (
-              <p className="text-xs text-[var(--color-text-muted)]">No hay sensores libres.</p>
+              <p className="text-xs text-[var(--color-text-muted)]">{t("inst.sensors.no_free")}</p>
             ) : (
               <div className="space-y-2">
                 {available.map((sensor) => (
@@ -551,7 +556,8 @@ function SensoresSheet({
                     key={sensor.id}
                     sensor={sensor}
                     actionIcon={<Radio className="h-4 w-4" />}
-                    actionLabel="Asignar"
+                    actionLabel={t("inst.sensors.assign")}
+                    deleteLabel={t("inst.sensor.delete")}
                     onAction={() => actualizar.mutate({ id: sensor.id, payload: { instalacion: instalacion.id } })}
                     onDelete={() => eliminar.mutate(sensor.id)}
                   />
@@ -563,20 +569,20 @@ function SensoresSheet({
           <form onSubmit={createSensor} className="space-y-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-neutral-50)] p-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
               <Cpu className="h-4 w-4" />
-              Nuevo sensor
+              {t("inst.sensors.new")}
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              <Field label="Nombre"><input required value={form.nombre} onChange={(e) => setFormField(setForm, "nombre", e.target.value)} className="input-ui" /></Field>
-              <Field label="Codigo"><input required value={form.codigo} onChange={(e) => setFormField(setForm, "codigo", e.target.value)} className="input-ui" /></Field>
-              <Field label="Tipo">
+              <Field label={t("inst.sensor.name")}><input required value={form.nombre} onChange={(e) => setFormField(setForm, "nombre", e.target.value)} className="input-ui" /></Field>
+              <Field label={t("inst.sensor.code")}><input required value={form.codigo} onChange={(e) => setFormField(setForm, "codigo", e.target.value)} className="input-ui" /></Field>
+              <Field label={t("inst.sensor.type")}>
                 <select value={form.tipo} onChange={(e) => setFormField(setForm, "tipo", e.target.value)} className="input-ui">
                   {TIPOS_SENSOR.map((tipo) => <option key={tipo} value={tipo}>{tipo}</option>)}
                 </select>
               </Field>
-              <Field label="Unidad"><input value={form.unidad} onChange={(e) => setFormField(setForm, "unidad", e.target.value)} className="input-ui" /></Field>
+              <Field label={t("inst.sensor.unit")}><input value={form.unidad} onChange={(e) => setFormField(setForm, "unidad", e.target.value)} className="input-ui" /></Field>
             </div>
-            <Field label="Notas"><textarea value={form.notas} onChange={(e) => setFormField(setForm, "notas", e.target.value)} className="input-ui min-h-20" /></Field>
-            <button type="submit" className="btn-primary"><Plus className="h-4 w-4" />Crear y asignar</button>
+            <Field label={t("inst.sensor.notes")}><textarea value={form.notas} onChange={(e) => setFormField(setForm, "notas", e.target.value)} className="input-ui min-h-20" /></Field>
+            <button type="submit" className="btn-primary"><Plus className="h-4 w-4" />{t("inst.sensors.create")}</button>
           </form>
         </div>
       ) : null}
@@ -588,12 +594,14 @@ function SensorRow({
   sensor,
   actionIcon,
   actionLabel,
+  deleteLabel,
   onAction,
   onDelete,
 }: {
   sensor: SensorInstalacion
   actionIcon: ReactNode
   actionLabel: string
+  deleteLabel: string
   onAction: () => void
   onDelete: () => void
 }) {
@@ -607,7 +615,7 @@ function SensorRow({
       </div>
       <div className="flex gap-1">
         <button type="button" onClick={onAction} className="btn-icon" title={actionLabel}>{actionIcon}</button>
-        <button type="button" onClick={onDelete} className="btn-icon-danger" title="Eliminar"><Trash2 className="h-4 w-4" /></button>
+        <button type="button" onClick={onDelete} className="btn-icon-danger" title={deleteLabel}><Trash2 className="h-4 w-4" /></button>
       </div>
     </div>
   )

@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { empresaService } from "@/services/empresa.service"
+import { absoluteMediaUrl } from "@/lib/env"
 import type { InstalacionResumen } from "@/types/domain"
 import type { ApiInstalacionResumen } from "@/types/api"
 
@@ -15,7 +16,7 @@ function normalize(api: ApiInstalacionResumen): InstalacionResumen {
     generacionHoy: api.generacion_hoy ?? null,
     tipoSistema: (api.tipo_sistema ?? null) as InstalacionResumen["tipoSistema"],
     ciudad: api.ciudad ?? null,
-    imagen: api.imagen ?? null,
+    imagen: absoluteMediaUrl(api.imagen),
     riesgo: api.riesgo ?? null,
   }
 }

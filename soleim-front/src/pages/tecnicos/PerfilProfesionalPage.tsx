@@ -22,25 +22,7 @@ import {
 import type { Certificacion, CiudadBasica, Especialidad, Tecnico } from "@/types/domain"
 import type { PerfilProfesionalPayload } from "@/services/tecnicos.service"
 import { cn } from "@/lib/cn"
-
-/* ─── Constantes ─────────────────────────────────────────────────────── */
-
-const NIVELES = [
-  { value: "", label: "Sin especificar" },
-  { value: "bachiller", label: "Bachiller" },
-  { value: "tecnico", label: "Técnico" },
-  { value: "tecnologo", label: "Tecnólogo" },
-  { value: "profesional", label: "Profesional" },
-  { value: "especializacion", label: "Especialización" },
-  { value: "maestria", label: "Maestría" },
-  { value: "doctorado", label: "Doctorado" },
-]
-
-const CAPACIDADES = [
-  { value: "campo", label: "Trabajo en campo" },
-  { value: "supervision", label: "Solo supervisión" },
-  { value: "ambas", label: "Supervisión y campo" },
-]
+import { useI18n } from "@/contexts/I18nContext"
 
 /* ─── Tipos del formulario ───────────────────────────────────────────── */
 
@@ -154,6 +136,7 @@ function CertificacionesEditor({
   value: Certificacion[]
   onChange: (certs: Certificacion[]) => void
 }) {
+  const { t } = useI18n()
   const add = () =>
     onChange([...value, { nombre: "", institucion: "", ano: "" }])
 
@@ -166,12 +149,12 @@ function CertificacionesEditor({
   return (
     <div className="space-y-3">
       {value.length === 0 && (
-        <p className="text-xs text-[var(--color-text-muted)]">Sin certificaciones registradas.</p>
+        <p className="text-xs text-[var(--color-text-muted)]">{t("profile.cert.empty")}</p>
       )}
       {value.map((cert, i) => (
         <div key={i} className="grid grid-cols-[1fr_1fr_80px_32px] gap-2 items-end">
           <div>
-            {i === 0 && <span className="mb-1 block text-[10px] font-semibold uppercase text-[var(--color-text-secondary)]">Nombre</span>}
+            {i === 0 && <span className="mb-1 block text-[10px] font-semibold uppercase text-[var(--color-text-secondary)]">{t("profile.cert.name")}</span>}
             <input
               value={cert.nombre}
               onChange={(e) => update(i, "nombre", e.target.value)}
@@ -180,7 +163,7 @@ function CertificacionesEditor({
             />
           </div>
           <div>
-            {i === 0 && <span className="mb-1 block text-[10px] font-semibold uppercase text-[var(--color-text-secondary)]">Institución</span>}
+            {i === 0 && <span className="mb-1 block text-[10px] font-semibold uppercase text-[var(--color-text-secondary)]">{t("profile.cert.institution")}</span>}
             <input
               value={cert.institucion ?? ""}
               onChange={(e) => update(i, "institucion", e.target.value)}
@@ -189,7 +172,7 @@ function CertificacionesEditor({
             />
           </div>
           <div>
-            {i === 0 && <span className="mb-1 block text-[10px] font-semibold uppercase text-[var(--color-text-secondary)]">Año</span>}
+            {i === 0 && <span className="mb-1 block text-[10px] font-semibold uppercase text-[var(--color-text-secondary)]">{t("profile.cert.year")}</span>}
             <input
               value={cert.ano ?? ""}
               onChange={(e) => update(i, "ano", e.target.value)}
@@ -213,7 +196,7 @@ function CertificacionesEditor({
         className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-dashed border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-neutral-50)]"
       >
         <Plus className="h-3.5 w-3.5" />
-        Agregar certificación
+        {t("profile.cert.add")}
       </button>
     </div>
   )
@@ -259,6 +242,25 @@ function setPerfilField<K extends keyof PerfilFormState>(
 /* ─── Página principal ───────────────────────────────────────────────── */
 
 export default function PerfilProfesionalPage() {
+  const { t } = useI18n()
+
+  const NIVELES = [
+    { value: "", label: t("profile.level.none") },
+    { value: "bachiller", label: t("profile.level.bachiller") },
+    { value: "tecnico", label: t("profile.level.tecnico") },
+    { value: "tecnologo", label: t("profile.level.tecnologo") },
+    { value: "profesional", label: t("profile.level.profesional") },
+    { value: "especializacion", label: t("profile.level.spec") },
+    { value: "maestria", label: t("profile.level.maestria") },
+    { value: "doctorado", label: t("profile.level.doctorado") },
+  ]
+
+  const CAPACIDADES = [
+    { value: "campo", label: t("profile.cap.field") },
+    { value: "supervision", label: t("profile.cap.supervision") },
+    { value: "ambas", label: t("profile.cap.both") },
+  ]
+
   const { data: perfil, isLoading, isError, refetch } = useMiPerfilTecnico()
   const { data: especialidades = [] } = useEspecialidades()
   const { data: ciudades = [] } = useCiudades()
@@ -305,9 +307,9 @@ export default function PerfilProfesionalPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Perfil técnico"
-        title="Mi perfil profesional"
-        description="Hoja de vida, formación, certificaciones, especialidades y disponibilidad."
+        eyebrow={t("profile.eyebrow")}
+        title={t("profile.title")}
+        description={t("profile.desc")}
         actions={
           <button
             type="button"
@@ -315,7 +317,7 @@ export default function PerfilProfesionalPage() {
             className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-neutral-100)]"
           >
             <RefreshCw className="h-4 w-4" />
-            Actualizar
+            {t("profile.btn.refresh")}
           </button>
         }
       />
@@ -327,7 +329,7 @@ export default function PerfilProfesionalPage() {
         </div>
       ) : isError || !perfil ? (
         <ErrorState
-          message="No se encontró un perfil técnico asociado a este usuario."
+          message={t("profile.error")}
           onRetry={() => refetch()}
         />
       ) : (
@@ -337,14 +339,14 @@ export default function PerfilProfesionalPage() {
             {localError && <ErrorState message={localError} onRetry={() => setLocalError(null)} />}
             {saved && (
               <div className="rounded-[var(--radius-lg)] border border-[var(--color-energy-200)] bg-[var(--color-energy-50)] px-4 py-2.5 text-sm font-medium text-[var(--color-energy-700)]">
-                ✓ Perfil actualizado correctamente.
+                {t("profile.saved")}
               </div>
             )}
 
             {/* Datos generales */}
-            <SectionCard icon={UserCheck} title="Datos generales">
+            <SectionCard icon={UserCheck} title={t("profile.section.general")}>
               <div className="grid gap-3 sm:grid-cols-2">
-                <ProfileField label="Teléfono">
+                <ProfileField label={t("profile.field.phone")}>
                   <input
                     value={form.telefono}
                     onChange={(e) => setPerfilField(setForm, "telefono", e.target.value)}
@@ -352,7 +354,7 @@ export default function PerfilProfesionalPage() {
                     placeholder="+57 300 000 0000"
                   />
                 </ProfileField>
-                <ProfileField label="Licencia vence">
+                <ProfileField label={t("profile.field.license")}>
                   <input
                     type="date"
                     value={form.licencia_vence}
@@ -360,7 +362,7 @@ export default function PerfilProfesionalPage() {
                     className="input-ui"
                   />
                 </ProfileField>
-                <ProfileField label="Área profesional">
+                <ProfileField label={t("profile.field.area")}>
                   <input
                     value={form.area_profesional}
                     onChange={(e) => setPerfilField(setForm, "area_profesional", e.target.value)}
@@ -370,7 +372,7 @@ export default function PerfilProfesionalPage() {
                 </ProfileField>
 
                 {/* Capacidad de operación */}
-                <ProfileField label="Capacidad de operación">
+                <ProfileField label={t("profile.field.operation")}>
                   <div className="flex gap-2 mt-1">
                     {CAPACIDADES.map(({ value, label }) => (
                       <label
@@ -400,8 +402,8 @@ export default function PerfilProfesionalPage() {
               {/* Toggle disponible */}
               <label className="flex items-center justify-between gap-3 rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-neutral-50)] px-3 py-2.5">
                 <span>
-                  <span className="block text-sm font-semibold text-[var(--color-text-primary)]">Disponible para asignación</span>
-                  <span className="block text-xs text-[var(--color-text-muted)]">Visible en despacho y sugerencias del sistema</span>
+                  <span className="block text-sm font-semibold text-[var(--color-text-primary)]">{t("profile.field.available")}</span>
+                  <span className="block text-xs text-[var(--color-text-muted)]">{t("profile.field.available.desc")}</span>
                 </span>
                 <input
                   type="checkbox"
@@ -413,9 +415,9 @@ export default function PerfilProfesionalPage() {
             </SectionCard>
 
             {/* Formación académica */}
-            <SectionCard icon={GraduationCap} title="Formación académica">
+            <SectionCard icon={GraduationCap} title={t("profile.section.education")}>
               <div className="grid gap-3 sm:grid-cols-2">
-                <ProfileField label="Título académico">
+                <ProfileField label={t("profile.field.title")}>
                   <input
                     value={form.titulo_academico}
                     onChange={(e) => setPerfilField(setForm, "titulo_academico", e.target.value)}
@@ -423,7 +425,7 @@ export default function PerfilProfesionalPage() {
                     placeholder="Ej: Ingeniero Electrónico"
                   />
                 </ProfileField>
-                <ProfileField label="Nivel educativo">
+                <ProfileField label={t("profile.field.edu_level")}>
                   <select
                     value={form.nivel_educativo}
                     onChange={(e) => setPerfilField(setForm, "nivel_educativo", e.target.value)}
@@ -436,18 +438,18 @@ export default function PerfilProfesionalPage() {
                 </ProfileField>
               </div>
 
-              <ProfileField label="Estudios adicionales">
+              <ProfileField label={t("profile.field.extra_studies")}>
                 <textarea
                   value={form.estudios}
                   onChange={(e) => setPerfilField(setForm, "estudios", e.target.value)}
                   className="input-ui min-h-24"
-                  placeholder="Un estudio por línea. Ej: Técnico en energías renovables - SENA 2021"
+                  placeholder={t("profile.field.studies.ph")}
                 />
               </ProfileField>
             </SectionCard>
 
             {/* Certificaciones */}
-            <SectionCard icon={Award} title="Certificaciones">
+            <SectionCard icon={Award} title={t("profile.section.certs")}>
               <CertificacionesEditor
                 value={form.certificaciones}
                 onChange={(certs) => setPerfilField(setForm, "certificaciones", certs)}
@@ -457,8 +459,8 @@ export default function PerfilProfesionalPage() {
             {/* Especialidades y Zonas */}
             <div className="grid gap-4 lg:grid-cols-2">
               <ProfileCatalogSelector
-                title="Especialidades"
-                empty="No hay especialidades disponibles."
+                title={t("profile.specialties")}
+                empty={t("profile.no_spec")}
                 items={especialidades}
                 selected={form.especialidades}
                 getId={(item) => item.id}
@@ -471,8 +473,8 @@ export default function PerfilProfesionalPage() {
                 }
               />
               <ProfileCatalogSelector
-                title="Zonas de cobertura"
-                empty="No hay ciudades disponibles."
+                title={t("profile.zones")}
+                empty={t("profile.no_cities")}
                 items={ciudades}
                 selected={form.zonas}
                 getId={(item) => item.id}
@@ -484,21 +486,21 @@ export default function PerfilProfesionalPage() {
             </div>
 
             {/* Resumen y notas */}
-            <SectionCard icon={Wrench} title="Resumen profesional y notas">
-              <ProfileField label="Resumen profesional">
+            <SectionCard icon={Wrench} title={t("profile.section.summary")}>
+              <ProfileField label={t("profile.field.summary")}>
                 <textarea
                   value={form.resumen_profesional}
                   onChange={(e) => setPerfilField(setForm, "resumen_profesional", e.target.value)}
                   className="input-ui min-h-28"
-                  placeholder="Describe tu experiencia, habilidades y enfoque profesional…"
+                  placeholder={t("profile.field.summary.ph")}
                 />
               </ProfileField>
-              <ProfileField label="Notas internas">
+              <ProfileField label={t("profile.field.notes")}>
                 <textarea
                   value={form.notas}
                   onChange={(e) => setPerfilField(setForm, "notas", e.target.value)}
                   className="input-ui min-h-20"
-                  placeholder="Observaciones visibles solo para administradores…"
+                  placeholder={t("profile.field.notes.ph")}
                 />
               </ProfileField>
             </SectionCard>
@@ -517,32 +519,32 @@ export default function PerfilProfesionalPage() {
                     {perfil.nombre}
                   </h2>
                   <p className="truncate text-xs text-[var(--color-text-muted)]">
-                    {perfil.empresaNombre ?? "Sin empresa"}
+                    {perfil.empresaNombre ?? t("profile.identity.no_company")}
                   </p>
                 </div>
               </div>
               <div className="space-y-2 text-xs text-[var(--color-text-secondary)]">
-                <InfoRow label="Correo" value={perfil.email ?? "N/D"} />
-                <InfoRow label="Cédula" value={perfil.cedula ?? "N/D"} />
-                <InfoRow label="Área" value={form.area_profesional || "Sin área"} />
+                <InfoRow label={t("profile.identity.email")} value={perfil.email ?? "N/D"} />
+                <InfoRow label={t("profile.identity.id")} value={perfil.cedula ?? "N/D"} />
+                <InfoRow label={t("profile.identity.area")} value={form.area_profesional || t("profile.identity.no_area")} />
                 {form.titulo_academico && (
-                  <InfoRow label="Título" value={form.titulo_academico} />
+                  <InfoRow label={t("profile.identity.title_lbl")} value={form.titulo_academico} />
                 )}
                 {form.nivel_educativo && (
                   <InfoRow
-                    label="Nivel"
+                    label={t("profile.identity.level")}
                     value={NIVELES.find(n => n.value === form.nivel_educativo)?.label ?? form.nivel_educativo}
                   />
                 )}
                 <div className="flex justify-between gap-3">
-                  <span className="text-[var(--color-text-muted)]">Estado</span>
+                  <span className="text-[var(--color-text-muted)]">{t("profile.status.label")}</span>
                   <span className={cn(
                     "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold",
                     form.disponible
                       ? "bg-[var(--color-energy-50)] text-[var(--color-energy-700)]"
                       : "bg-[var(--color-danger-50)] text-[var(--color-danger-600)]"
                   )}>
-                    {form.disponible ? "● Disponible" : "○ No disponible"}
+                    {form.disponible ? t("profile.status.available") : t("profile.status.unavailable")}
                   </span>
                 </div>
               </div>
@@ -552,7 +554,7 @@ export default function PerfilProfesionalPage() {
             <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
               <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
                 <FileText className="h-4 w-4" />
-                Hoja de vida
+                {t("profile.cv.title")}
               </div>
               {perfil.hojaVidaUrl && (
                 <a
@@ -562,12 +564,12 @@ export default function PerfilProfesionalPage() {
                   className="mb-3 inline-flex items-center gap-1.5 text-xs font-medium text-[var(--color-primary-700)] hover:underline"
                 >
                   <FileText className="h-3.5 w-3.5" />
-                  Ver archivo actual
+                  {t("profile.cv.current")}
                 </a>
               )}
               <label className="flex cursor-pointer flex-col items-center justify-center gap-2 rounded-[var(--radius-lg)] border border-dashed border-[var(--color-border)] bg-[var(--color-neutral-50)] px-4 py-8 text-center text-xs font-medium text-[var(--color-text-muted)] hover:bg-[var(--color-neutral-100)]">
                 <Upload className="h-5 w-5" />
-                {form.hoja_vida ? form.hoja_vida.name : "Subir PDF, DOC o DOCX"}
+                {form.hoja_vida ? form.hoja_vida.name : t("profile.cv.upload")}
                 <input
                   type="file"
                   accept=".pdf,.doc,.docx"
@@ -584,7 +586,7 @@ export default function PerfilProfesionalPage() {
               <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
                 <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
                   <Award className="h-4 w-4" />
-                  Certificaciones
+                  {t("profile.certs.preview")}
                 </div>
                 <ul className="space-y-2">
                   {form.certificaciones.filter(c => c.nombre.trim()).map((c, i) => (
@@ -606,7 +608,7 @@ export default function PerfilProfesionalPage() {
               <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-[var(--shadow-card)]">
                 <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-[var(--color-text-primary)]">
                   <GraduationCap className="h-4 w-4" />
-                  Estudios
+                  {t("profile.studies.preview")}
                 </div>
                 <ul className="space-y-1.5">
                   {parseStudyLines(form.estudios).map((item) => (
@@ -624,9 +626,9 @@ export default function PerfilProfesionalPage() {
               className="btn-primary w-full"
             >
               {actualizar.isPending ? (
-                <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />Guardando…</>
+                <><span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />{t("profile.btn.saving")}</>
               ) : (
-                <><Save className="h-4 w-4" />Guardar perfil</>
+                <><Save className="h-4 w-4" />{t("profile.btn.save")}</>
               )}
             </button>
           </aside>

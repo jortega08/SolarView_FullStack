@@ -101,7 +101,15 @@
   /* Sidebar */
   --sidebar-width: 232px;
   --sidebar-collapsed-width: 64px;
+  --sidebar-current-width: 232px;   /* actualizado por JS al colapsar/expandir */
   --header-height: 60px;
+
+  /* Sidebar colors — always dark, not affected by theme */
+  --sidebar-bg: #0f172a;
+  --sidebar-border: #1e293b;
+  --sidebar-item-hover: #1e293b;
+  --sidebar-text: #94a3b8;
+  --sidebar-tooltip-bg: #1e293b;
 }
 
 /* CSS variables for shadcn/ui compatibility */

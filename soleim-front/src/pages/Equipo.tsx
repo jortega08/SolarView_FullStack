@@ -4,6 +4,7 @@ import { toast } from "sonner"
 import { useAuth } from "@/contexts/useAuth"
 import { prestadorService } from "@/services/prestador.service"
 import type { ApiInvitacionPrestador, ApiUsuarioEquipoPrestador } from "@/types/api"
+import { useI18n } from "@/contexts/I18nContext"
 
 type InviteForm = {
   email_destino: string
@@ -11,11 +12,6 @@ type InviteForm = {
   vigente_hasta: string
 }
 
-const roleLabels: Record<string, string> = {
-  admin_empresa: "Admin de empresa",
-  operador: "Operador",
-  viewer: "Visor",
-}
 
 function defaultExpiry() {
   const date = new Date()
@@ -33,6 +29,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export default function Equipo() {
+  const { t } = useI18n()
   const { user } = useAuth()
   const isAdmin = Boolean(user?.es_admin_prestador)
   const currentUserId = user?.idusuario ?? user?.id
@@ -135,9 +132,15 @@ export default function Equipo() {
     }
   }
 
+  const roleLabels: Record<string, string> = {
+    admin_empresa: t("team.role.admin_company"),
+    operador: t("team.role.operator"),
+    viewer: t("team.role.viewer"),
+  }
+
   if (loading) {
     return (
-      <Shell title="Equipo" subtitle="Usuarios e invitaciones del prestador">
+      <Shell title={t("team.title")} subtitle={t("team.subtitle")}>
         <Skeleton />
       </Shell>
     )
@@ -145,26 +148,26 @@ export default function Equipo() {
 
   if (error) {
     return (
-      <Shell title="Equipo" subtitle="Usuarios e invitaciones del prestador">
-        <EmptyState icon={<Users className="w-8 h-8" />} title="Sin prestador vinculado" text={error} />
+      <Shell title={t("team.title")} subtitle={t("team.subtitle")}>
+        <EmptyState icon={<Users className="w-8 h-8" />} title={t("team.empty.no_prestador")} text={error} />
       </Shell>
     )
   }
 
   return (
-    <Shell title="Equipo" subtitle="Gestiona el acceso de tu empresa prestadora">
+    <Shell title={t("team.title")} subtitle={t("team.subtitle.manage")}>
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-5">
           <Panel
-            title="Usuarios vinculados"
-            subtitle={`${equipo.length} usuario${equipo.length === 1 ? "" : "s"} en este prestador`}
+            title={t("team.panel.users")}
+            subtitle={`${equipo.length} ${equipo.length === 1 ? t("team.col.user").toLowerCase() : t("team.col.user").toLowerCase() + "s"} en este prestador`}
             icon={<Users className="w-4 h-4" />}
           >
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-[var(--color-border)] bg-[var(--color-neutral-50)]">
-                    {["Usuario", "Rol", "Estado", "Ingreso", "Acciones"].map((header) => (
+                    {[t("team.col.user"), t("team.col.role"), t("team.col.status"), t("team.col.joined"), t("team.col.actions")].map((header) => (
                       <th key={header} className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-secondary)]">
                         {header}
                       </th>
@@ -173,7 +176,7 @@ export default function Equipo() {
                 </thead>
                 <tbody>
                   {equipo.length === 0 ? (
-                    <TableEmpty colSpan={5} title="Sin usuarios vinculados" text="Cuando alguien use una invitación aparecerá aquí." />
+                    <TableEmpty colSpan={5} title={t("team.empty.users")} text={t("team.empty.users.desc")} />
                   ) : (
                     equipo.map((miembro) => {
                       const isSelf = miembro.idusuario === currentUserId
@@ -184,11 +187,11 @@ export default function Equipo() {
                             <div className="text-xs text-[var(--color-text-secondary)]">{miembro.email}</div>
                           </td>
                           <td className="px-4 py-3">
-                            <RoleBadge admin={miembro.es_admin_prestador} rol={miembro.rol} />
+                            <RoleBadge admin={miembro.es_admin_prestador} rol={miembro.rol} roleLabels={roleLabels} adminLabel={t("team.role.admin")} />
                           </td>
                           <td className="px-4 py-3">
                             <span className="text-xs text-[var(--color-text-secondary)]">
-                              {miembro.is_active ? "Activo" : "Inactivo"}
+                              {miembro.is_active ? t("team.status.active") : t("team.status.inactive")}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-xs text-[var(--color-text-secondary)]">
@@ -198,7 +201,7 @@ export default function Equipo() {
                             {isAdmin && !miembro.es_admin_prestador && !isSelf ? (
                               <button
                                 className="btn-icon-danger"
-                                title="Quitar acceso"
+                                title={t("team.action.remove")}
                                 disabled={removing === miembro.idusuario}
                                 onClick={() => removeAccess(miembro)}
                               >
@@ -220,18 +223,18 @@ export default function Equipo() {
           {empleados.length === 0 && (
             <EmptyState
               icon={<ShieldCheck className="w-8 h-8" />}
-              title="Sin empleados vinculados"
-              text={isAdmin ? "Genera una invitación para que tu equipo pueda unirse." : "Aún no hay empleados adicionales vinculados al prestador."}
+              title={t("team.empty.employees")}
+              text={isAdmin ? t("team.empty.employees.admin") : t("team.empty.employees.user")}
             />
           )}
 
           {isAdmin && (
-            <Panel title="Invitaciones" subtitle="Códigos emitidos para nuevos empleados" icon={<KeyRound className="w-4 h-4" />}>
+            <Panel title={t("team.panel.invites")} subtitle={t("team.panel.invites.sub")} icon={<KeyRound className="w-4 h-4" />}>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-[var(--color-border)] bg-[var(--color-neutral-50)]">
-                      {["Código", "Destino", "Rol", "Estado", "Vence", "Acciones"].map((header) => (
+                      {[t("team.col.code"), t("team.col.destination"), t("team.col.role"), t("team.col.status"), t("team.col.expires"), t("team.col.actions")].map((header) => (
                         <th key={header} className="px-4 py-3 text-left text-xs font-semibold text-[var(--color-text-secondary)]">
                           {header}
                         </th>
@@ -240,7 +243,7 @@ export default function Equipo() {
                   </thead>
                   <tbody>
                     {invitaciones.length === 0 ? (
-                      <TableEmpty colSpan={6} title="Sin invitaciones" text="Genera el primer código desde el panel lateral." />
+                      <TableEmpty colSpan={6} title={t("team.empty.invites")} text={t("team.empty.invites.desc")} />
                     ) : (
                       invitaciones.map((invitacion) => (
                         <tr key={invitacion.idinvitacion} className="border-b border-[var(--color-border)] last:border-0">
@@ -253,13 +256,13 @@ export default function Equipo() {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-1">
-                              <button className="btn-icon" title="Copiar código" onClick={() => copyCode(invitacion.codigo)}>
+                              <button className="btn-icon" title={t("team.action.copy")} onClick={() => copyCode(invitacion.codigo)}>
                                 <Copy className="w-4 h-4" />
                               </button>
                               {invitacion.vigente && !invitacion.usado_por && !invitacion.revocada && (
                                 <button
                                   className="btn-icon-danger"
-                                  title="Revocar invitación"
+                                  title={t("team.action.revoke")}
                                   disabled={revoking === invitacion.idinvitacion}
                                   onClick={() => revokeInvite(invitacion)}
                                 >
@@ -287,12 +290,12 @@ export default function Equipo() {
               <div className="px-5 py-4 border-b border-[var(--color-border)]">
                 <h2 className="text-sm font-semibold text-[var(--color-text-primary)] flex items-center gap-2">
                   <MailPlus className="w-4 h-4 text-[var(--color-primary-600)]" />
-                  Nueva invitación
+                  {t("team.new_invite")}
                 </h2>
-                <p className="text-xs text-[var(--color-text-secondary)] mt-1">Crea un código de un solo uso para un empleado.</p>
+                <p className="text-xs text-[var(--color-text-secondary)] mt-1">{t("team.new_invite.desc")}</p>
               </div>
               <div className="p-5 space-y-4">
-                <Field label="Correo destino (opcional)">
+                <Field label={t("team.invite.email")}>
                   <input
                     className="input-ui"
                     type="email"
@@ -301,18 +304,18 @@ export default function Equipo() {
                     placeholder="empleado@empresa.com"
                   />
                 </Field>
-                <Field label="Rol">
+                <Field label={t("team.invite.role")}>
                   <select
                     className="input-ui"
                     value={form.rol}
                     onChange={(event) => setForm((prev) => ({ ...prev, rol: event.target.value as InviteForm["rol"] }))}
                   >
-                    <option value="operador">Operador</option>
-                    <option value="viewer">Visor</option>
-                    <option value="admin_empresa">Admin de empresa</option>
+                    <option value="operador">{t("team.role.operator")}</option>
+                    <option value="viewer">{t("team.role.viewer")}</option>
+                    <option value="admin_empresa">{t("team.role.admin_company")}</option>
                   </select>
                 </Field>
-                <Field label="Vigente hasta">
+                <Field label={t("team.invite.expires")}>
                   <input
                     className="input-ui"
                     type="datetime-local"
@@ -323,15 +326,15 @@ export default function Equipo() {
                 </Field>
                 <button type="submit" className="btn-primary w-full" disabled={submitting}>
                   <KeyRound className="w-4 h-4" />
-                  {submitting ? "Generando..." : "Generar invitación"}
+                  {submitting ? t("team.invite.btn.loading") : t("team.invite.btn")}
                 </button>
               </div>
             </form>
           ) : (
             <EmptyState
               icon={<ShieldCheck className="w-8 h-8" />}
-              title="Acceso de solo lectura"
-              text="Solo el administrador del prestador puede generar invitaciones o retirar accesos."
+              title={t("team.read_only")}
+              text={t("team.read_only.desc")}
             />
           )}
 
@@ -339,13 +342,13 @@ export default function Equipo() {
             <div className="bg-[var(--color-primary-50)] border border-[var(--color-primary-200)] rounded-[var(--radius-lg)] p-5">
               <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-primary-800)]">
                 <Clipboard className="w-4 h-4" />
-                Código generado
+                {t("team.code.title")}
               </div>
               <div className="mt-3 flex items-center gap-2">
                 <code className="min-w-0 flex-1 rounded-[var(--radius-md)] bg-[var(--color-surface)] border border-[var(--color-border)] px-3 py-2 text-xs font-mono text-[var(--color-text-primary)] break-all">
                   {lastCode}
                 </code>
-                <button className="btn-icon" title="Copiar código" onClick={() => copyCode(lastCode)}>
+                <button className="btn-icon" title={t("team.action.copy")} onClick={() => copyCode(lastCode)}>
                   <Copy className="w-4 h-4" />
                 </button>
               </div>
@@ -403,16 +406,17 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-function RoleBadge({ admin, rol }: { admin: boolean; rol: string }) {
+function RoleBadge({ admin, rol, roleLabels, adminLabel }: { admin: boolean; rol: string; roleLabels: Record<string, string>; adminLabel: string }) {
   return (
     <span className="inline-flex items-center rounded-full bg-[var(--color-neutral-100)] px-2 py-1 text-xs font-medium text-[var(--color-text-primary)]">
-      {admin ? "Admin prestador" : roleLabels[rol] ?? rol}
+      {admin ? adminLabel : roleLabels[rol] ?? rol}
     </span>
   )
 }
 
 function InviteStatus({ invitacion }: { invitacion: ApiInvitacionPrestador }) {
-  const label = invitacion.usado_por ? "Usada" : invitacion.revocada ? "Revocada" : invitacion.vigente ? "Vigente" : "Expirada"
+  const { t } = useI18n()
+  const label = invitacion.usado_por ? t("team.invite.used") : invitacion.revocada ? t("team.invite.revoked") : invitacion.vigente ? t("team.invite.active") : t("team.invite.expired")
   const tone = invitacion.vigente && !invitacion.usado_por && !invitacion.revocada ? "text-[var(--color-energy-700)] bg-[var(--color-energy-50)]" : "text-[var(--color-text-secondary)] bg-[var(--color-neutral-100)]"
   return <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${tone}`}>{label}</span>
 }

@@ -40,21 +40,13 @@ import { OrdenDetalleSheet } from "@/features/operaciones/OrdenDetalleSheet"
 import { CrearOrdenDialog } from "@/features/operaciones/CrearOrdenDialog"
 import type { Orden } from "@/types/domain"
 import type { EstadoOrden } from "@/types/enums"
+import { useI18n } from "@/contexts/I18nContext"
 
 interface ColumnDef {
   estado: EstadoOrden
   label: string
   accent: string
 }
-
-const COLUMNS: ColumnDef[] = [
-  { estado: "abierta", label: "Abiertas", accent: "var(--color-solar-500)" },
-  { estado: "asignada", label: "Asignadas", accent: "var(--color-primary-500)" },
-  { estado: "en_progreso", label: "En progreso", accent: "var(--color-warning-500)" },
-  { estado: "completada", label: "Completadas", accent: "var(--color-energy-500)" },
-  { estado: "cerrada", label: "Cerradas", accent: "var(--color-neutral-500)" },
-  { estado: "cancelada", label: "Canceladas", accent: "var(--color-danger-500)" },
-]
 
 const ACTIVE_STATES: EstadoOrden[] = ["abierta", "asignada", "en_progreso"]
 
@@ -85,6 +77,17 @@ const TRANSICION_ACCION: Partial<
 }
 
 export default function OrdenesPage() {
+  const { t } = useI18n()
+
+  const COLUMNS: ColumnDef[] = [
+    { estado: "abierta", label: t("order.col.open"), accent: "var(--color-solar-500)" },
+    { estado: "asignada", label: t("order.col.assigned"), accent: "var(--color-primary-500)" },
+    { estado: "en_progreso", label: t("order.col.progress"), accent: "var(--color-warning-500)" },
+    { estado: "completada", label: t("order.col.completed"), accent: "var(--color-energy-500)" },
+    { estado: "cerrada", label: t("order.col.closed"), accent: "var(--color-neutral-500)" },
+    { estado: "cancelada", label: t("order.col.cancelled"), accent: "var(--color-danger-500)" },
+  ]
+
   const [filters, setFilters] = useState<FiltersState>({
     estado: "",
     prioridad: "",
@@ -238,9 +241,9 @@ export default function OrdenesPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Centro de operaciones"
-        title="Órdenes de trabajo"
-        description="Despacho, prioridad, SLA y ejecución de órdenes en campo."
+        eyebrow={t("order.eyebrow")}
+        title={t("order.title")}
+        description={t("order.desc")}
         actions={
           <>
             <button
@@ -248,14 +251,14 @@ export default function OrdenesPage() {
               className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-neutral-50)]"
             >
               <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
-              Actualizar
+              {t("order.btn.refresh")}
             </button>
             <button
               onClick={() => setCrearOpen(true)}
               className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary-600)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-700)]"
             >
               <Plus className="h-4 w-4" />
-              Nueva orden
+              {t("order.btn.new")}
             </button>
           </>
         }
@@ -263,54 +266,54 @@ export default function OrdenesPage() {
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
         <MetricCard
-          title="Órdenes totales"
+          title={t("order.metric.total")}
           value={String(metrics.total)}
-          delta="En vista actual"
+          delta={t("order.metric.total.delta")}
           icon={ClipboardList}
           iconBg="bg-[var(--color-primary-50)]"
           iconColor="text-[var(--color-primary-600)]"
           loading={isLoading}
         />
         <MetricCard
-          title="Activas"
+          title={t("order.metric.active")}
           value={String(metrics.activas)}
-          delta="Abiertas, asignadas o en proceso"
+          delta={t("order.metric.active.delta")}
           icon={Gauge}
           iconBg="bg-[var(--color-solar-50)]"
           iconColor="text-[var(--color-solar-700)]"
           loading={isLoading}
         />
         <MetricCard
-          title="Asignadas"
+          title={t("order.metric.assigned")}
           value={String(metrics.asignadas)}
-          delta="Pendientes de inicio"
+          delta={t("order.metric.assigned.delta")}
           icon={UserCheck}
           iconBg="bg-[var(--color-primary-50)]"
           iconColor="text-[var(--color-primary-600)]"
           loading={isLoading}
         />
         <MetricCard
-          title="En campo"
+          title={t("order.metric.field")}
           value={String(metrics.enCampo)}
-          delta="Ejecución activa"
+          delta={t("order.metric.field.delta")}
           icon={Wrench}
           iconBg="bg-[var(--color-warning-50)]"
           iconColor="text-[var(--color-warning-600)]"
           loading={isLoading}
         />
         <MetricCard
-          title="Completadas"
+          title={t("order.metric.completed")}
           value={String(metrics.completadas)}
-          delta="Esperando cierre si aplica"
+          delta={t("order.metric.completed.delta")}
           icon={CheckCircle2}
           iconBg="bg-[var(--color-energy-50)]"
           iconColor="text-[var(--color-energy-700)]"
           loading={isLoading}
         />
         <MetricCard
-          title="SLA / Urgentes"
+          title={t("order.metric.sla")}
           value={String(metrics.urgentes)}
-          delta={metrics.urgentes > 0 ? "Requieren atención" : "Sin riesgo visible"}
+          delta={metrics.urgentes > 0 ? t("order.metric.sla.risk") : t("order.metric.sla.ok")}
           deltaPositive={metrics.urgentes === 0}
           icon={ShieldAlert}
           iconBg="bg-[var(--color-danger-50)]"
@@ -323,7 +326,7 @@ export default function OrdenesPage() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="mr-1 inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-normal text-[var(--color-text-secondary)]">
             <Filter className="h-3.5 w-3.5" />
-            Filtros
+            {t("order.filter.label")}
           </div>
 
           <select
@@ -331,7 +334,7 @@ export default function OrdenesPage() {
             onChange={(e) => setFilters((f) => ({ ...f, estado: e.target.value }))}
             className="min-h-9 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-2.5 text-xs text-[var(--color-text-secondary)] outline-none focus:border-[var(--color-primary-300)]"
           >
-            <option value="">Todos los estados</option>
+            <option value="">{t("order.filter.status")}</option>
             {COLUMNS.map((column) => (
               <option key={column.estado} value={column.estado}>
                 {column.label}
@@ -344,11 +347,11 @@ export default function OrdenesPage() {
             onChange={(e) => setFilters((f) => ({ ...f, prioridad: e.target.value }))}
             className="min-h-9 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-2.5 text-xs text-[var(--color-text-secondary)] outline-none focus:border-[var(--color-primary-300)]"
           >
-            <option value="">Toda prioridad</option>
-            <option value="urgente">Urgente</option>
-            <option value="alta">Alta</option>
-            <option value="media">Media</option>
-            <option value="baja">Baja</option>
+            <option value="">{t("order.filter.priority")}</option>
+            <option value="urgente">{t("order.priority.urgent")}</option>
+            <option value="alta">{t("order.priority.high")}</option>
+            <option value="media">{t("order.priority.medium")}</option>
+            <option value="baja">{t("order.priority.low")}</option>
           </select>
 
           <select
@@ -356,7 +359,7 @@ export default function OrdenesPage() {
             onChange={(e) => setFilters((f) => ({ ...f, instalacion: e.target.value }))}
             className="min-h-9 max-w-[260px] rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-2.5 text-xs text-[var(--color-text-secondary)] outline-none focus:border-[var(--color-primary-300)]"
           >
-            <option value="">Todas las instalaciones</option>
+            <option value="">{t("order.filter.all_inst")}</option>
             {(instalaciones ?? []).map((instalacion) => (
               <option key={instalacion.id} value={instalacion.id}>
                 {instalacion.nombre}
@@ -369,7 +372,7 @@ export default function OrdenesPage() {
             onChange={(e) => setFilters((f) => ({ ...f, tipo: e.target.value }))}
             className="min-h-9 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-2.5 text-xs text-[var(--color-text-secondary)] outline-none focus:border-[var(--color-primary-300)]"
           >
-            <option value="">Todo tipo</option>
+            <option value="">{t("order.filter.all_type")}</option>
             {tipos.map((tipo) => (
               <option key={tipo} value={tipo}>
                 {tipo}
@@ -382,7 +385,7 @@ export default function OrdenesPage() {
             <input
               value={filters.busqueda}
               onChange={(e) => setFilters((f) => ({ ...f, busqueda: e.target.value }))}
-              placeholder="Buscar código, título, técnico..."
+              placeholder={t("order.filter.search")}
               className="w-full bg-transparent text-xs text-[var(--color-text-primary)] outline-none placeholder:text-[var(--color-text-muted)]"
             />
           </div>
@@ -390,13 +393,13 @@ export default function OrdenesPage() {
       </section>
 
       {isError ? (
-        <ErrorState message="No se pudieron cargar las órdenes" onRetry={() => refetch()} />
+        <ErrorState message={t("order.error.load")} onRetry={() => refetch()} />
       ) : isLoading ? (
         <BoardSkeleton />
       ) : filtradas.length === 0 ? (
         <EmptyState
-          title="Sin órdenes"
-          description="No hay órdenes que cumplan con los filtros actuales."
+          title={t("order.empty")}
+          description={t("order.empty.desc")}
         />
       ) : (
         <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
@@ -404,10 +407,10 @@ export default function OrdenesPage() {
             <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">
-                  Tablero de despacho
+                  {t("order.board.title")}
                 </h3>
                 <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                  Arrastra tarjetas entre columnas para ejecutar transiciones permitidas.
+                  {t("order.board.desc")}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -443,11 +446,11 @@ export default function OrdenesPage() {
           </section>
 
           <aside className="space-y-4">
-            <Panel title="Órdenes críticas" action="Máx. 12 visibles" icon={<AlertTriangle className="h-4 w-4" />}>
+            <Panel title={t("order.panel.critical")} action={t("order.panel.critical.max")} icon={<AlertTriangle className="h-4 w-4" />}>
               {ordenesCriticas.length === 0 ? (
                 <EmptyState
-                  title="Sin urgencias"
-                  description="No hay órdenes urgentes, altas o con SLA vencido en la vista actual."
+                  title={t("order.empty.urgent")}
+                  description={t("order.empty.urgent.desc")}
                 />
               ) : (
                 <div className="max-h-[360px] space-y-2 overflow-y-auto pr-1">
@@ -469,7 +472,7 @@ export default function OrdenesPage() {
                         <PriorityBadge prioridad={orden.prioridad} />
                       </div>
                       <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-[var(--color-text-muted)]">
-                        <span>{orden.tecnicoNombre ?? "Sin técnico"}</span>
+                        <span>{orden.tecnicoNombre ?? t("order.tech.no")}</span>
                         <span
                           className={cn(
                             "tabular-nums",
@@ -477,7 +480,7 @@ export default function OrdenesPage() {
                           )}
                         >
                           {orden.slaVencido
-                            ? "SLA vencido"
+                            ? t("order.sla.expired")
                             : formatRelativeTime(orden.fechaCreacion)}
                         </span>
                       </div>
@@ -487,11 +490,11 @@ export default function OrdenesPage() {
               )}
             </Panel>
 
-            <Panel title="Carga por técnico" action={`${metrics.tecnicos} activos`} icon={<Users className="h-4 w-4" />}>
+            <Panel title={t("order.panel.technicians")} action={`${metrics.tecnicos} ${t("order.tech.active")}`} icon={<Users className="h-4 w-4" />}>
               {cargaTecnicos.length === 0 ? (
                 <EmptyState
-                  title="Sin carga activa"
-                  description="No hay técnicos con órdenes abiertas, asignadas o en proceso."
+                  title={t("order.empty.load")}
+                  description={t("order.empty.load.desc")}
                 />
               ) : (
                 <div className="space-y-3">
@@ -521,8 +524,8 @@ export default function OrdenesPage() {
                         </div>
                         <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
                           {item.urgentes > 0
-                            ? `${item.urgentes} urgente(s) o SLA vencido`
-                            : "Carga sin urgencias visibles"}
+                            ? `${item.urgentes} ${t("order.tech.urgent")}`
+                            : t("order.tech.no_urgent")}
                         </p>
                       </div>
                     )
@@ -531,33 +534,33 @@ export default function OrdenesPage() {
               )}
             </Panel>
 
-            <Panel title="Acciones rápidas" icon={<BriefcaseBusiness className="h-4 w-4" />}>
+            <Panel title={t("order.panel.actions")} icon={<BriefcaseBusiness className="h-4 w-4" />}>
               <div className="space-y-2">
                 <button
                   onClick={() => setCrearOpen(true)}
                   className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-neutral-50)]"
                 >
-                  Crear orden
+                  {t("order.action.create")}
                   <Plus className="h-4 w-4 text-[var(--color-primary-600)]" />
                 </button>
                 <Link
                   to="/tecnicos"
                   className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-neutral-50)]"
                 >
-                  Ver técnicos
+                  {t("order.action.view_tech")}
                   <Users className="h-4 w-4 text-[var(--color-primary-600)]" />
                 </Link>
                 <button
                   onClick={() => refetch()}
                   className="flex w-full items-center justify-between rounded-[var(--radius-md)] border border-[var(--color-border)] bg-white px-3 py-2 text-sm font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-neutral-50)]"
                 >
-                  Sincronizar tablero
+                  {t("order.action.sync")}
                   <RefreshCw className={cn("h-4 w-4 text-[var(--color-primary-600)]", isFetching && "animate-spin")} />
                 </button>
               </div>
             </Panel>
 
-            <Panel title="Última actividad" icon={<Clock3 className="h-4 w-4" />}>
+            <Panel title={t("order.panel.activity")} icon={<Clock3 className="h-4 w-4" />}>
               <div className="space-y-2">
                 {filtradas.slice(0, 5).map((orden) => (
                   <button
@@ -608,8 +611,8 @@ function BoardSkeleton() {
           <Skeleton className="h-8 w-56" />
         </div>
         <div className="flex gap-3 overflow-hidden">
-          {COLUMNS.slice(0, 4).map((column) => (
-            <div key={column.estado} className="w-80 flex-shrink-0 space-y-2">
+          {(["abierta", "asignada", "en_progreso", "completada"] as const).map((estado) => (
+            <div key={estado} className="w-80 flex-shrink-0 space-y-2">
               <Skeleton className="h-10 w-full" />
               <Skeleton className="h-28 w-full" />
               <Skeleton className="h-28 w-full" />
