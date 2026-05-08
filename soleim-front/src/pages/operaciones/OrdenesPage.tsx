@@ -41,6 +41,7 @@ import { CrearOrdenDialog } from "@/features/operaciones/CrearOrdenDialog"
 import type { Orden } from "@/types/domain"
 import type { EstadoOrden } from "@/types/enums"
 import { useI18n } from "@/contexts/I18nContext"
+import { usePermissions } from "@/hooks/usePermissions"
 
 interface ColumnDef {
   estado: EstadoOrden
@@ -78,6 +79,7 @@ const TRANSICION_ACCION: Partial<
 
 export default function OrdenesPage() {
   const { t } = useI18n()
+  const { ordenes: permOrdenes } = usePermissions()
 
   const COLUMNS: ColumnDef[] = [
     { estado: "abierta", label: t("order.col.open"), accent: "var(--color-solar-500)" },
@@ -253,13 +255,15 @@ export default function OrdenesPage() {
               <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
               {t("order.btn.refresh")}
             </button>
-            <button
-              onClick={() => setCrearOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary-600)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-700)]"
-            >
-              <Plus className="h-4 w-4" />
-              {t("order.btn.new")}
-            </button>
+            {permOrdenes.crear && (
+              <button
+                onClick={() => setCrearOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary-600)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-700)]"
+              >
+                <Plus className="h-4 w-4" />
+                {t("order.btn.new")}
+              </button>
+            )}
           </>
         }
       />

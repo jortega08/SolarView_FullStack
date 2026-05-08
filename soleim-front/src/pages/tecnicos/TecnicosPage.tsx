@@ -34,6 +34,7 @@ import { TechnicianAvailabilityPanel } from "@/features/tecnicos/TechnicianAvail
 import { TechnicianAssignmentSuggestion } from "@/features/tecnicos/TechnicianAssignmentSuggestion"
 import { TecnicoDetalleSheet } from "@/features/tecnicos/TecnicoDetalleSheet"
 import { useI18n } from "@/contexts/I18nContext"
+import { usePermissions } from "@/hooks/usePermissions"
 
 interface FiltersState {
   disponibilidad: string
@@ -80,6 +81,7 @@ interface TecnicoFormSubmit {
 
 export default function TecnicosPage() {
   const { t } = useI18n()
+  const { tecnicos: permTecnicos } = usePermissions()
   const [filters, setFilters] = useState<FiltersState>({
     disponibilidad: "",
     especialidad: "",
@@ -191,14 +193,16 @@ export default function TecnicosPage() {
         description={t("tech.desc")}
         actions={
           <>
-            <button
-              type="button"
-              onClick={() => setCreating(true)}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary-600)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-700)]"
-            >
-              <Plus className="h-4 w-4" />
-              {t("tech.btn.new")}
-            </button>
+            {permTecnicos.crear && (
+              <button
+                type="button"
+                onClick={() => setCreating(true)}
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary-600)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-700)]"
+              >
+                <Plus className="h-4 w-4" />
+                {t("tech.btn.new")}
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setFilters((f) => ({ ...f, disponibilidad: "disponible" }))}

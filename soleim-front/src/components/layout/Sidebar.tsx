@@ -7,6 +7,7 @@ import {
 import { cn } from "@/lib/cn"
 import { useAuth } from "@/contexts/useAuth"
 import { useI18n } from "@/contexts/I18nContext"
+import { usePermissions } from "@/hooks/usePermissions"
 import { useNoLeidasCount } from "@/hooks/useNotificaciones"
 import { useAlertas } from "@/hooks/useAlertas"
 import { LiveBadge } from "@/components/status/LiveBadge"
@@ -17,56 +18,48 @@ interface NavItem {
   label: string
   icon: React.ReactNode
   badge?: number
-  requiresPrestador?: boolean
 }
 
 function useSidebarItems() {
   const { data: notiCount } = useNoLeidasCount()
   const { data: alertas } = useAlertas({ estado: "activa" })
   const { t } = useI18n()
+  const { nav } = usePermissions()
 
-  const items: NavItem[] = [
-    { to: "/", label: t("nav.dashboard"), icon: <LayoutDashboard className="w-4 h-4" /> },
-    { to: "/instalaciones", label: t("nav.installations"), icon: <Zap className="w-4 h-4" /> },
-    { to: "/telemetria", label: t("nav.telemetry"), icon: <Radio className="w-4 h-4" /> },
-    { to: "/alertas", label: t("nav.alerts"), icon: <Bell className="w-4 h-4" />, badge: alertas?.length },
-    { to: "/ordenes", label: t("nav.orders"), icon: <ClipboardList className="w-4 h-4" /> },
-    { to: "/mantenimiento", label: t("nav.maintenance"), icon: <Wrench className="w-4 h-4" /> },
-    { to: "/perfil-profesional", label: t("nav.profile"), icon: <UserCog className="w-4 h-4" /> },
-    { to: "/tecnicos", label: t("nav.technicians"), icon: <Users className="w-4 h-4" /> },
-    { to: "/analitica", label: t("nav.analytics"), icon: <BarChart2 className="w-4 h-4" /> },
-    { to: "/reportes", label: t("nav.reports"), icon: <FileText className="w-4 h-4" /> },
-    {
-      to: "/notificaciones",
-      label: t("nav.notifications"),
-      icon: <Bell className="w-4 h-4" />,
-      badge: notiCount && notiCount > 0 ? notiCount : undefined,
-    },
-    { to: "/tarifas", label: "Tarifas", icon: <DollarSign className="w-4 h-4" /> },
-    { to: "/mi-empresa", label: "Mi empresa", icon: <Building2 className="w-4 h-4" />, requiresPrestador: true },
-    { to: "/equipo", label: "Equipo", icon: <Users className="w-4 h-4" />, requiresPrestador: true },
-    { to: "/configuracion", label: t("nav.settings"), icon: <Settings className="w-4 h-4" /> },
+  const all = [
+    { to: "/",                  label: t("nav.dashboard"),     icon: <LayoutDashboard className="w-4 h-4" /> },
+    nav.verInstalaciones  && { to: "/instalaciones",           label: t("nav.installations"), icon: <Zap className="w-4 h-4" /> },
+    nav.verTelemetria     && { to: "/telemetria",              label: t("nav.telemetry"),     icon: <Radio className="w-4 h-4" /> },
+    nav.verAlertas        && { to: "/alertas",                 label: t("nav.alerts"),        icon: <Bell className="w-4 h-4" />, badge: alertas?.length },
+    nav.verOrdenes        && { to: "/ordenes",                 label: t("nav.orders"),        icon: <ClipboardList className="w-4 h-4" /> },
+    nav.verMantenimiento  && { to: "/mantenimiento",           label: t("nav.maintenance"),   icon: <Wrench className="w-4 h-4" /> },
+                             { to: "/perfil-profesional",      label: t("nav.profile"),       icon: <UserCog className="w-4 h-4" /> },
+    nav.verTecnicos       && { to: "/tecnicos",                label: t("nav.technicians"),   icon: <Users className="w-4 h-4" /> },
+    nav.verAnalitica      && { to: "/analitica",               label: t("nav.analytics"),     icon: <BarChart2 className="w-4 h-4" /> },
+    nav.verReportes       && { to: "/reportes",                label: t("nav.reports"),       icon: <FileText className="w-4 h-4" /> },
+                             { to: "/notificaciones",          label: t("nav.notifications"), icon: <Bell className="w-4 h-4" />, badge: notiCount && notiCount > 0 ? notiCount : undefined },
+    nav.verTarifas        && { to: "/tarifas",                 label: "Tarifas",              icon: <DollarSign className="w-4 h-4" /> },
+    nav.verMiEmpresa      && { to: "/mi-empresa",              label: "Mi empresa",           icon: <Building2 className="w-4 h-4" /> },
+    nav.verEquipo         && { to: "/equipo",                  label: "Equipo",               icon: <Users className="w-4 h-4" /> },
+    nav.verConfiguracion  && { to: "/configuracion",           label: t("nav.settings"),      icon: <Settings className="w-4 h-4" /> },
   ]
-  return items
+  return all.filter(Boolean) as NavItem[]
 }
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false)
   const { user, logout } = useAuth()
 
-  // Sincroniza el ancho del sidebar como CSS variable para que AppLayout se ajuste
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--sidebar-current-width",
       collapsed ? "64px" : "232px"
     )
   }, [collapsed])
+
   const { t } = useI18n()
   const navigate = useNavigate()
-  const items = useSidebarItems().filter((item) => {
-    if (!item.requiresPrestador) return true
-    return Boolean(user?.prestador_id || user?.es_admin_prestador)
-  })
+  const items = useSidebarItems()
 
   const handleLogout = () => {
     logout()

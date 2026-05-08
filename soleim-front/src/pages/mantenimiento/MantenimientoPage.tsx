@@ -29,6 +29,7 @@ import { ContractServicePanel } from "@/features/mantenimiento/ContractServicePa
 import { MaintenancePlanList } from "@/features/mantenimiento/MaintenancePlanList"
 import { MantenimientoDetalleSheet } from "@/features/mantenimiento/MantenimientoDetalleSheet"
 import { useI18n } from "@/contexts/I18nContext"
+import { usePermissions } from "@/hooks/usePermissions"
 
 type Tab = "calendario" | "lista" | "contratos" | "planes"
 
@@ -43,6 +44,7 @@ interface FiltersState {
 
 export default function MantenimientoPage() {
   const { t } = useI18n()
+  const { mantenimiento: permMant } = usePermissions()
 
   const TABS: Array<{ id: Tab; label: string; icon: ReactNode }> = [
     { id: "calendario", label: t("maint.tab.calendar"), icon: <CalendarDays className="h-4 w-4" /> },
@@ -154,15 +156,17 @@ export default function MantenimientoPage() {
         description={t("maint.desc")}
         actions={
           <>
-            <button
-              type="button"
-              disabled
-              title={t("maint.btn.schedule")}
-              className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-neutral-100)] px-3 py-2 text-sm font-medium text-[var(--color-text-muted)]"
-            >
-              <Plus className="h-4 w-4" />
-              {t("maint.btn.schedule")}
-            </button>
+            {permMant.crear && (
+              <button
+                type="button"
+                disabled
+                title={t("maint.btn.schedule")}
+                className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-neutral-100)] px-3 py-2 text-sm font-medium text-[var(--color-text-muted)]"
+              >
+                <Plus className="h-4 w-4" />
+                {t("maint.btn.schedule")}
+              </button>
+            )}
             <Link
               to="/ordenes"
               className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm font-medium text-[var(--color-text-primary)] hover:bg-[var(--color-neutral-100)]"
