@@ -860,11 +860,59 @@ class InvitacionPrestadorViewSet(viewsets.ModelViewSet):
             target_prestador_id = prestador_id
 
         codigo = token_urlsafe(18)[:24]  # ~24 chars URL-safe
-        serializer.save(
+        invitacion = serializer.save(
             prestador_id=target_prestador_id,
             codigo=codigo,
             creado_por=user,
         )
+
+        # Enviar email si se especificó destinatario
+        email_destino = invitacion.email_destino
+        if email_destino:
+            try:
+                from django.conf import settings as django_settings
+                from django.core.mail import send_mail
+
+                frontend_url = getattr(django_settings, "FRONTEND_URL", "http://localhost:5174")
+                link = f"{frontend_url}/register?codigo={invitacion.codigo}"
+                prestador_nombre = invitacion.prestador.nombre if invitacion.prestador else "SolarView"
+                asunto = f"Invitación para unirte a {prestador_nombre} en SolarView"
+                mensaje_texto = (
+                    f"Hola,\n\n"
+                    f"Has sido invitado a unirte a {prestador_nombre} en SolarView.\n\n"
+                    f"Usa el siguiente enlace para registrarte:\n{link}\n\n"
+                    f"O ingresa el código manualmente: {invitacion.codigo}\n\n"
+                    f"Este enlace vence el {invitacion.vigente_hasta.strftime('%d/%m/%Y')}.\n\n"
+                    f"— Equipo SolarView"
+                )
+                mensaje_html = f"""
+                <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+                  <h2 style="color:#2563eb">Invitación a SolarView</h2>
+                  <p>Hola,</p>
+                  <p>Has sido invitado a unirte a <strong>{prestador_nombre}</strong> en SolarView.</p>
+                  <p style="margin:24px 0">
+                    <a href="{link}"
+                       style="background:#2563eb;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600">
+                      Aceptar invitación
+                    </a>
+                  </p>
+                  <p style="color:#64748b;font-size:13px">
+                    O copia este código en el registro: <code style="background:#f1f5f9;padding:2px 6px;border-radius:4px">{invitacion.codigo}</code>
+                  </p>
+                  <p style="color:#64748b;font-size:12px">Vence el {invitacion.vigente_hasta.strftime('%d/%m/%Y')}.</p>
+                </div>
+                """
+                send_mail(
+                    subject=asunto,
+                    message=mensaje_texto,
+                    from_email=django_settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[email_destino],
+                    html_message=mensaje_html,
+                    fail_silently=False,
+                )
+            except Exception as exc:
+                import logging
+                logging.getLogger(__name__).warning("No se pudo enviar email de invitación: %s", exc)
 
     def destroy(self, request, *args, **kwargs):
         invitacion = self.get_object()
