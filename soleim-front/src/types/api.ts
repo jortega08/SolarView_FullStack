@@ -507,6 +507,32 @@ export interface ApiTelemetriaItem {
   descripcion?: string
 }
 
+/** Registro de consumo energético (endpoint /telemetria/consumos/) */
+export interface ApiConsumo {
+  idconsumo?: number
+  instalacion?: number
+  domicilio?: number | null
+  energia_consumida?: number | null
+  potencia?: number | null
+  fuente?: "solar" | "electrica" | string
+  costo?: number | null
+  fecha: string
+}
+
+/** Registro de estado de batería (endpoint /telemetria/baterias/) */
+export interface ApiBateria {
+  idbateria?: number
+  instalacion?: number
+  domicilio?: number | null
+  voltaje?: number | null
+  corriente?: number | null
+  temperatura?: number | null
+  capacidad_bateria?: number | null
+  porcentaje_carga?: number | null
+  tiempo_restante?: number | null
+  fecha_registro: string
+}
+
 export interface PaginatedResponse<T> {
   count: number
   next: string | null

@@ -75,29 +75,33 @@ export default function TelemetriaPage() {
   const ultimaBateria    = baterias[baterias.length - 1]
   const consumoSolar     = consumos.filter(c => c.fuente === "solar")
   const consumoElectrica = consumos.filter(c => c.fuente === "electrica")
-  const totalSolar       = consumoSolar.reduce((s, c) => s + (c.valor ?? 0), 0)
-  const totalElectrica   = consumoElectrica.reduce((s, c) => s + (c.valor ?? 0), 0)
+  const totalSolar       = consumoSolar.reduce((s, c) => s + (c.energia_consumida ?? 0), 0)
+  const totalElectrica   = consumoElectrica.reduce((s, c) => s + (c.energia_consumida ?? 0), 0)
 
   // ── Datos para gráfica de consumo ────────────────────────────────────────
   const chartConsumo = useMemo(() => {
-    const map = new Map<string, { label: string; solar: number; electrica: number; potencia: number }>()
+    const map = new Map<string, { label: string; solar: number; electrica: number }>()
     for (const c of consumos) {
-      const key = formatFecha(c.timestamp, rango)
-      if (!map.has(key)) map.set(key, { label: key, solar: 0, electrica: 0, potencia: 0 })
+      if (!c.fecha) continue
+      const d = new Date(c.fecha)
+      if (isNaN(d.getTime())) continue
+      const key = formatFecha(c.fecha, rango)
+      if (!map.has(key)) map.set(key, { label: key, solar: 0, electrica: 0 })
       const row = map.get(key)!
-      if (c.tipo === "solar")     row.solar    += c.valor ?? 0
-      if (c.tipo === "electrica") row.electrica += c.valor ?? 0
-      row.potencia = c.valor ?? row.potencia
+      if (c.fuente === "solar")     row.solar     += c.energia_consumida ?? 0
+      if (c.fuente === "electrica") row.electrica += c.energia_consumida ?? 0
     }
     return Array.from(map.values())
   }, [consumos, rango])
 
   // ── Datos para gráfica de batería ────────────────────────────────────────
   const chartBateria = useMemo(() =>
-    baterias.map(b => ({
-      label: formatFecha(b.timestamp, rango),
-      soc:   b.valor ?? 0,
-    })),
+    baterias
+      .filter(b => b.fecha_registro && !isNaN(new Date(b.fecha_registro).getTime()))
+      .map(b => ({
+        label: formatFecha(b.fecha_registro, rango),
+        soc:   b.porcentaje_carga ?? 0,
+      })),
     [baterias, rango]
   )
 
@@ -185,27 +189,27 @@ export default function TelemetriaPage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <MetricCard
               label="Potencia actual"
-              value={loading ? "—" : `${ultimoConsumo?.valor?.toFixed(1) ?? "0"} kW`}
-              icon={<Zap className="h-4 w-4" />}
+              value={loading ? "—" : `${ultimoConsumo?.potencia?.toFixed(1) ?? "0"} kW`}
+              icon={Zap}
               loading={loading}
             />
             <MetricCard
               label="Solar (período)"
               value={loading ? "—" : `${totalSolar.toFixed(1)} kWh`}
-              icon={<Activity className="h-4 w-4" />}
+              icon={Activity}
               loading={loading}
               trend={totalSolar > totalElectrica ? "up" : undefined}
             />
             <MetricCard
               label="Red eléctrica (período)"
               value={loading ? "—" : `${totalElectrica.toFixed(1)} kWh`}
-              icon={<PlugZap className="h-4 w-4" />}
+              icon={PlugZap}
               loading={loading}
             />
             <MetricCard
               label="Batería SOC"
-              value={loading ? "—" : ultimaBateria ? `${ultimaBateria.valor?.toFixed(0) ?? "—"}%` : "Sin datos"}
-              icon={<BatteryMedium className="h-4 w-4" />}
+              value={loading ? "—" : ultimaBateria ? `${ultimaBateria.porcentaje_carga?.toFixed(0) ?? "—"}%` : "Sin datos"}
+              icon={BatteryMedium}
               loading={loading}
             />
           </div>
@@ -264,11 +268,14 @@ export default function TelemetriaPage() {
               </div>
               {ultimaBateria && (
                 <div className="flex items-center gap-4 text-xs text-[var(--color-text-secondary)]">
-                  {ultimaBateria.unidad && (
+                  {ultimaBateria.temperatura != null && (
                     <span className="flex items-center gap-1">
                       <Thermometer className="h-3.5 w-3.5" />
-                      {ultimaBateria.unidad}
+                      {ultimaBateria.temperatura.toFixed(1)} °C
                     </span>
+                  )}
+                  {ultimaBateria.voltaje != null && (
+                    <span>{ultimaBateria.voltaje.toFixed(1)} V</span>
                   )}
                 </div>
               )}
@@ -329,23 +336,23 @@ export default function TelemetriaPage() {
                     {[...consumos].reverse().slice(0, 20).map((c, i) => (
                       <tr key={i} className="border-b border-[var(--color-border)] last:border-0 hover:bg-[var(--color-neutral-50)] transition-colors">
                         <td className="px-5 py-3 tabular text-[var(--color-text-secondary)] whitespace-nowrap">
-                          {c.timestamp ? format(new Date(c.timestamp), "dd/MM/yyyy HH:mm:ss") : "—"}
+                          {c.fecha ? format(new Date(c.fecha), "dd/MM/yyyy HH:mm:ss") : "—"}
                         </td>
                         <td className="px-5 py-3">
                           <span className={cn(
                             "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
-                            c.tipo === "solar"
+                            c.fuente === "solar"
                               ? "bg-[var(--color-solar-100)] text-[var(--color-solar-700)]"
                               : "bg-[var(--color-primary-100)] text-[var(--color-primary-700)]"
                           )}>
-                            {c.tipo ?? "—"}
+                            {c.fuente ?? "—"}
                           </span>
                         </td>
                         <td className="px-5 py-3 text-right tabular font-medium text-[var(--color-text-primary)]">
-                          {c.valor?.toFixed(3) ?? "—"}
+                          {c.energia_consumida?.toFixed(3) ?? "—"}
                         </td>
                         <td className="px-5 py-3 text-right text-[var(--color-text-muted)]">
-                          {c.unidad ?? "kWh"}
+                          kWh
                         </td>
                       </tr>
                     ))}
