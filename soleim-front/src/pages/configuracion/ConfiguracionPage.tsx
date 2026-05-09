@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   User, Palette, Bell, Info, Globe,
   Sun, Moon, Save, Check, AlertTriangle,
@@ -499,7 +499,7 @@ function SeccionSistema() {
   )
 }
 
-/* ─── Navegación lateral ─────────────────────────────────────────────── */
+/* ─── Definición de secciones ────────────────────────────────────────── */
 
 const SECTION_KEYS = [
   { id: "perfil",     labelKey: "cfg.profile",    icon: User    },
@@ -515,43 +515,137 @@ export default function ConfiguracionPage() {
   const { user } = useAuth()
   const { t } = useI18n()
   const [active, setActive] = useState("perfil")
+  const scrollingByClick = useRef(false)
 
+  /**
+   * Al hacer clic en el nav: scroll suave a la sección.
+   * Usamos un flag para evitar que el IntersectionObserver
+   * sobreescriba el activo mientras dura la animación de scroll.
+   */
   const scrollTo = (id: string) => {
     setActive(id)
-    document.getElementById(`cfg-${id}`)?.scrollIntoView({ behavior: "smooth", block: "start" })
+    scrollingByClick.current = true
+
+    const el = document.getElementById(`cfg-${id}`)
+    if (el) {
+      // Offset manual: header (60px) + padding de la página (20px) + 8px de aire
+      const top = el.getBoundingClientRect().top + window.scrollY
+        - parseInt(getComputedStyle(document.documentElement)
+            .getPropertyValue("--header-height") || "60", 10)
+        - 28
+      window.scrollTo({ top, behavior: "smooth" })
+    }
+
+    // Liberar el flag después de que termine el scroll (~600 ms)
+    setTimeout(() => { scrollingByClick.current = false }, 700)
   }
+
+  /**
+   * IntersectionObserver: actualiza el ítem activo mientras el usuario
+   * hace scroll manualmente. Usa rootMargin para activar la sección
+   * un poco antes de que llegue al centro de la pantalla.
+   */
+  useEffect(() => {
+    const observers: IntersectionObserver[] = []
+
+    SECTION_KEYS.forEach(({ id }) => {
+      const el = document.getElementById(`cfg-${id}`)
+      if (!el) return
+
+      const obs = new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting && !scrollingByClick.current) {
+            setActive(id)
+          }
+        },
+        {
+          // -80px arriba (dejar pasar el header) · -50% abajo (activar en la mitad superior)
+          rootMargin: "-80px 0px -50% 0px",
+          threshold: 0,
+        },
+      )
+
+      obs.observe(el)
+      observers.push(obs)
+    })
+
+    return () => observers.forEach(o => o.disconnect())
+  }, [])
 
   if (!user) return null
 
   return (
     <div className="flex gap-6 items-start">
-      {/* Nav lateral pegajosa */}
-      <aside className="hidden lg:flex w-44 flex-shrink-0 flex-col gap-0.5 sticky top-6">
-        <p className="mb-1 px-3 text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
+
+      {/* ── Nav lateral — desktop ────────────────────────────────────────── */}
+      <aside
+        className="hidden lg:flex w-52 flex-shrink-0 flex-col gap-0.5 sticky"
+        // top = header (60px) + padding-top de .p-5 (20px) + 8px de margen visual
+        style={{ top: "calc(var(--header-height) + 28px)" }}
+      >
+        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-widest text-[var(--color-text-muted)]">
           {t("cfg.sections")}
         </p>
-        {SECTION_KEYS.map(({ id, labelKey, icon: Icon }) => (
-          <button key={id} type="button" onClick={() => scrollTo(id)}
-            className={cn(
-              "flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2 text-sm font-medium text-left transition-colors",
-              active === id
-                ? "bg-[var(--color-primary-50)] text-[var(--color-primary-700)]"
-                : "text-[var(--color-text-secondary)] hover:bg-[var(--color-neutral-50)] hover:text-[var(--color-text-primary)]"
-            )}
-          >
-            <Icon className="h-4 w-4 flex-shrink-0" />{t(labelKey)}
-          </button>
-        ))}
+
+        {SECTION_KEYS.map(({ id, labelKey, icon: Icon }) => {
+          const isActive = active === id
+          return (
+            <button
+              key={id}
+              type="button"
+              onClick={() => scrollTo(id)}
+              className={cn(
+                "group flex items-center gap-2.5 rounded-[var(--radius-md)] px-3 py-2.5 text-sm font-medium text-left transition-all duration-150",
+                isActive
+                  ? "bg-[var(--color-primary-50)] text-[var(--color-primary-600)] shadow-[inset_2px_0_0_var(--color-solar-500)]"
+                  : "text-[var(--color-text-secondary)] hover:bg-[var(--color-neutral-100)] hover:text-[var(--color-text-primary)]",
+              )}
+            >
+              <Icon className={cn(
+                "h-4 w-4 flex-shrink-0 transition-colors",
+                isActive ? "text-[var(--color-solar-500)]" : "text-[var(--color-text-muted)] group-hover:text-[var(--color-text-secondary)]",
+              )} />
+              {t(labelKey)}
+            </button>
+          )
+        })}
       </aside>
 
-      {/* Contenido */}
-      <div className="flex-1 space-y-6 min-w-0">
-        <div id="cfg-perfil"><SeccionPerfil user={user} /></div>
-        <div id="cfg-apariencia"><SeccionApariencia /></div>
-        <div id="cfg-idioma"><SeccionIdioma /></div>
-        <div id="cfg-alertas"><SeccionNotificaciones /></div>
-        <div id="cfg-sistema"><SeccionSistema /></div>
+      {/* ── Contenido ────────────────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 space-y-6">
+
+        {/* Nav horizontal — móvil (lg:hidden) */}
+        <div className="lg:hidden -mx-0 overflow-x-auto pb-1">
+          <div className="flex gap-1 min-w-max">
+            {SECTION_KEYS.map(({ id, labelKey, icon: Icon }) => {
+              const isActive = active === id
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => scrollTo(id)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-[var(--radius-md)] px-3 py-2 text-xs font-medium whitespace-nowrap transition-all",
+                    isActive
+                      ? "bg-[var(--color-primary-600)] text-white"
+                      : "bg-[var(--color-surface)] border border-[var(--color-border)] text-[var(--color-text-secondary)] hover:bg-[var(--color-neutral-100)]",
+                  )}
+                >
+                  <Icon className="h-3.5 w-3.5 flex-shrink-0" />
+                  {t(labelKey)}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        <div id="cfg-perfil">     <SeccionPerfil user={user} /></div>
+        <div id="cfg-apariencia"> <SeccionApariencia /></div>
+        <div id="cfg-idioma">     <SeccionIdioma /></div>
+        <div id="cfg-alertas">    <SeccionNotificaciones /></div>
+        <div id="cfg-sistema">    <SeccionSistema /></div>
       </div>
+
     </div>
   )
 }

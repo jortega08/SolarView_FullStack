@@ -76,8 +76,13 @@ export function AppLayout() {
       >
         <Header title={meta.title} subtitle={meta.subtitle} />
         <main
-          className="flex-1 overflow-x-hidden"
-          style={{ paddingTop: "var(--header-height)" }}
+          className="flex-1"
+          style={{
+            paddingTop: "var(--header-height)",
+            // "clip" recorta el desbordamiento horizontal sin crear un nuevo
+            // scroll-container, preservando position:sticky en páginas con subnavs.
+            overflowX: "clip",
+          }}
         >
           <div className="p-5">
             <Outlet />
