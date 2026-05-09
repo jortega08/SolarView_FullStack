@@ -99,6 +99,16 @@ export const tecnicosService = {
 
   eliminar: (id: number) => apiClient.delete(`/tecnicos/perfiles/${id}/`),
 
+  actualizarHojaVida: (id: number, file: File) => {
+    const form = new FormData()
+    form.append("hoja_vida", file)
+    return apiClient
+      .patch<ApiTecnico>(`/tecnicos/perfiles/${id}/`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      })
+      .then((r) => r.data)
+  },
+
   miPerfil: () => apiClient.get<ApiTecnico>("/tecnicos/perfiles/me/").then((r) => r.data),
 
   actualizarMiPerfil: (payload: PerfilProfesionalPayload) => {
