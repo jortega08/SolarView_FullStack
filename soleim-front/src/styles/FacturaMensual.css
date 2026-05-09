@@ -32,7 +32,7 @@
   border-radius: 7px;
   border: 1.2px solid #e8eafc;
   background: #f8fafc;
-  color: #2563eb;
+  color: #1E2F45;
   padding: 1.5px 8px;
   outline: none;
   font-weight: 600;
@@ -42,7 +42,7 @@
   font-size: 15px;
 }
 .btn-descargar {
-  background: #3b82f6;
+  background: #1E2F45;
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -57,7 +57,7 @@
   cursor: not-allowed;
 }
 .btn-descargar:hover:not([disabled]) {
-  background: #2563eb;
+  background: #1E2F45;
 }
 .factura-info {
   margin-bottom: 18px;

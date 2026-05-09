@@ -9,24 +9,24 @@
    SOLEIM Design Tokens — Light mode
    ═══════════════════════════════════════════════════════════════════════════ */
 :root {
-  /* Paleta principal SOLEIM */
-  --solein-navy:        #1e3a8a;   /* azul oscuro — texto headings, elementos oscuros */
-  --solein-navy-hover:  #1e40af;
-  --solein-navy-light:  #1d4ed8;
-  --solein-gold:        #E0B63D;   /* acento dorado — badges, indicadores de estado */
-  --solein-gold-dark:   #9B7720;
-  --solein-gold-bg:     #fdf6e3;
-  --solein-teal:        #1d4ed8;   /* azul primario SOLEIM — focus, active, links */
-  --solein-teal-hover:  #1e40af;
-  --solein-teal-bg:     #eff6ff;
+  /* ── Paleta Soleim (alineada con la guía de marca) ───────────────────── */
+  --solein-navy:        #1E2F45;   /* navy principal de marca */
+  --solein-navy-hover:  #162337;
+  --solein-navy-light:  #2d526e;
+  --solein-gold:        #E0B63D;   /* dorado principal de marca */
+  --solein-gold-dark:   #9B7720;   /* dorado oscuro de marca */
+  --solein-gold-bg:     #fdf8e8;
+  --solein-teal:        #3F687A;   /* teal secundario de marca */
+  --solein-teal-hover:  #325669;
+  --solein-teal-bg:     #edf5f8;
 
   /* Superficies */
-  --solein-bg:          #f1f5f9;
+  --solein-bg:          #EDF2F7;   /* fondo claro de marca */
   --solein-white:       #FFFFFF;
-  --solein-border:      #e2e8f0;
+  --solein-border:      #dce6ef;
 
   /* Texto */
-  --solein-text:        #1e293b;
+  --solein-text:        #0f172a;
   --solein-text-muted:  #64748b;
 
   /* Semánticos */
@@ -37,33 +37,33 @@
   --radius-sm:  6px;
   --radius-md:  10px;
   --radius-lg:  14px;
-  --shadow-sm:  0 1px 4px rgba(15,23,42,.07);
-  --shadow-md:  0 4px 14px rgba(15,23,42,.10);
+  --shadow-sm:  0 1px 4px rgba(30,47,69,.08);
+  --shadow-md:  0 4px 14px rgba(30,47,69,.12);
 
-  /* Botones de acción primaria — azul SOLEIM fijo */
-  --btn-navy-bg:    #1d4ed8;
-  --btn-navy-hover: #1e40af;
+  /* Botones de acción primaria — navy Soleim */
+  --btn-navy-bg:    #1E2F45;
+  --btn-navy-hover: #162337;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
    Dark mode tokens
    ═══════════════════════════════════════════════════════════════════════════ */
 [data-theme="dark"] {
-  --solein-bg:          #0d1829;
-  --solein-white:       #172236;
-  --solein-border:      #263548;
-  --solein-text:        #d8e4f0;
-  --solein-text-muted:  #8899b0;
-  --solein-gold-bg:     #211c0a;
-  --solein-teal-bg:     #0c1f40;
+  --solein-bg:          #0d1b2e;
+  --solein-white:       #152338;
+  --solein-border:      #253d5a;
+  --solein-text:        #d6e4f0;
+  --solein-text-muted:  #7a9bb8;
+  --solein-gold-bg:     #1f1a0d;
+  --solein-teal-bg:     #0d1e2e;
 
-  /* Navy → claro para texto legible en dark */
-  --solein-navy:        #93c5fd;
-  --solein-navy-hover:  #bfdbfe;
+  /* Navy → más claro para contraste en dark */
+  --solein-navy:        #8eaec8;
+  --solein-navy-hover:  #aec6d8;
 
-  /* Botones primarios: azul SOLEIM más claro para contrastar en dark */
-  --btn-navy-bg:    #2563eb;
-  --btn-navy-hover: #1d4ed8;
+  /* Botones primarios: navy más claro en dark */
+  --btn-navy-bg:    #2d526e;
+  --btn-navy-hover: #1E2F45;
 
   --shadow-sm:  0 1px 4px rgba(0,0,0,.45);
   --shadow-md:  0 4px 16px rgba(0,0,0,.55);

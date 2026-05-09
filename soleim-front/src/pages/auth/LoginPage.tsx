@@ -2,7 +2,6 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { Link, useNavigate, useLocation } from "react-router-dom"
-import { Zap } from "lucide-react"
 import { useAuth } from "@/contexts/useAuth"
 
 const schema = z.object({
@@ -38,12 +37,22 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen bg-[var(--color-background)] flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
+        {/* Logo Soleim */}
         <div className="flex items-center gap-3 justify-center mb-8">
-          <div className="w-10 h-10 rounded-xl bg-[var(--color-primary-600)] flex items-center justify-center">
-            <Zap className="w-5 h-5 text-white" />
+          <svg width="36" height="44" viewBox="0 0 28 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M6 11 C6 5.5 10 3 15 3 C20 3 23 6 23 11 C23 15.5 20 17 15 17"
+              stroke="#E0B63D" strokeWidth="3" strokeLinecap="round" fill="none"/>
+            <circle cx="23" cy="11" r="2.8" fill="#E0B63D"/>
+            <path d="M22 23 C22 28.5 18 31 13 31 C8 31 5 28 5 23 C5 18.5 8 17 13 17"
+              stroke="#3F687A" strokeWidth="3" strokeLinecap="round" fill="none"/>
+            <circle cx="5" cy="23" r="2.8" fill="#3F687A"/>
+          </svg>
+          <div className="flex flex-col leading-none">
+            <span className="text-[26px] font-bold text-[var(--color-primary-600)] tracking-tight">Soleim</span>
+            <span className="text-[10px] font-semibold tracking-widest uppercase text-[var(--color-teal-500)]">
+              Control Energético
+            </span>
           </div>
-          <span className="text-2xl font-bold text-[var(--color-text-primary)]">SOLEIM</span>
         </div>
 
         <div className="bg-[var(--color-surface)] rounded-[var(--radius-xl)] shadow-[var(--shadow-overlay)] border border-[var(--color-border)] p-6">

@@ -2,25 +2,45 @@
 @plugin "tailwindcss-animate";
 
 @theme {
-  /* Tipografía */
+  /* ── Tipografía ─────────────────────────────────────────────────────────── */
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
 
-  /* Paleta principal */
-  --color-primary-50: #eff6ff;
-  --color-primary-100: #dbeafe;
-  --color-primary-200: #bfdbfe;
-  --color-primary-300: #93c5fd;
-  --color-primary-400: #60a5fa;
-  --color-primary-500: #3b82f6;
-  --color-primary-600: #2563eb;
-  --color-primary-700: #1d4ed8;
-  --color-primary-800: #1e40af;
-  --color-primary-900: #1e3a8a;
-  --color-primary-950: #172554;
+  /* ── Paleta primaria: Soleim Navy (#1E2F45) ─────────────────────────────── */
+  --color-primary-50:  #f0f4f8;
+  --color-primary-100: #d6e0ea;
+  --color-primary-200: #adc1d5;
+  --color-primary-300: #7498b4;
+  --color-primary-400: #4b7393;
+  --color-primary-500: #2d526e;
+  --color-primary-600: #1E2F45;   /* ← navy principal de marca */
+  --color-primary-700: #162337;
+  --color-primary-800: #0e1828;
+  --color-primary-900: #070c14;
+  --color-primary-950: #030508;
 
-  /* Energy green/teal */
-  --color-energy-50: #f0fdf4;
+  /* ── Paleta solar / acento: Soleim Gold (#E0B63D) ───────────────────────── */
+  --color-solar-50:  #fdf8e8;
+  --color-solar-100: #faedc7;
+  --color-solar-200: #f5d98f;
+  --color-solar-300: #ecc450;
+  --color-solar-400: #e4bb3e;
+  --color-solar-500: #E0B63D;     /* ← dorado principal de marca */
+  --color-solar-600: #9B7720;     /* ← dorado oscuro de marca */
+  --color-solar-700: #7a5c18;
+
+  /* ── Paleta teal secundaria: Soleim Teal (#3F687A) ──────────────────────── */
+  --color-teal-50:  #edf5f8;
+  --color-teal-100: #cce4ed;
+  --color-teal-200: #9dcadb;
+  --color-teal-300: #6eaec8;
+  --color-teal-400: #4d8fa8;
+  --color-teal-500: #3F687A;      /* ← teal principal de marca */
+  --color-teal-600: #325669;
+  --color-teal-700: #264455;
+
+  /* ── Energy green (estados positivos: batería, operando) ───────────────── */
+  --color-energy-50:  #f0fdf4;
   --color-energy-100: #dcfce7;
   --color-energy-200: #bbf7d0;
   --color-energy-400: #4ade80;
@@ -28,41 +48,32 @@
   --color-energy-600: #16a34a;
   --color-energy-700: #15803d;
 
-  /* Solar amber */
-  --color-solar-50: #fffbeb;
-  --color-solar-100: #fef3c7;
-  --color-solar-200: #fde68a;
-  --color-solar-400: #fbbf24;
-  --color-solar-500: #f59e0b;
-  --color-solar-600: #d97706;
-  --color-solar-700: #b45309;
-
-  /* Danger red */
-  --color-danger-50: #fff1f2;
+  /* ── Danger red ─────────────────────────────────────────────────────────── */
+  --color-danger-50:  #fff1f2;
   --color-danger-100: #ffe4e6;
   --color-danger-400: #fb7185;
   --color-danger-500: #ef4444;
   --color-danger-600: #dc2626;
   --color-danger-700: #b91c1c;
 
-  /* Warning orange */
-  --color-warning-50: #fff7ed;
+  /* ── Warning orange ─────────────────────────────────────────────────────── */
+  --color-warning-50:  #fff7ed;
   --color-warning-100: #ffedd5;
   --color-warning-400: #fb923c;
   --color-warning-500: #f97316;
   --color-warning-600: #ea580c;
 
-  /* SLA / Security purple */
-  --color-sla-50: #faf5ff;
+  /* ── SLA / Security purple ──────────────────────────────────────────────── */
+  --color-sla-50:  #faf5ff;
   --color-sla-100: #f3e8ff;
   --color-sla-400: #c084fc;
   --color-sla-500: #a855f7;
   --color-sla-600: #9333ea;
   --color-sla-700: #7e22ce;
 
-  /* Neutrals */
-  --color-neutral-0: #ffffff;
-  --color-neutral-50: #f8fafc;
+  /* ── Neutrals ───────────────────────────────────────────────────────────── */
+  --color-neutral-0:   #ffffff;
+  --color-neutral-50:  #f8fafc;
   --color-neutral-100: #f1f5f9;
   --color-neutral-200: #e2e8f0;
   --color-neutral-300: #cbd5e1;
@@ -74,115 +85,135 @@
   --color-neutral-900: #0f172a;
   --color-neutral-950: #020617;
 
-  /* Semantic tokens */
-  --color-background: var(--color-neutral-50);
-  --color-surface: var(--color-neutral-0);
-  --color-surface-raised: var(--color-neutral-0);
-  --color-border: var(--color-neutral-200);
-  --color-border-strong: var(--color-neutral-300);
-  --color-text-primary: var(--color-neutral-900);
-  --color-text-secondary: var(--color-neutral-500);
-  --color-text-muted: var(--color-neutral-400);
-  --color-text-inverse: var(--color-neutral-0);
+  /* ── Tokens semánticos (light mode) ────────────────────────────────────── */
+  --color-background:     #EDF2F7;   /* ← fondo de marca */
+  --color-surface:        #ffffff;
+  --color-surface-raised: #ffffff;
+  --color-border:         #dce6ef;
+  --color-border-strong:  #c4d4e0;
+  --color-text-primary:   #0f172a;
+  --color-text-secondary: #64748b;
+  --color-text-muted:     #94a3b8;
+  --color-text-inverse:   #ffffff;
 
-  /* Shadows */
-  --shadow-card: 0 1px 3px 0 rgb(0 0 0 / 0.08), 0 1px 2px -1px rgb(0 0 0 / 0.04);
-  --shadow-card-hover: 0 4px 12px 0 rgb(0 0 0 / 0.10), 0 2px 4px -1px rgb(0 0 0 / 0.06);
-  --shadow-overlay: 0 10px 40px -5px rgb(0 0 0 / 0.15), 0 4px 16px -3px rgb(0 0 0 / 0.08);
+  /* ── Sombras ────────────────────────────────────────────────────────────── */
+  --shadow-card:       0 1px 3px 0 rgb(30 47 69 / 0.08), 0 1px 2px -1px rgb(30 47 69 / 0.05);
+  --shadow-card-hover: 0 4px 12px 0 rgb(30 47 69 / 0.12), 0 2px 4px -1px rgb(30 47 69 / 0.07);
+  --shadow-overlay:    0 10px 40px -5px rgb(30 47 69 / 0.18), 0 4px 16px -3px rgb(30 47 69 / 0.10);
 
-  /* Border radii */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
-  --radius-2xl: 20px;
+  /* ── Border radii ───────────────────────────────────────────────────────── */
+  --radius-sm:   6px;
+  --radius-md:   8px;
+  --radius-lg:   12px;
+  --radius-xl:   16px;
+  --radius-2xl:  20px;
   --radius-full: 9999px;
 
-  /* Sidebar */
-  --sidebar-width: 232px;
+  /* ── Layout ─────────────────────────────────────────────────────────────── */
+  --sidebar-width:           232px;
   --sidebar-collapsed-width: 64px;
-  --sidebar-current-width: 232px;   /* actualizado por JS al colapsar/expandir */
-  --header-height: 60px;
+  --sidebar-current-width:   232px;   /* actualizado por JS al colapsar/expandir */
+  --header-height:           60px;
 
-  /* Sidebar colors — always dark, not affected by theme */
-  --sidebar-bg: #0f172a;
-  --sidebar-border: #1e293b;
-  --sidebar-item-hover: #1e293b;
-  --sidebar-text: #94a3b8;
-  --sidebar-tooltip-bg: #1e293b;
+  /* ── Sidebar — siempre con el navy de marca ─────────────────────────────── */
+  --sidebar-bg:          #1E2F45;    /* navy principal */
+  --sidebar-border:      #2a3f5c;
+  --sidebar-item-hover:  #2a3f5c;
+  --sidebar-active-bg:   #E0B63D;    /* dorado para ítem activo */
+  --sidebar-active-text: #1E2F45;    /* navy como texto del ítem activo */
+  --sidebar-text:        #8eaec8;
+  --sidebar-tooltip-bg:  #2a3f5c;
 }
 
-/* CSS variables for shadcn/ui compatibility */
+/* ── Variables shadcn/ui (HSL) ───────────────────────────────────────────── */
+/* Necesarias para compatibilidad con componentes Radix que usan hsl(var(--*)) */
 :root {
-  --background: 0 0% 100%;
-  --foreground: 222.2 84% 4.9%;
-  --card: 0 0% 100%;
-  --card-foreground: 222.2 84% 4.9%;
-  --popover: 0 0% 100%;
-  --popover-foreground: 222.2 84% 4.9%;
-  --primary: 221.2 83.2% 53.3%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 210 40% 96.1%;
-  --secondary-foreground: 222.2 47.4% 11.2%;
-  --muted: 210 40% 96.1%;
-  --muted-foreground: 215.4 16.3% 46.9%;
-  --accent: 210 40% 96.1%;
-  --accent-foreground: 222.2 47.4% 11.2%;
-  --destructive: 0 84.2% 60.2%;
+  --background:            0 0% 100%;
+  --foreground:            214 39% 8%;
+  --card:                  0 0% 100%;
+  --card-foreground:       214 39% 8%;
+  --popover:               0 0% 100%;
+  --popover-foreground:    214 39% 8%;
+  --primary:               214 39% 20%;   /* navy #1E2F45 */
+  --primary-foreground:    0 0% 100%;
+  --secondary:             210 20% 96%;
+  --secondary-foreground:  214 39% 20%;
+  --muted:                 210 20% 96%;
+  --muted-foreground:      215 16% 47%;
+  --accent:                44 72% 56%;    /* gold #E0B63D */
+  --accent-foreground:     214 39% 12%;
+  --destructive:           0 84% 60%;
   --destructive-foreground: 210 40% 98%;
-  --border: 214.3 31.8% 91.4%;
-  --input: 214.3 31.8% 91.4%;
-  --ring: 221.2 83.2% 53.3%;
-  --radius: 0.5rem;
-  --chart-1: 221.2 83.2% 53.3%;
-  --chart-2: 142.1 76.2% 36.3%;
-  --chart-3: 43.3 96.4% 56.3%;
-  --chart-4: 0 84.2% 60.2%;
-  --chart-5: 271.5 81.3% 55.9%;
+  --border:                210 20% 88%;
+  --input:                 210 20% 88%;
+  --ring:                  214 39% 20%;   /* navy */
+  --radius:                0.5rem;
+  /* Chart colors alineados con la marca */
+  --chart-1: 44 72% 56%;    /* gold */
+  --chart-2: 201 32% 36%;   /* teal */
+  --chart-3: 214 39% 20%;   /* navy */
+  --chart-4: 0 84% 60%;     /* danger */
+  --chart-5: 142 71% 45%;   /* energy */
 }
 
-/* ── Dark mode: tokens semánticos ─────────────────────────────────────── */
+/* ── Dark mode ───────────────────────────────────────────────────────────── */
 [data-theme="dark"] {
-  /* Superficies */
-  --color-background:     #0d1829;
-  --color-surface:        #172236;
-  --color-surface-raised: #1e2d44;
+  /* Superficies oscuras con tono navy */
+  --color-background:     #0d1b2e;
+  --color-surface:        #152338;
+  --color-surface-raised: #1c2f48;
 
   /* Bordes */
-  --color-border:         #263548;
-  --color-border-strong:  #334d66;
+  --color-border:         #253d5a;
+  --color-border-strong:  #325270;
 
   /* Texto */
-  --color-text-primary:   #d8e4f0;
-  --color-text-secondary: #8899b0;
-  --color-text-muted:     #5a6e84;
-  --color-text-inverse:   #0d1829;
+  --color-text-primary:   #d6e4f0;
+  --color-text-secondary: #7a9bb8;
+  --color-text-muted:     #4d6e8a;
+  --color-text-inverse:   #0d1b2e;
 
-  /* Neutrals re-mapeados a dark */
-  --color-neutral-0:   #172236;
-  --color-neutral-50:  #1e2d44;
-  --color-neutral-100: #243354;
-  --color-neutral-200: #2c3d60;
-  --color-neutral-300: #3a4f72;
-  --color-neutral-400: #5a6e8a;
-  --color-neutral-500: #7c90a8;
-  --color-neutral-600: #9db2c8;
-  --color-neutral-700: #bfcfe0;
-  --color-neutral-800: #d8e4f0;
-  --color-neutral-900: #edf2f8;
+  /* Neutrals re-mapeados para dark */
+  --color-neutral-0:   #152338;
+  --color-neutral-50:  #1c2f48;
+  --color-neutral-100: #243a59;
+  --color-neutral-200: #2d4870;
+  --color-neutral-300: #3a5c84;
+  --color-neutral-400: #527298;
+  --color-neutral-500: #7a9bb8;
+  --color-neutral-600: #9db8cc;
+  --color-neutral-700: #c0d3e0;
+  --color-neutral-800: #d6e4f0;
+  --color-neutral-900: #eaf2f8;
 
-  /* Primarios levemente más brillantes */
-  --color-primary-50:  #0c1f40;
-  --color-primary-100: #112a55;
-  --color-primary-600: #3b82f6;
-  --color-primary-700: #2563eb;
+  /* Primary más claro para visibilidad en dark */
+  --color-primary-50:  #0c1f3a;
+  --color-primary-100: #112a50;
+  --color-primary-500: #4b7393;
+  --color-primary-600: #5a87ab;   /* más claro para botones en dark */
+  --color-primary-700: #4a7393;
 
-  /* Sombras */
+  /* Gold se mantiene igual (contrasta bien en dark) */
+  --color-solar-500: #E0B63D;
+  --color-solar-600: #c9a028;
+
+  /* Teal se aclara levemente */
+  --color-teal-500: #4d8fa8;
+  --color-teal-600: #3F687A;
+
+  /* Sombras más profundas */
   --shadow-card:       0 1px 4px 0 rgb(0 0 0 / 0.45), 0 1px 2px -1px rgb(0 0 0 / 0.30);
   --shadow-card-hover: 0 4px 16px 0 rgb(0 0 0 / 0.55), 0 2px 6px -1px rgb(0 0 0 / 0.40);
   --shadow-overlay:    0 10px 40px -5px rgb(0 0 0 / 0.70), 0 4px 16px -3px rgb(0 0 0 / 0.50);
+
+  /* shadcn dark */
+  --background:   214 39% 10%;
+  --foreground:   210 20% 90%;
+  --primary:      214 30% 50%;
+  --ring:         214 30% 50%;
 }
 
+/* ── Base ────────────────────────────────────────────────────────────────── */
 * {
   box-sizing: border-box;
   border-color: hsl(var(--border));
@@ -202,7 +233,7 @@ body {
   margin: 0;
 }
 
-/* Tipografía numérica tabular */
+/* ── Tipografía numérica tabular ─────────────────────────────────────────── */
 .tabular,
 .kpi-value,
 .metric-value,
@@ -211,22 +242,16 @@ body {
   font-feature-settings: "tnum";
 }
 
-/* Scrollbar sutil */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
+/* ── Scrollbar sutil ─────────────────────────────────────────────────────── */
+::-webkit-scrollbar        { width: 6px; height: 6px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  {
   background: var(--color-neutral-300);
   border-radius: var(--radius-full);
 }
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-neutral-400);
-}
+::-webkit-scrollbar-thumb:hover { background: var(--color-neutral-400); }
 
+/* ── Inputs ──────────────────────────────────────────────────────────────── */
 .input-ui {
   width: 100%;
   min-width: 0;
@@ -238,18 +263,17 @@ body {
   font-size: 0.875rem;
   color: var(--color-text-primary);
   outline: none;
-  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
 }
 
-.input-ui::placeholder {
-  color: var(--color-text-muted);
-}
+.input-ui::placeholder { color: var(--color-text-muted); }
 
 .input-ui:focus {
-  border-color: var(--color-primary-400);
-  box-shadow: 0 0 0 3px rgb(59 130 246 / 0.12);
+  border-color: var(--color-solar-500);          /* foco dorado de marca */
+  box-shadow: 0 0 0 3px rgb(224 182 61 / 0.15);
 }
 
+/* ── Botones ─────────────────────────────────────────────────────────────── */
 .btn-primary,
 .btn-secondary,
 .btn-icon,
@@ -260,7 +284,7 @@ body {
   border: 0;
   font: inherit;
   cursor: pointer;
-  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
 }
 
 .btn-primary,
@@ -274,12 +298,12 @@ body {
 }
 
 .btn-primary {
-  background: var(--color-primary-600);
-  color: white;
+  background: var(--color-primary-600);   /* navy */
+  color: #ffffff;
 }
-
 .btn-primary:hover {
   background: var(--color-primary-700);
+  box-shadow: 0 2px 8px rgb(30 47 69 / 0.25);
 }
 
 .btn-secondary {
@@ -287,9 +311,9 @@ body {
   background: var(--color-surface);
   color: var(--color-text-primary);
 }
-
 .btn-secondary:hover {
   background: var(--color-neutral-100);
+  border-color: var(--color-border-strong);
 }
 
 .btn-icon,
@@ -300,19 +324,13 @@ body {
   background: transparent;
 }
 
-.btn-icon {
-  color: var(--color-neutral-500);
-}
-
+.btn-icon { color: var(--color-neutral-500); }
 .btn-icon:hover {
   background: var(--color-neutral-100);
   color: var(--color-text-primary);
 }
 
-.btn-icon-danger {
-  color: var(--color-danger-500);
-}
-
+.btn-icon-danger { color: var(--color-danger-500); }
 .btn-icon-danger:hover {
   background: var(--color-danger-50);
   color: var(--color-danger-600);
@@ -323,5 +341,5 @@ body {
 .btn-icon:disabled,
 .btn-icon-danger:disabled {
   cursor: not-allowed;
-  opacity: 0.6;
+  opacity: 0.55;
 }

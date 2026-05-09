@@ -4,6 +4,39 @@ import {
   Wrench, Users, UserCog, BarChart2, FileText, Settings, DollarSign,
   ChevronLeft, ChevronRight, LogOut, Building2,
 } from "lucide-react"
+
+/** Marca "S" de Soleim — dos arcos (dorado + teal) con puntos en los extremos */
+function SoleimMark({ size = 28 }: { size?: number }) {
+  return (
+    <svg
+      width={size}
+      height={Math.round(size * 1.2)}
+      viewBox="0 0 28 34"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Arco superior — dorado */}
+      <path
+        d="M6 11 C6 5.5 10 3 15 3 C20 3 23 6 23 11 C23 15.5 20 17 15 17"
+        stroke="#E0B63D"
+        strokeWidth="3"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <circle cx="23" cy="11" r="2.8" fill="#E0B63D" />
+
+      {/* Arco inferior — teal */}
+      <path
+        d="M22 23 C22 28.5 18 31 13 31 C8 31 5 28 5 23 C5 18.5 8 17 13 17"
+        stroke="#3F687A"
+        strokeWidth="3"
+        strokeLinecap="round"
+        fill="none"
+      />
+      <circle cx="5" cy="23" r="2.8" fill="#3F687A" />
+    </svg>
+  )
+}
 import { cn } from "@/lib/cn"
 import { useAuth } from "@/contexts/useAuth"
 import { useI18n } from "@/contexts/I18nContext"
@@ -86,13 +119,19 @@ export function Sidebar() {
       <Link
         to="/"
         onMouseEnter={() => handleMouseEnter("/")}
-        className="flex items-center gap-3 px-4 h-[var(--header-height)] border-b border-[var(--sidebar-border)] flex-shrink-0 hover:opacity-80 transition-opacity"
+        className="flex items-center gap-2.5 px-4 h-[var(--header-height)] border-b border-[var(--sidebar-border)] flex-shrink-0 hover:opacity-90 transition-opacity"
       >
-        <div className="w-8 h-8 rounded-lg bg-[var(--color-primary-600)] flex items-center justify-center flex-shrink-0">
-          <Zap className="w-4 h-4 text-white" />
-        </div>
+        {/* Marca "S" — visible colapsado y expandido */}
+        <span className="flex-shrink-0">
+          <SoleimMark size={collapsed ? 26 : 28} />
+        </span>
         {!collapsed && (
-          <span className="text-white font-bold text-lg tracking-tight">SOLEIM</span>
+          <div className="flex flex-col leading-none">
+            <span className="text-white font-bold text-[17px] tracking-tight">Soleim</span>
+            <span className="text-[var(--sidebar-text)] text-[9px] font-medium tracking-widest uppercase">
+              Control Energético
+            </span>
+          </div>
         )}
       </Link>
 
@@ -113,7 +152,7 @@ export function Sidebar() {
               cn(
                 "flex items-center gap-3 px-3 py-2 rounded-[var(--radius-md)] text-sm transition-colors relative group",
                 isActive
-                  ? "bg-[var(--color-primary-600)] text-white font-medium"
+                  ? "bg-[var(--sidebar-active-bg)] text-[var(--sidebar-active-text)] font-semibold"
                   : "text-[var(--sidebar-text)] hover:bg-[var(--sidebar-item-hover)] hover:text-white",
               )
             }
@@ -121,7 +160,7 @@ export function Sidebar() {
             <span className="flex-shrink-0">{item.icon}</span>
             {!collapsed && <span className="truncate">{item.label}</span>}
             {!collapsed && item.badge != null && item.badge > 0 && (
-              <span className="ml-auto bg-[var(--color-danger-500)] text-white text-xs font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+              <span className="ml-auto bg-[var(--color-danger-500)] text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 leading-none">
                 {item.badge > 99 ? "99+" : item.badge}
               </span>
             )}
