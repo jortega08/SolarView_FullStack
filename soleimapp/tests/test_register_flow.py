@@ -113,7 +113,6 @@ def test_usuario_sin_prestador_puede_crear_y_se_autolinkea(usuario, ciudad):
     )
     assert response.status_code == 201, response.content
 
-
     usuario.refresh_from_db()
     assert usuario.prestador_id == response.data["idprestador"]
 

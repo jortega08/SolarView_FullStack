@@ -121,7 +121,7 @@ def test_calcular_valores_energia_aplica_formula(instalacion, ciudad):
 
     valores = calcular_valores_energia(
         generacion_solar_kwh=12.5,  # ahorro = 12.5 * 1000 = 12500
-        consumo_red_kwh=8.0,        # consumo = 8 * 1000 = 8000
+        consumo_red_kwh=8.0,  # consumo = 8 * 1000 = 8000
         tarifa=tarifa,
     )
 

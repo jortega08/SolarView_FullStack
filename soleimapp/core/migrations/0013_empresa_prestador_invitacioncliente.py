@@ -10,13 +10,17 @@ def backfill_empresa_prestador(apps, schema_editor):
 
     for empresa in Empresa.objects.filter(prestador__isnull=True).iterator():
         prestador_id = (
-            Instalacion.objects.filter(cliente_id=empresa.idempresa, prestador__isnull=False)
+            Instalacion.objects.filter(
+                cliente_id=empresa.idempresa, prestador__isnull=False
+            )
             .values_list("prestador_id", flat=True)
             .first()
         )
         if prestador_id is None:
             prestador_id = (
-                Instalacion.objects.filter(empresa_id=empresa.idempresa, prestador__isnull=False)
+                Instalacion.objects.filter(
+                    empresa_id=empresa.idempresa, prestador__isnull=False
+                )
                 .values_list("prestador_id", flat=True)
                 .first()
             )
@@ -108,8 +112,12 @@ class Migration(migrations.Migration):
                 "ordering": ["-fecha_creacion"],
                 "indexes": [
                     models.Index(fields=["codigo"], name="idx_inv_cliente_codigo"),
-                    models.Index(fields=["prestador"], name="idx_inv_cliente_prestador"),
-                    models.Index(fields=["empresa_cliente"], name="idx_inv_cliente_empresa"),
+                    models.Index(
+                        fields=["prestador"], name="idx_inv_cliente_prestador"
+                    ),
+                    models.Index(
+                        fields=["empresa_cliente"], name="idx_inv_cliente_empresa"
+                    ),
                 ],
             },
         ),

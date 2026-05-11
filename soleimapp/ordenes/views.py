@@ -138,7 +138,9 @@ class OrdenTrabajoViewSet(viewsets.ModelViewSet):
                 },
             )
         except Exception:
-            logger.exception("No se pudo crear notificación de orden creada %s", orden.codigo)
+            logger.exception(
+                "No se pudo crear notificación de orden creada %s", orden.codigo
+            )
 
         # Asignación inmediata opcional: si viene tecnico_id en el payload
         tecnico_id = self.request.data.get("tecnico_id")

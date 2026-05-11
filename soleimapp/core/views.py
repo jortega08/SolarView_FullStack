@@ -379,9 +379,7 @@ class ClienteViewSet(viewsets.ModelViewSet):
             ).filter(empresa_cliente=cliente)
             if user.rol != "admin":
                 invitaciones = invitaciones.filter(prestador_id=user.prestador_id)
-            return Response(
-                InvitacionClienteSerializer(invitaciones, many=True).data
-            )
+            return Response(InvitacionClienteSerializer(invitaciones, many=True).data)
 
         serializer = InvitacionClienteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

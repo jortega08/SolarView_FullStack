@@ -162,8 +162,12 @@ def test_usuario_sin_prestador_no_puede_crear_invitacion(api_client):
 
 @pytest.mark.django_db
 def test_listado_invitaciones_aislado_por_prestador(ciudad):
-    admin1, prestador1 = _crear_admin_prestador(ciudad, email="boss1@solar.test", nit="900-FN-A")
-    admin2, prestador2 = _crear_admin_prestador(ciudad, email="boss2@solar.test", nit="900-FN-B")
+    admin1, prestador1 = _crear_admin_prestador(
+        ciudad, email="boss1@solar.test", nit="900-FN-A"
+    )
+    admin2, prestador2 = _crear_admin_prestador(
+        ciudad, email="boss2@solar.test", nit="900-FN-B"
+    )
 
     from core.models import InvitacionPrestador
 

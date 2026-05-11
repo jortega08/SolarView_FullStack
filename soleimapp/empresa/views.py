@@ -265,9 +265,7 @@ def panel_empresa(request):
                     if instalacion.ultimo_registro
                     else None
                 ),
-                "imagen": (
-                    instalacion.imagen.url if instalacion.imagen else None
-                ),
+                "imagen": (instalacion.imagen.url if instalacion.imagen else None),
             }
         )
 
@@ -334,9 +332,7 @@ def panel_empresa(request):
             "valor_ahorro": round(total_valor_ahorro, 2),
             "valor_total": round(total_valor_consumo + total_valor_ahorro, 2),
             "moneda": (
-                next(iter(monedas_usadas))
-                if len(monedas_usadas) == 1
-                else "MIXED"
+                next(iter(monedas_usadas)) if len(monedas_usadas) == 1 else "MIXED"
             ),
         },
         "alertas_criticas": con_alerta_critica,
@@ -426,9 +422,7 @@ def listar_instalaciones(request):
                     "ciudad": instalacion.ciudad.nombre if instalacion.ciudad else None,
                     "estado": instalacion.estado,
                     "tipo_sistema": instalacion.tipo_sistema,
-                    "imagen": (
-                        instalacion.imagen.url if instalacion.imagen else None
-                    ),
+                    "imagen": (instalacion.imagen.url if instalacion.imagen else None),
                 }
                 for instalacion in instalaciones
             ],
@@ -538,9 +532,7 @@ def detalle_instalacion(request, pk):
                 else None
             ),
             "eficiencia": round(eficiencia, 2) if eficiencia is not None else None,
-            "imagen": (
-                instalacion.imagen.url if instalacion.imagen else None
-            ),
+            "imagen": (instalacion.imagen.url if instalacion.imagen else None),
         },
         "bateria": (
             {

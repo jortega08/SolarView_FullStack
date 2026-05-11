@@ -7,36 +7,97 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0011_tarifa'),
+        ("core", "0011_tarifa"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='usuario',
-            name='es_admin_prestador',
-            field=models.BooleanField(default=False, help_text='True si es el admin de su PrestadorServicio (puede invitar empleados).'),
+            model_name="usuario",
+            name="es_admin_prestador",
+            field=models.BooleanField(
+                default=False,
+                help_text="True si es el admin de su PrestadorServicio (puede invitar empleados).",
+            ),
         ),
         migrations.CreateModel(
-            name='InvitacionPrestador',
+            name="InvitacionPrestador",
             fields=[
-                ('idinvitacion', models.AutoField(primary_key=True, serialize=False)),
-                ('codigo', models.CharField(help_text='Token aleatorio compartido por el admin con el invitado.', max_length=32, unique=True)),
-                ('rol', models.CharField(choices=[('admin_empresa', 'Admin de empresa'), ('operador', 'Operador'), ('viewer', 'Viewer')], default='operador', help_text='Rol operativo que tendrá el invitado al unirse.', max_length=20)),
-                ('email_destino', models.EmailField(blank=True, help_text='Opcional: email esperado del invitado (sólo informativo).', max_length=254)),
-                ('creado_at', models.DateTimeField(auto_now_add=True)),
-                ('vigente_hasta', models.DateTimeField(help_text='Después de esta fecha la invitación deja de ser canjeable.')),
-                ('usado_at', models.DateTimeField(blank=True, null=True)),
-                ('revocada', models.BooleanField(default=False)),
-                ('creado_por', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='invitaciones_emitidas', to='core.usuario')),
-                ('prestador', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='invitaciones', to='core.prestadorservicio')),
-                ('usado_por', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='invitacion_usada', to='core.usuario')),
+                ("idinvitacion", models.AutoField(primary_key=True, serialize=False)),
+                (
+                    "codigo",
+                    models.CharField(
+                        help_text="Token aleatorio compartido por el admin con el invitado.",
+                        max_length=32,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "rol",
+                    models.CharField(
+                        choices=[
+                            ("admin_empresa", "Admin de empresa"),
+                            ("operador", "Operador"),
+                            ("viewer", "Viewer"),
+                        ],
+                        default="operador",
+                        help_text="Rol operativo que tendrá el invitado al unirse.",
+                        max_length=20,
+                    ),
+                ),
+                (
+                    "email_destino",
+                    models.EmailField(
+                        blank=True,
+                        help_text="Opcional: email esperado del invitado (sólo informativo).",
+                        max_length=254,
+                    ),
+                ),
+                ("creado_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "vigente_hasta",
+                    models.DateTimeField(
+                        help_text="Después de esta fecha la invitación deja de ser canjeable."
+                    ),
+                ),
+                ("usado_at", models.DateTimeField(blank=True, null=True)),
+                ("revocada", models.BooleanField(default=False)),
+                (
+                    "creado_por",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="invitaciones_emitidas",
+                        to="core.usuario",
+                    ),
+                ),
+                (
+                    "prestador",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="invitaciones",
+                        to="core.prestadorservicio",
+                    ),
+                ),
+                (
+                    "usado_por",
+                    models.ForeignKey(
+                        blank=True,
+                        null=True,
+                        on_delete=django.db.models.deletion.SET_NULL,
+                        related_name="invitacion_usada",
+                        to="core.usuario",
+                    ),
+                ),
             ],
             options={
-                'verbose_name': 'Invitación de prestador',
-                'verbose_name_plural': 'Invitaciones de prestador',
-                'db_table': 'invitacion_prestador',
-                'ordering': ['-creado_at'],
-                'indexes': [models.Index(fields=['codigo'], name='idx_invitacion_codigo'), models.Index(fields=['prestador'], name='idx_invitacion_prestador')],
+                "verbose_name": "Invitación de prestador",
+                "verbose_name_plural": "Invitaciones de prestador",
+                "db_table": "invitacion_prestador",
+                "ordering": ["-creado_at"],
+                "indexes": [
+                    models.Index(fields=["codigo"], name="idx_invitacion_codigo"),
+                    models.Index(fields=["prestador"], name="idx_invitacion_prestador"),
+                ],
             },
         ),
     ]

@@ -230,7 +230,10 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
                 carga=Count(
                     "usuario__ordenes_asignadas",
                     filter=Q(
-                        usuario__ordenes_asignadas__estado__in=["asignada", "en_progreso"]
+                        usuario__ordenes_asignadas__estado__in=[
+                            "asignada",
+                            "en_progreso",
+                        ]
                     ),
                     distinct=True,
                 )
@@ -244,6 +247,7 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
                 qs = qs.filter(prestador_id=user.prestador_id)
             else:
                 from core.access import get_user_installation_queryset
+
                 empresas = list(
                     get_user_installation_queryset(user).values_list(
                         "empresa_id", flat=True
@@ -286,7 +290,9 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
                 razones.append("Sin órdenes activas")
             elif carga <= 2:
                 score += 7
-                razones.append(f"{carga} orden{'es' if carga > 1 else ''} activa{'s' if carga > 1 else ''}")
+                razones.append(
+                    f"{carga} orden{'es' if carga > 1 else ''} activa{'s' if carga > 1 else ''}"
+                )
 
             # 4. Capacidad de operación en campo
             if tecnico.capacidad_operacion in ("campo", "ambas"):
@@ -304,7 +310,9 @@ class PerfilTecnicoViewSet(viewsets.ModelViewSet):
 
         results = []
         for score, tecnico, razones in top3:
-            data = PerfilTecnicoLigeroSerializer(tecnico, context={"request": request}).data
+            data = PerfilTecnicoLigeroSerializer(
+                tecnico, context={"request": request}
+            ).data
             data["score"] = score
             data["razones"] = razones
             results.append(data)

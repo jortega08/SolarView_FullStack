@@ -44,10 +44,18 @@ def fase4c(db, ciudad):
         nombre="Solar Sur 4C", nit="900-4C-B", ciudad=ciudad
     )
     cliente_a = Empresa.objects.create(
-        nombre="Cliente Norte", nit="C-4C-A", sector="Retail", ciudad=ciudad, prestador=prestador_a
+        nombre="Cliente Norte",
+        nit="C-4C-A",
+        sector="Retail",
+        ciudad=ciudad,
+        prestador=prestador_a,
     )
     cliente_b = Empresa.objects.create(
-        nombre="Cliente Sur", nit="C-4C-B", sector="Salud", ciudad=ciudad, prestador=prestador_b
+        nombre="Cliente Sur",
+        nit="C-4C-B",
+        sector="Salud",
+        ciudad=ciudad,
+        prestador=prestador_b,
     )
     inst_a = Instalacion.objects.create(
         nombre="Planta Cliente Norte",
@@ -131,8 +139,12 @@ def test_admin_prestador_crea_empresa_cliente(fase4c, ciudad):
 def test_empleado_y_cliente_no_crean_empresa_cliente(fase4c, ciudad):
     payload = {"nombre": "Bloqueado", "nit": "C-4C-X", "ciudad": ciudad.idciudad}
 
-    empleado = _client_for(fase4c["empleado"]).post(CLIENTES_URL, payload, format="json")
-    cliente = _client_for(fase4c["cliente_user"]).post(CLIENTES_URL, payload, format="json")
+    empleado = _client_for(fase4c["empleado"]).post(
+        CLIENTES_URL, payload, format="json"
+    )
+    cliente = _client_for(fase4c["cliente_user"]).post(
+        CLIENTES_URL, payload, format="json"
+    )
 
     assert empleado.status_code == 403, empleado.content
     assert cliente.status_code == 403, cliente.content
