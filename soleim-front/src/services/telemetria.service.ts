@@ -1,5 +1,5 @@
 import { apiClient } from "./apiClient"
-import type { ApiTelemetriaItem, PaginatedResponse } from "@/types/api"
+import type { ApiTelemetriaItem, ApiConsumo, ApiBateria, PaginatedResponse } from "@/types/api"
 
 export const telemetriaService = {
   verDatos: (params: { instalacion_id?: number; domicilio_id?: number; limit?: number }) =>
@@ -13,11 +13,11 @@ export const telemetriaService = {
     limit?: number
   }) =>
     apiClient
-      .get<PaginatedResponse<ApiTelemetriaItem>>("/telemetria/consumos/", { params })
+      .get<PaginatedResponse<ApiConsumo>>("/telemetria/consumos/", { params })
       .then((r) => r.data),
 
   baterias: (params: { instalacion?: number; domicilio?: number; fecha__gte?: string; limit?: number }) =>
     apiClient
-      .get<PaginatedResponse<ApiTelemetriaItem>>("/telemetria/baterias/", { params })
+      .get<PaginatedResponse<ApiBateria>>("/telemetria/baterias/", { params })
       .then((r) => r.data),
 }

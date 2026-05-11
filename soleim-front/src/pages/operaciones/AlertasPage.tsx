@@ -26,8 +26,10 @@ import {
 } from "@/features/alertas/alertasUtils"
 import type { AlertaFilterState, AlertaEnriquecida } from "@/features/alertas/types"
 import { cn } from "@/lib/cn"
+import { useI18n } from "@/contexts/I18nContext"
 
 export default function AlertasPage() {
+  const { t } = useI18n()
   /* ── Estado de filtros ─────────────────────────────────────────────── */
   const [filters, setFilters] = useState<AlertaFilterState>({
     rango: "24h",
@@ -105,12 +107,12 @@ export default function AlertasPage() {
     return (
       <div className="space-y-5">
         <PageHeader
-          eyebrow="Centro de operaciones"
-          title="Centro de Alertas"
-          description="Monitoreo, priorización y cumplimiento SLA en todas las instalaciones"
+          eyebrow={t("alert.eyebrow")}
+          title={t("alert.title")}
+          description={t("alert.desc")}
         />
         <ErrorState
-          message="No se pudieron cargar las alertas. Verifica la conexión con el servidor."
+          message={t("alert.error.load")}
           onRetry={() => refetch()}
         />
       </div>
@@ -121,9 +123,9 @@ export default function AlertasPage() {
     <div className="space-y-5">
       {/* Header */}
       <PageHeader
-        eyebrow="Centro de operaciones"
-        title="Centro de Alertas"
-        description="Monitoreo, priorización y cumplimiento SLA en todas las instalaciones"
+        eyebrow={t("alert.eyebrow")}
+        title={t("alert.title")}
+        description={t("alert.desc")}
         actions={
           <button
             onClick={() => refetch()}
@@ -131,7 +133,7 @@ export default function AlertasPage() {
             className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-primary)] shadow-[var(--shadow-card)] hover:bg-[var(--color-neutral-50)] disabled:opacity-60"
           >
             <RefreshCw className={cn("h-3.5 w-3.5", isLoading && "animate-spin")} />
-            Actualizar
+            {t("common.refresh")}
           </button>
         }
       />

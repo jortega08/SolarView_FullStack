@@ -18,6 +18,7 @@ import { useInstalacionesCrud } from "@/hooks/useInstalacionesCrud"
 import { useTarifaMutations, useTarifas } from "@/hooks/useTarifasCrud"
 import type { Tarifa } from "@/types/domain"
 import type { TarifaPayload } from "@/services/tarifas.service"
+import { useI18n } from "@/contexts/I18nContext"
 
 const MONEDAS = [
   { value: "COP", label: "COP — Peso colombiano" },
@@ -66,6 +67,7 @@ function fromDatetimeLocal(local: string): string {
 }
 
 export default function TarifasPage() {
+  const { t } = useI18n()
   const [query, setQuery] = useState("")
   const [editing, setEditing] = useState<Tarifa | null>(null)
   const [creating, setCreating] = useState(false)
@@ -94,61 +96,61 @@ export default function TarifasPage() {
   const columns: DataTableColumn<Tarifa>[] = [
     {
       id: "nombre",
-      header: "Tarifa",
-      cell: (t) => (
+      header: t("tariff.col.name"),
+      cell: (row) => (
         <div className="min-w-0">
           <p className="truncate text-xs font-semibold text-[var(--color-text-primary)]">
-            {t.nombre}
+            {row.nombre}
           </p>
           <p className="truncate text-xs text-[var(--color-text-muted)]">
-            {scopeLabel(t)}
+            {scopeLabel(row, t)}
           </p>
         </div>
       ),
     },
     {
       id: "valor",
-      header: "Valor kWh",
-      cell: (t) => (
+      header: t("tariff.col.value"),
+      cell: (row) => (
         <span className="tabular text-xs font-semibold text-[var(--color-text-primary)]">
-          {t.valorKwh.toLocaleString("es-CO", { maximumFractionDigits: 2 })} {t.moneda}
+          {row.valorKwh.toLocaleString("es-CO", { maximumFractionDigits: 2 })} {row.moneda}
         </span>
       ),
     },
     {
       id: "vigencia",
-      header: "Vigencia",
-      cell: (t) => (
+      header: t("tariff.col.validity"),
+      cell: (row) => (
         <span className="tabular text-xs text-[var(--color-text-secondary)]">
-          {formatDate(t.vigenteDesde)}
-          {t.vigenteHasta ? ` → ${formatDate(t.vigenteHasta)}` : " → indef."}
+          {formatDate(row.vigenteDesde)}
+          {row.vigenteHasta ? ` → ${formatDate(row.vigenteHasta)}` : ` → ${t("tariff.validity.indef")}`}
         </span>
       ),
     },
     {
       id: "acciones",
-      header: "Acciones",
+      header: t("tariff.col.actions"),
       className: "text-right",
       headerClassName: "text-right",
-      cell: (t) => (
+      cell: (row) => (
         <div className="flex justify-end gap-1">
           <button
             type="button"
-            onClick={() => setEditing(t)}
+            onClick={() => setEditing(row)}
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-neutral-500)] hover:bg-[var(--color-neutral-100)]"
-            title="Editar"
+            title={t("tariff.action.edit")}
           >
             <Pencil className="h-4 w-4" />
           </button>
           <button
             type="button"
             onClick={() => {
-              if (window.confirm(`Eliminar tarifa "${t.nombre}"?`)) {
-                void eliminar.mutateAsync(t.id)
+              if (window.confirm(`${t("tariff.action.delete")} "${row.nombre}"?`)) {
+                void eliminar.mutateAsync(row.id)
               }
             }}
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-danger-500)] hover:bg-[var(--color-danger-50)]"
-            title="Eliminar"
+            title={t("tariff.action.delete")}
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -176,9 +178,9 @@ export default function TarifasPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        eyebrow="Facturación"
-        title="Tarifas de energía"
-        description="Define el valor del kWh por ciudad o instalación. Usado por el dashboard para calcular consumo, ahorro solar y total."
+        eyebrow={t("tariff.eyebrow")}
+        title={t("tariff.title")}
+        description={t("tariff.desc")}
         actions={
           <button
             type="button"
@@ -186,7 +188,7 @@ export default function TarifasPage() {
             className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] bg-[var(--color-primary-600)] px-3 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-700)]"
           >
             <Plus className="h-4 w-4" />
-            Nueva tarifa
+            {t("tariff.btn.new")}
           </button>
         }
       />
@@ -196,7 +198,7 @@ export default function TarifasPage() {
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por nombre, ciudad, instalación, moneda o valor"
+          placeholder={t("tariff.search.ph")}
           className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-text-muted)]"
         />
       </div>
@@ -204,15 +206,15 @@ export default function TarifasPage() {
       {localError && <ErrorState message={localError} onRetry={() => setLocalError(null)} />}
 
       {isError ? (
-        <ErrorState message="No se pudieron cargar las tarifas" onRetry={() => refetch()} />
+        <ErrorState message={t("tariff.error.load")} onRetry={() => refetch()} />
       ) : (
         <DataTable
           data={filtered}
           columns={columns}
           loading={isLoading}
-          getRowKey={(t) => t.id}
-          emptyTitle="Sin tarifas configuradas"
-          emptyDescription="Mientras no haya tarifas, el sistema usa el fallback (800 COP/kWh)."
+          getRowKey={(row) => row.id}
+          emptyTitle={t("tariff.empty.title")}
+          emptyDescription={t("tariff.empty.desc")}
         />
       )}
 
@@ -245,6 +247,7 @@ function TarifaFormSheet({
   onOpenChange: (open: boolean) => void
   onSubmit: (payload: TarifaPayload) => Promise<void>
 }) {
+  const { t } = useI18n()
   const { data: ciudades = [] } = useCiudades()
   const { data: instalaciones = [] } = useInstalacionesCrud()
   const [form, setForm] = useState<TarifaFormState>(() => toForm(tarifa))
@@ -272,12 +275,12 @@ function TarifaFormSheet({
     <Sheet
       open={open}
       onOpenChange={onOpenChange}
-      title={tarifa ? "Editar tarifa" : "Nueva tarifa"}
-      description="Valor del kWh aplicado a una ciudad o instalación"
+      title={tarifa ? t("tariff.form.edit") : t("tariff.form.new")}
+      description={t("tariff.form.desc")}
       className="max-w-xl"
     >
       <form onSubmit={submit} className="space-y-4">
-        <Field label="Nombre">
+        <Field label={t("tariff.form.name")}>
           <input
             required
             value={form.nombre}
@@ -288,27 +291,27 @@ function TarifaFormSheet({
           />
         </Field>
 
-        <Field label="Aplica a">
+        <Field label={t("tariff.form.scope")}>
           <select
             value={form.scope}
             onChange={(e) => setFormField(setForm, "scope", e.target.value)}
             className="input-ui"
           >
-            <option value="ciudad">Ciudad (default para todas las instalaciones)</option>
-            <option value="instalacion">Instalación específica (override)</option>
-            <option value="global">Global (fallback de todo el sistema)</option>
+            <option value="ciudad">{t("tariff.form.scope.city")}</option>
+            <option value="instalacion">{t("tariff.form.scope.inst")}</option>
+            <option value="global">{t("tariff.form.scope.global")}</option>
           </select>
         </Field>
 
         {form.scope === "ciudad" && (
-          <Field label="Ciudad">
+          <Field label={t("tariff.form.city")}>
             <select
               required
               value={form.ciudad}
               onChange={(e) => setFormField(setForm, "ciudad", e.target.value)}
               className="input-ui"
             >
-              <option value="">Selecciona ciudad</option>
+              <option value="">{t("tariff.form.city.select")}</option>
               {ciudades.map((c) => (
                 <option key={c.id} value={c.id}>{c.nombre}</option>
               ))}
@@ -317,14 +320,14 @@ function TarifaFormSheet({
         )}
 
         {form.scope === "instalacion" && (
-          <Field label="Instalación">
+          <Field label={t("tariff.form.inst")}>
             <select
               required
               value={form.instalacion}
               onChange={(e) => setFormField(setForm, "instalacion", e.target.value)}
               className="input-ui"
             >
-              <option value="">Selecciona instalación</option>
+              <option value="">{t("tariff.form.inst.select")}</option>
               {instalaciones.map((i) => (
                 <option key={i.id} value={i.id}>{i.nombre}</option>
               ))}
@@ -333,7 +336,7 @@ function TarifaFormSheet({
         )}
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Valor kWh">
+          <Field label={t("tariff.form.value")}>
             <div className="relative">
               <DollarSign className="pointer-events-none absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-text-muted)]" />
               <input
@@ -348,7 +351,7 @@ function TarifaFormSheet({
               />
             </div>
           </Field>
-          <Field label="Moneda">
+          <Field label={t("tariff.form.currency")}>
             <select
               value={form.moneda}
               onChange={(e) => setFormField(setForm, "moneda", e.target.value)}
@@ -362,7 +365,7 @@ function TarifaFormSheet({
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Vigente desde">
+          <Field label={t("tariff.form.from")}>
             <input
               required
               type="datetime-local"
@@ -371,7 +374,7 @@ function TarifaFormSheet({
               className="input-ui"
             />
           </Field>
-          <Field label="Vigente hasta (opcional)">
+          <Field label={t("tariff.form.to")}>
             <input
               type="datetime-local"
               value={form.vigente_hasta}
@@ -383,11 +386,11 @@ function TarifaFormSheet({
 
         <div className="flex justify-end gap-2 border-t border-[var(--color-border)] pt-4">
           <button type="button" onClick={() => onOpenChange(false)} className="btn-secondary">
-            Cancelar
+            {t("common.cancel")}
           </button>
           <button type="submit" disabled={saving} className="btn-primary">
             <Save className="h-4 w-4" />
-            Guardar
+            {t("common.save")}
           </button>
         </div>
       </form>
@@ -414,14 +417,14 @@ function setFormField<T extends object>(
   setter((current) => ({ ...current, [key]: value }))
 }
 
-function scopeLabel(t: Tarifa): string {
-  if (t.scope === "instalacion") {
-    return `Instalación: ${t.instalacionNombre ?? `#${t.instalacionId}`}`
+function scopeLabel(row: Tarifa, t: (key: string) => string): string {
+  if (row.scope === "instalacion") {
+    return `${t("tariff.scope.inst.label")}: ${row.instalacionNombre ?? `#${row.instalacionId}`}`
   }
-  if (t.scope === "ciudad") {
-    return `Ciudad: ${t.ciudadNombre ?? `#${t.ciudadId}`}`
+  if (row.scope === "ciudad") {
+    return `${t("tariff.scope.city.label")}: ${row.ciudadNombre ?? `#${row.ciudadId}`}`
   }
-  return "Tarifa global (fallback)"
+  return t("tariff.scope.global.label")
 }
 
 function formatAxiosError(error: unknown): string {

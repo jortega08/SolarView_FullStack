@@ -23,17 +23,11 @@ import {
 } from "@/hooks/useNotificaciones"
 import { cn } from "@/lib/cn"
 import type { Notificacion } from "@/types/domain"
+import { useI18n } from "@/contexts/I18nContext"
 
 /* ─── Helpers ──────────────────────────────────────────────────────────── */
 
 type TabId = "todas" | "no_leidas" | "in_app" | "email"
-
-const TABS: { id: TabId; label: string }[] = [
-  { id: "todas",     label: "Todas"      },
-  { id: "no_leidas", label: "No leídas"  },
-  { id: "in_app",    label: "En app"     },
-  { id: "email",     label: "Email"      },
-]
 
 function tipoIcon(tipo: string | null) {
   switch (tipo) {
@@ -104,6 +98,7 @@ function NotifCard({
   onMarcar: (id: number) => void
   marking: boolean
 }) {
+  const { t } = useI18n()
   const TipoIcon = tipoIcon(notif.tipo)
   const { Icon: ContentIcon, color: contentColor } = contentIcon(notif.titulo)
 
@@ -174,7 +169,7 @@ function NotifCard({
             {notif.tipo ?? "in_app"}
           </span>
           {notif.leida ? (
-            <span className="text-[10px] text-[var(--color-text-muted)]">Leída</span>
+            <span className="text-[10px] text-[var(--color-text-muted)]">{t("notif.read")}</span>
           ) : (
             <button
               type="button"
@@ -182,7 +177,7 @@ function NotifCard({
               disabled={marking}
               className="text-[10px] font-medium text-[var(--color-primary-600)] hover:underline disabled:opacity-50"
             >
-              Marcar como leída
+              {t("notif.mark_read")}
             </button>
           )}
         </div>
@@ -194,6 +189,7 @@ function NotifCard({
 /* ─── Estado vacío ─────────────────────────────────────────────────────── */
 
 function EmptyNotifs({ tab }: { tab: TabId }) {
+  const { t } = useI18n()
   return (
     <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
       <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--color-neutral-100)]">
@@ -201,12 +197,12 @@ function EmptyNotifs({ tab }: { tab: TabId }) {
       </div>
       <div>
         <p className="text-sm font-medium text-[var(--color-text-primary)]">
-          {tab === "no_leidas" ? "Todo al día" : "Sin notificaciones"}
+          {tab === "no_leidas" ? t("notif.empty.uptodate") : t("notif.empty.none")}
         </p>
         <p className="mt-1 text-xs text-[var(--color-text-secondary)]">
           {tab === "no_leidas"
-            ? "No tienes notificaciones pendientes de leer."
-            : "Las notificaciones del sistema aparecerán aquí."}
+            ? t("notif.empty.uptodate.desc")
+            : t("notif.empty.none.desc")}
         </p>
       </div>
     </div>
@@ -216,7 +212,15 @@ function EmptyNotifs({ tab }: { tab: TabId }) {
 /* ─── Página principal ─────────────────────────────────────────────────── */
 
 export default function NotificacionesPage() {
+  const { t } = useI18n()
   const [tab, setTab] = useState<TabId>("todas")
+
+  const TABS: { id: TabId; label: string }[] = [
+    { id: "todas",     label: t("notif.tab.all")    },
+    { id: "no_leidas", label: t("notif.tab.unread") },
+    { id: "in_app",    label: t("notif.tab.in_app") },
+    { id: "email",     label: t("notif.tab.email")  },
+  ]
 
   const { data: notificaciones = [], isLoading, refetch, isRefetching } = useNotificaciones({ limit: 100 })
   const { mutate: marcarLeida, isPending: marcando } = useMarcarLeida()
@@ -237,9 +241,9 @@ export default function NotificacionesPage() {
     <div className="space-y-5">
       {/* Header */}
       <PageHeader
-        eyebrow="Comunicación"
-        title="Notificaciones"
-        description="Bandeja de notificaciones del sistema"
+        eyebrow={t("notif.eyebrow")}
+        title={t("notif.title")}
+        description={t("notif.desc")}
         actions={
           <div className="flex items-center gap-2">
             {noLeidas > 0 && (
@@ -250,7 +254,7 @@ export default function NotificacionesPage() {
                 className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-primary)] shadow-[var(--shadow-card)] hover:bg-[var(--color-neutral-50)] disabled:opacity-60"
               >
                 <CheckCheck className="h-3.5 w-3.5" />
-                {marcandoTodas ? "Marcando…" : "Marcar todas como leídas"}
+                {marcandoTodas ? t("notif.btn.marking") : t("notif.btn.mark_all")}
               </button>
             )}
             <button
@@ -260,7 +264,7 @@ export default function NotificacionesPage() {
               className="inline-flex items-center gap-1.5 rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1.5 text-sm font-medium text-[var(--color-text-primary)] shadow-[var(--shadow-card)] hover:bg-[var(--color-neutral-50)] disabled:opacity-60"
             >
               <RefreshCw className={cn("h-3.5 w-3.5", (isLoading || isRefetching) && "animate-spin")} />
-              Actualizar
+              {t("notif.btn.refresh")}
             </button>
           </div>
         }
@@ -348,10 +352,10 @@ export default function NotificacionesPage() {
         {/* Footer con total */}
         {!isLoading && notificaciones.length > 0 && (
           <div className="border-t border-[var(--color-border)] px-4 py-2.5 text-xs text-[var(--color-text-muted)] text-center">
-            {filtered.length} de {notificaciones.length} notificaciones
+            {filtered.length} {t("notif.footer")} {notificaciones.length} {t("notif.footer.label")}
             {noLeidas > 0 && (
               <span className="ml-2 font-medium text-[var(--color-primary-600)]">
-                · {noLeidas} sin leer
+                · {noLeidas} {t("notif.footer.unread")}
               </span>
             )}
           </div>

@@ -84,10 +84,10 @@
 }
 
 .calendar-day.today {
-  outline: 1px solid #3b82f6;
+  outline: 1px solid #E0B63D;   /* dorado de marca */
 }
 
 .calendar-day.selected {
-  background: #3b82f6;
+  background: #1E2F45;          /* navy de marca */
   color: #fff;
 }

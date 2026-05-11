@@ -5,6 +5,7 @@ import { useAuth } from "@/contexts/useAuth"
 import { apiClient } from "@/services/apiClient"
 import { prestadorService } from "@/services/prestador.service"
 import type { ApiCiudad, ApiPrestadorServicio } from "@/types/api"
+import { useI18n } from "@/contexts/I18nContext"
 
 type FormState = {
   nombre: string
@@ -23,6 +24,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export default function MiEmpresa() {
+  const { t } = useI18n()
   const { user } = useAuth()
   const isAdmin = Boolean(user?.es_admin_prestador)
   const [prestador, setPrestador] = useState<ApiPrestadorServicio | null>(null)
@@ -65,9 +67,9 @@ export default function MiEmpresa() {
   }, [])
 
   const ciudadActual = useMemo(() => {
-    if (!prestador) return "Sin ciudad"
-    return prestador.ciudad_nombre || ciudades.find((c) => c.idciudad === prestador.ciudad)?.nombre || "Sin ciudad"
-  }, [ciudades, prestador])
+    if (!prestador) return t("company.no_city")
+    return prestador.ciudad_nombre || ciudades.find((c) => c.idciudad === prestador.ciudad)?.nombre || t("company.no_city")
+  }, [ciudades, prestador, t])
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault()
@@ -99,15 +101,15 @@ export default function MiEmpresa() {
   }
 
   if (loading) {
-    return <Shell title="Mi empresa" subtitle="Cargando datos del prestador..."><Skeleton /></Shell>
+    return <Shell title={t("company.title")} subtitle={t("company.subtitle.loading")}><Skeleton /></Shell>
   }
 
   if (error && !prestador) {
     return (
-      <Shell title="Mi empresa" subtitle="Información del prestador vinculado a tu cuenta">
+      <Shell title={t("company.title")} subtitle={t("company.subtitle")}>
         <EmptyState
           icon={<ShieldAlert className="w-8 h-8" />}
-          title="Sin prestador vinculado"
+          title={t("company.info.no_prestador")}
           text={error}
         />
       </Shell>
@@ -115,7 +117,7 @@ export default function MiEmpresa() {
   }
 
   return (
-    <Shell title="Mi empresa" subtitle="Información operativa de tu empresa prestadora">
+    <Shell title={t("company.title")} subtitle={t("company.subtitle.ops")}>
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
         <form
           onSubmit={handleSubmit}
@@ -123,21 +125,21 @@ export default function MiEmpresa() {
         >
           <div className="px-5 py-4 border-b border-[var(--color-border)] flex items-center justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">Datos generales</h2>
+              <h2 className="text-sm font-semibold text-[var(--color-text-primary)]">{t("company.form.title")}</h2>
               <p className="text-xs text-[var(--color-text-secondary)] mt-0.5">
-                {isAdmin ? "Puedes editar los campos principales del prestador." : "Tu usuario tiene acceso de solo lectura."}
+                {isAdmin ? t("company.form.admin.desc") : t("company.form.readonly.desc")}
               </p>
             </div>
             {saved && (
               <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--color-energy-700)]">
                 <CheckCircle2 className="w-4 h-4" />
-                Guardado
+                {t("company.saved")}
               </span>
             )}
           </div>
 
           <div className="p-5 grid gap-4 md:grid-cols-2">
-            <Field label="Nombre">
+            <Field label={t("company.form.name")}>
               <input
                 className="input-ui"
                 value={form.nombre}
@@ -146,23 +148,23 @@ export default function MiEmpresa() {
                 required
               />
             </Field>
-            <Field label="NIT">
+            <Field label={t("company.form.nit")}>
               <input
                 className="input-ui"
                 value={form.nit}
                 disabled={!isAdmin || saving}
                 onChange={(event) => setForm((prev) => ({ ...prev, nit: event.target.value }))}
-                placeholder="Sin NIT"
+                placeholder={t("company.form.no_nit")}
               />
             </Field>
-            <Field label="Ciudad">
+            <Field label={t("company.form.city")}>
               <select
                 className="input-ui"
                 value={form.ciudad}
                 disabled={!isAdmin || saving}
                 onChange={(event) => setForm((prev) => ({ ...prev, ciudad: event.target.value }))}
               >
-                <option value="">Sin ciudad</option>
+                <option value="">{t("company.form.no_city")}</option>
                 {ciudades.map((ciudad) => (
                   <option key={ciudad.idciudad} value={ciudad.idciudad}>
                     {ciudad.nombre}
@@ -170,8 +172,8 @@ export default function MiEmpresa() {
                 ))}
               </select>
             </Field>
-            <Field label="Estado">
-              <input className="input-ui" value={prestador?.activo ? "Activo" : "Inactivo"} disabled />
+            <Field label={t("company.form.status")}>
+              <input className="input-ui" value={prestador?.activo ? t("company.status.active") : t("company.status.inactive")} disabled />
             </Field>
           </div>
 
@@ -185,7 +187,7 @@ export default function MiEmpresa() {
             <div className="px-5 py-4 border-t border-[var(--color-border)] flex justify-end">
               <button type="submit" className="btn-primary" disabled={saving}>
                 <Save className="w-4 h-4" />
-                {saving ? "Guardando..." : "Guardar cambios"}
+                {saving ? t("company.btn.saving") : t("company.btn.save")}
               </button>
             </div>
           )}
@@ -197,17 +199,17 @@ export default function MiEmpresa() {
           </div>
           <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{prestador?.nombre}</h3>
           <dl className="mt-4 space-y-3 text-xs">
-            <Info label="ID prestador" value={prestador ? `#${prestador.idprestador}` : "-"} />
-            <Info label="Ciudad" value={ciudadActual} />
+            <Info label={t("company.info.id")} value={prestador ? `#${prestador.idprestador}` : "-"} />
+            <Info label={t("company.info.city")} value={ciudadActual} />
             <Info
-              label="Fecha de registro"
+              label={t("company.info.registered")}
               value={
                 prestador?.fecha_registro
                   ? new Date(prestador.fecha_registro).toLocaleDateString("es-CO")
                   : "-"
               }
             />
-            <Info label="Permiso" value={isAdmin ? "Administrador del prestador" : "Solo lectura"} />
+            <Info label={t("company.info.permission")} value={isAdmin ? t("company.info.admin") : t("company.info.readonly")} />
           </dl>
         </aside>
       </div>

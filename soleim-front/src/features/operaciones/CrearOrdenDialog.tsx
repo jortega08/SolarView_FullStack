@@ -9,6 +9,7 @@ import { useCrearOrden } from "@/hooks/useOrdenes"
 import { useTecnicos, useTecnicosSugeridos } from "@/hooks/useTecnicos"
 import { cn } from "@/lib/cn"
 import type { Tecnico } from "@/types/domain"
+import { useI18n } from "@/contexts/I18nContext"
 
 const schema = z.object({
   instalacion: z.coerce.number().int().positive({ message: "Selecciona una instalación" }),
@@ -43,6 +44,7 @@ function TecnicoCard({
   selected: boolean
   onClick: () => void
 }) {
+  const { t } = useI18n()
   const scoreColor =
     (tecnico.score ?? 0) >= 50 ? "text-green-600 bg-green-50" :
     (tecnico.score ?? 0) >= 25 ? "text-yellow-600 bg-yellow-50" :
@@ -98,11 +100,11 @@ function TecnicoCard({
           "text-[10px] font-medium",
           tecnico.disponible ? "text-green-600" : "text-[var(--color-danger-500)]"
         )}>
-          {tecnico.disponible ? "● Disponible" : "○ Ocupado"}
+          {tecnico.disponible ? t("crear_orden.tech.available") : t("crear_orden.tech.busy")}
         </span>
         {tecnico.cargaTrabajo != null && (
           <span className="text-[10px] text-[var(--color-text-muted)]">
-            {tecnico.cargaTrabajo} orden{tecnico.cargaTrabajo !== 1 ? "es" : ""} activa{tecnico.cargaTrabajo !== 1 ? "s" : ""}
+            {tecnico.cargaTrabajo} {tecnico.cargaTrabajo !== 1 ? t("crear_orden.tech.orders.pl") : t("crear_orden.tech.orders")} {tecnico.cargaTrabajo !== 1 ? t("crear_orden.tech.active.pl") : t("crear_orden.tech.active")}
           </span>
         )}
       </div>
@@ -121,6 +123,7 @@ export function CrearOrdenDialog({
   defaultDescripcion,
   onCreated,
 }: CrearOrdenDialogProps) {
+  const { t } = useI18n()
   const { data: instalaciones } = useInstalaciones()
   const { data: tecnicos } = useTecnicos()
   const { mutateAsync: crear, isPending } = useCrearOrden()
@@ -198,10 +201,10 @@ export function CrearOrdenDialog({
           <div className="flex items-start justify-between border-b border-[var(--color-border)] px-5 py-4 flex-shrink-0">
             <div>
               <Dialog.Title className="text-base font-semibold text-[var(--color-text-primary)]">
-                Crear orden de trabajo
+                {t("crear_orden.title")}
               </Dialog.Title>
               <Dialog.Description className="mt-1 text-xs text-[var(--color-text-secondary)]">
-                Puedes asignar un técnico de inmediato o hacerlo más adelante.
+                {t("crear_orden.desc")}
               </Dialog.Description>
             </div>
             <Dialog.Close className="text-[var(--color-neutral-500)] hover:text-[var(--color-text-primary)]">
@@ -215,7 +218,7 @@ export function CrearOrdenDialog({
             {/* Instalación */}
             <div>
               <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">
-                Instalación
+                {t("crear_orden.field.inst")}
               </label>
               <Controller
                 control={control}
@@ -234,7 +237,7 @@ export function CrearOrdenDialog({
                       errors.instalacion ? "border-[var(--color-danger-500)]" : "border-[var(--color-border)]"
                     )}
                   >
-                    <option value="">Selecciona una instalación…</option>
+                    <option value="">{t("crear_orden.field.inst.ph")}</option>
                     {(instalaciones ?? []).map((i) => (
                       <option key={i.id} value={i.id}>{i.nombre}</option>
                     ))}
@@ -248,7 +251,7 @@ export function CrearOrdenDialog({
 
             {/* Título */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Título</label>
+              <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">{t("crear_orden.field.title")}</label>
               <input
                 {...register("titulo")}
                 placeholder="Ej. Revisar inversor con falla intermitente"
@@ -264,11 +267,11 @@ export function CrearOrdenDialog({
 
             {/* Descripción */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Descripción</label>
+              <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">{t("crear_orden.field.desc")}</label>
               <textarea
                 {...register("descripcion")}
                 rows={3}
-                placeholder="Detalles del problema, contexto, observaciones…"
+                placeholder={t("crear_orden.field.desc.ph")}
                 className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
               />
             </div>
@@ -276,21 +279,21 @@ export function CrearOrdenDialog({
             {/* Prioridad + Tipo */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Prioridad</label>
+                <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">{t("crear_orden.field.priority")}</label>
                 <select {...register("prioridad")} className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm">
-                  <option value="urgente">Urgente</option>
-                  <option value="alta">Alta</option>
-                  <option value="media">Media</option>
-                  <option value="baja">Baja</option>
+                  <option value="urgente">{t("order.priority.urgent")}</option>
+                  <option value="alta">{t("order.priority.high")}</option>
+                  <option value="media">{t("order.priority.medium")}</option>
+                  <option value="baja">{t("order.priority.low")}</option>
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">Tipo</label>
+                <label className="mb-1 block text-xs font-medium text-[var(--color-text-secondary)]">{t("crear_orden.field.type")}</label>
                 <select {...register("tipo")} className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm">
-                  <option value="correctivo">Correctivo</option>
-                  <option value="preventivo">Preventivo</option>
-                  <option value="inspeccion">Inspección</option>
-                  <option value="instalacion">Instalación</option>
+                  <option value="correctivo">{t("crear_orden.type.corrective")}</option>
+                  <option value="preventivo">{t("crear_orden.type.preventive")}</option>
+                  <option value="inspeccion">{t("crear_orden.type.inspection")}</option>
+                  <option value="instalacion">{t("crear_orden.type.install")}</option>
                 </select>
               </div>
             </div>
@@ -298,7 +301,7 @@ export function CrearOrdenDialog({
             {/* Técnico — Sugeridos + selector manual */}
             <div>
               <label className="mb-2 block text-xs font-medium text-[var(--color-text-secondary)]">
-                Técnico asignado <span className="font-normal">(opcional)</span>
+                {t("crear_orden.field.tech")} <span className="font-normal">{t("crear_orden.field.tech.opt")}</span>
               </label>
 
               {/* Sugeridos — solo si hay instalación seleccionada */}
@@ -306,7 +309,7 @@ export function CrearOrdenDialog({
                 <div className="mb-3">
                   <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[var(--color-text-secondary)]">
                     <Sparkles className="h-3.5 w-3.5 text-[var(--color-primary-500)]" />
-                    Sugeridos por el sistema
+                    {t("crear_orden.suggested")}
                     {loadingSugeridos && (
                       <span className="h-3 w-3 animate-spin rounded-full border-2 border-[var(--color-primary-300)] border-t-transparent" />
                     )}
@@ -314,7 +317,7 @@ export function CrearOrdenDialog({
 
                   {!loadingSugeridos && (!sugeridos || sugeridos.length === 0) && (
                     <p className="text-xs text-[var(--color-text-muted)] italic">
-                      No hay técnicos disponibles para esta instalación.
+                      {t("crear_orden.no_tech")}
                     </p>
                   )}
 
@@ -342,7 +345,7 @@ export function CrearOrdenDialog({
               <details className="group">
                 <summary className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-[var(--color-text-secondary)] hover:text-[var(--color-text-primary)] list-none">
                   <User className="h-3.5 w-3.5" />
-                  {selectedInstalacion > 0 ? "O seleccionar manualmente…" : "Seleccionar técnico"}
+                  {selectedInstalacion > 0 ? t("crear_orden.manual") : t("crear_orden.select_tech")}
                   <span className="ml-auto text-[var(--color-text-muted)] group-open:rotate-180 transition-transform">▾</span>
                 </summary>
                 <div className="mt-2">
@@ -355,10 +358,10 @@ export function CrearOrdenDialog({
                         value={field.value ?? 0}
                         className="w-full rounded-[var(--radius-md)] border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-2 text-sm"
                       >
-                        <option value={0}>Sin asignar por ahora</option>
-                        {(tecnicos ?? []).map((t) => (
-                          <option key={t.usuarioId ?? t.id} value={t.usuarioId ?? t.id}>
-                            {t.nombre}{t.disponible ? "" : " · No disponible"}
+                        <option value={0}>{t("crear_orden.unassigned")}</option>
+                        {(tecnicos ?? []).map((tec) => (
+                          <option key={tec.usuarioId ?? tec.id} value={tec.usuarioId ?? tec.id}>
+                            {tec.nombre}{tec.disponible ? "" : ` · ${t("crear_orden.unavailable")}`}
                           </option>
                         ))}
                       </select>
@@ -375,14 +378,14 @@ export function CrearOrdenDialog({
                 onClick={() => onOpenChange(false)}
                 className="rounded-[var(--radius-md)] px-3 py-2 text-sm text-[var(--color-text-secondary)] hover:bg-[var(--color-neutral-100)]"
               >
-                Cancelar
+                {t("crear_orden.btn.cancel")}
               </button>
               <button
                 type="submit"
                 disabled={isPending}
                 className="rounded-[var(--radius-md)] bg-[var(--color-primary-600)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--color-primary-700)] disabled:opacity-50"
               >
-                {isPending ? "Creando…" : "Crear orden"}
+                {isPending ? t("crear_orden.btn.creating") : t("crear_orden.btn.create")}
               </button>
             </div>
           </form>

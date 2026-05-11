@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { empresaService } from "@/services/empresa.service"
+import { absoluteMediaUrl } from "@/lib/env"
 import type { PanelEmpresa } from "@/types/domain"
 import type { ApiPanelEmpresa } from "@/types/api"
 
@@ -40,7 +41,7 @@ function normalize(api: ApiPanelEmpresa): PanelEmpresa {
       generacionHoy: i.generacion_hoy ?? null,
       tipoSistema: (i.tipo_sistema ?? null) as PanelEmpresa["instalaciones"][0]["tipoSistema"],
       ciudad: i.ciudad ?? null,
-      imagen: i.imagen ?? null,
+      imagen: absoluteMediaUrl(i.imagen),
       riesgo: i.riesgo ?? null,
     })),
     clima: api.clima

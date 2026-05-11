@@ -11,8 +11,8 @@
   --solein-border:      #dde4ed;
   --solein-text:        #1A2740;
   --solein-text-muted:  #64748b;
-  --solein-navy:        #1e3a8a;
-  --solein-navy-hover:  #1e40af;
+  --solein-navy:        #1E2F45;
+  --solein-navy-hover:  #162337;
   --solein-gold-bg:     #fdf6e3;
   --solein-teal-bg:     #e0eef4;
   --shadow-sm:          0 1px 4px rgba(26,39,64,.07);
@@ -261,10 +261,10 @@
 
 .auth-brand {
   flex: 1;
-  background: #0f172a;   /* SOLEIM dark — hardcodeado */
-  /* Dot-grid sutil */
+  background: #1E2F45;   /* navy principal de marca */
+  /* Dot-grid sutil con el dorado de marca */
   background-image:
-    radial-gradient(circle, rgba(29, 78, 216, 0.25) 1px, transparent 1px);
+    radial-gradient(circle, rgba(224, 182, 61, 0.18) 1px, transparent 1px);
   background-size: 22px 22px;
   display: flex;
   align-items: center;
@@ -274,13 +274,13 @@
   overflow: hidden;
 }
 
-/* Glow radial suave centrado */
+/* Glow radial dorado suave centrado */
 .auth-brand::before {
   content: "";
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse 70% 70% at 50% 45%,
-    rgba(29, 78, 216, 0.25) 0%,
+    rgba(224, 182, 61, 0.12) 0%,
     transparent 70%);
   pointer-events: none;
 }

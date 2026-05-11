@@ -5,6 +5,7 @@ import { apiClient } from "@/services/apiClient"
 import { AuthContext } from "./auth-context"
 import type { ApiUser } from "@/types/api"
 import type { RegisterConCodigoPayload, RegisterPayload } from "@/services/auth.service"
+import { queryClient } from "@/lib/queryClient"
 import {
   clearAuthSession,
   getStoredAccessToken,
@@ -129,6 +130,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearAuthSession()
     setToken(null)
     setUser(null)
+    queryClient.clear() // Limpia cache al cambiar de usuario
   }
 
   const updateUser = async (patch: Partial<ApiUser>) => {

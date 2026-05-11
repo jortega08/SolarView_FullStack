@@ -23,6 +23,7 @@ import { useOrdenes } from "@/hooks/useOrdenes"
 import { usePanelEmpresa } from "@/hooks/usePanelEmpresa"
 import type { PdfReportRequest } from "@/hooks/useReportes"
 import type { ReportFiltersState, ReporteFormato } from "@/types/domain"
+import { useI18n } from "@/contexts/I18nContext"
 
 interface LocalDownload {
   filename: string
@@ -83,6 +84,7 @@ function periodLabel(filters: ReportFiltersState, dias: number): string {
 }
 
 export default function ReportesPage() {
+  const { t } = useI18n()
   const [draftFilters, setDraftFilters] = useState<ReportFiltersState>(DEFAULT_FILTERS)
   const [appliedFilters, setAppliedFilters] = useState<ReportFiltersState>(DEFAULT_FILTERS)
   const [formato, setFormato] = useState<ReporteFormato>("csv")
@@ -110,7 +112,12 @@ export default function ReportesPage() {
   }, [appliedFilters, autoSelected, draftFilters, instalaciones])
 
   const dias = useMemo(() => reportDays(appliedFilters), [appliedFilters])
-  const periodo = useMemo(() => periodLabel(appliedFilters, dias), [appliedFilters, dias])
+  const periodo = useMemo(() => {
+    if (appliedFilters.periodo === "custom") return `${dias} ${t("report.period.custom")}`
+    if (appliedFilters.periodo === "7d") return t("report.period.7d")
+    if (appliedFilters.periodo === "90d") return t("report.period.90d")
+    return t("report.period.30d")
+  }, [appliedFilters, dias, t])
   const selectedInstalacion = instalaciones.find((instalacion) => instalacion.id === appliedFilters.instalacionId)
   const csvKind = appliedFilters.tipo === "alertas" ? "alertas" : "consumo"
   const canHeaderCsv = appliedFilters.tipo === "consumo" || appliedFilters.tipo === "alertas"
@@ -150,8 +157,8 @@ export default function ReportesPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title="Reportes"
-        description="Exportación y consulta de reportes de consumo, alertas, mantenimiento y facturación."
+        title={t("report.title")}
+        description={t("report.desc")}
         actions={
           <>
             <button
@@ -160,13 +167,13 @@ export default function ReportesPage() {
               className="inline-flex h-9 items-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-3 text-xs font-medium text-[var(--color-text-secondary)] hover:bg-[var(--color-neutral-50)]"
             >
               <FileText className="h-3.5 w-3.5" />
-              Generar reporte
+              {t("report.btn.generate")}
             </button>
             <CsvDownloadButton
               tipo={csvKind}
               instalacionId={appliedFilters.instalacionId}
               dias={dias}
-              label="Exportar CSV"
+              label={t("report.btn.csv")}
               disabled={!canHeaderCsv}
               className="border border-[var(--color-primary-700)]"
               onDownloaded={recordDownload(appliedFilters.tipo)}
@@ -178,12 +185,12 @@ export default function ReportesPage() {
                 className="inline-flex h-9 items-center gap-2 rounded-md bg-[var(--color-primary-600)] px-3 text-xs font-semibold text-white hover:bg-[var(--color-primary-700)]"
               >
                 <FileDown className="h-3.5 w-3.5" />
-                Exportar PDF
+                {t("report.btn.pdf")}
               </button>
             ) : (
               <PdfDownloadButton
                 request={pdfRequest}
-                label="Exportar PDF"
+                label={t("report.btn.pdf")}
                 onDownloaded={recordDownload(`${appliedFilters.tipo} pdf`)}
               />
             )}
@@ -202,8 +209,8 @@ export default function ReportesPage() {
 
       <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
         <ReportCard
-          title="Reporte de consumo"
-          description="Detalle de consumo energético por fuente para una instalación."
+          title={t("report.card.consumption")}
+          description={t("report.card.consumption.desc")}
           formats={["CSV", "PDF"]}
           icon={Zap}
           tone="primary"
@@ -227,8 +234,8 @@ export default function ReportesPage() {
           }
         />
         <ReportCard
-          title="Reporte de alertas"
-          description="Alertas, severidad, estado, causa probable y resolución."
+          title={t("report.card.alerts")}
+          description={t("report.card.alerts.desc")}
           formats={["CSV", "PDF"]}
           icon={AlertTriangle}
           tone="danger"
@@ -252,15 +259,15 @@ export default function ReportesPage() {
           }
         />
         <ReportCard
-          title="Reporte de mantenimiento"
-          description="Vista operativa basada en mantenimientos visibles del backend."
+          title={t("report.card.maint")}
+          description={t("report.card.maint.desc")}
           formats={["PDF"]}
           icon={CalendarCheck2}
           tone="solar"
           action={
             <PdfDownloadButton
               request={{ ...pdfRequest, tipo: "mantenimiento" }}
-              label="Descargar PDF"
+              label={t("report.card.dl_pdf")}
               disabled={!hasMaintenanceData}
               className="w-full"
               onDownloaded={recordDownload("mantenimiento pdf")}
@@ -268,15 +275,15 @@ export default function ReportesPage() {
           }
         />
         <ReportCard
-          title="Reporte de SLA"
-          description="Indicadores de SLA disponibles cuando el panel expone estado de riesgo."
+          title={t("report.card.sla")}
+          description={t("report.card.sla.desc")}
           formats={["PDF"]}
           icon={ShieldCheck}
           tone="sla"
           action={
             <PdfDownloadButton
               request={{ ...pdfRequest, tipo: "sla" }}
-              label="Descargar PDF"
+              label={t("report.card.dl_pdf")}
               disabled={!hasSlaData}
               className="w-full"
               onDownloaded={recordDownload("sla pdf")}
@@ -284,8 +291,8 @@ export default function ReportesPage() {
           }
         />
         <ReportCard
-          title="Factura mensual"
-          description="Consulta y PDF de factura por domicilio, mes y año."
+          title={t("report.card.invoice")}
+          description={t("report.card.invoice.desc")}
           formats={["Vista", "PDF"]}
           icon={ReceiptText}
           tone="energy"
@@ -296,7 +303,7 @@ export default function ReportesPage() {
               className="inline-flex h-9 w-full items-center justify-center gap-2 rounded-md bg-[var(--color-primary-600)] px-3 text-xs font-semibold text-white hover:bg-[var(--color-primary-700)]"
             >
               <Download className="h-3.5 w-3.5" />
-              Consultar
+              {t("report.btn.consult")}
             </button>
           }
         />
@@ -326,18 +333,19 @@ export default function ReportesPage() {
 }
 
 function SessionHistory({ downloads }: { downloads: LocalDownload[] }) {
+  const { t } = useI18n()
   return (
     <section className="rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
       <div className="border-b border-[var(--color-border)] px-4 py-3">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Historial y vista previa</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{t("report.history.title")}</h3>
         <p className="mt-0.5 text-xs text-[var(--color-text-secondary)]">
-          El backend no expone historial persistente; esta lista solo registra descargas de la sesión actual.
+          {t("report.history.desc")}
         </p>
       </div>
       {downloads.length === 0 ? (
         <EmptyState
-          title="Historial no disponible"
-          description="Las descargas realizadas en esta sesión aparecerán aquí temporalmente."
+          title={t("report.history.empty")}
+          description={t("report.history.empty.desc")}
           icon={FileText}
           className="py-12"
         />

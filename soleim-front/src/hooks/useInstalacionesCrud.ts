@@ -4,6 +4,7 @@ import {
   type InstalacionPayload,
   type SensorPayload,
 } from "@/services/instalaciones-crud.service"
+import { absoluteMediaUrl } from "@/lib/env"
 import type { ApiInstalacionCrud, ApiSensor } from "@/types/api"
 import type { InstalacionCrud, SensorInstalacion } from "@/types/domain"
 import type { EstadoInstalacion, TipoSistema } from "@/types/enums"
@@ -22,7 +23,7 @@ function normalizeInstalacion(api: ApiInstalacionCrud): InstalacionCrud {
     capacidadBateriaKwh: Number(api.capacidad_bateria_kwh ?? 0),
     fechaInstalacion: api.fecha_instalacion ?? null,
     estado: api.estado as EstadoInstalacion,
-    imagenUrl: api.imagen_url ?? api.imagen ?? null,
+    imagenUrl: absoluteMediaUrl(api.imagen_url ?? api.imagen),
   }
 }
 

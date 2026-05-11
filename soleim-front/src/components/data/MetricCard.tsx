@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/feedback/ErrorState"
 interface MetricCardProps {
   title: string
   value: string
+  description?: string
   delta?: string
   deltaPositive?: boolean
   icon?: LucideIcon
@@ -21,6 +22,7 @@ interface MetricCardProps {
 export function MetricCard({
   title,
   value,
+  description,
   delta,
   deltaPositive,
   icon: Icon,
@@ -56,7 +58,10 @@ export function MetricCard({
           </div>
         )}
       </div>
-      <p className="text-2xl font-bold text-[var(--color-text-primary)] tabular leading-none mb-2">{value}</p>
+      <p className="text-2xl font-bold text-[var(--color-text-primary)] tabular leading-none mb-1">{value}</p>
+      {description && (
+        <p className="text-xs text-[var(--color-text-muted)] mb-1 leading-snug">{description}</p>
+      )}
       {delta && (
         <div className="flex items-center gap-1">
           {deltaPositive === true ? (

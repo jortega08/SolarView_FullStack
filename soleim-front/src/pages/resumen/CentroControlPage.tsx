@@ -58,15 +58,10 @@ import type {
   Orden,
 } from "@/types/domain"
 import type { SeveridadAlerta } from "@/types/enums"
-
-const ALERT_GROUPS: Array<{ severidad: SeveridadAlerta; label: string; iconClass: string }> = [
-  { severidad: "critica", label: "Críticas", iconClass: "text-[var(--color-danger-600)]" },
-  { severidad: "alta", label: "Altas", iconClass: "text-[var(--color-warning-600)]" },
-  { severidad: "media", label: "Medias", iconClass: "text-[var(--color-solar-600)]" },
-  { severidad: "baja", label: "Bajas", iconClass: "text-[var(--color-primary-600)]" },
-]
+import { useI18n } from "@/contexts/I18nContext"
 
 export default function CentroControlPage() {
+  const { t } = useI18n()
   const { data: panel, isLoading: panelLoading, isError: panelError, refetch: refetchPanel } = usePanelEmpresa()
   const { data: alertasActivas, isLoading: alertasLoading } = useAlertas({ estado: "activa", limit: 24 })
   const { data: ordenes, isLoading: ordenesLoading } = useOrdenes({ estado: "abierta", limit: 8 })
@@ -95,7 +90,7 @@ export default function CentroControlPage() {
     <div className="space-y-5">
       <section className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <MetricCard
-          title="Instalaciones activas"
+          title={t("dash.metric.active_inst")}
           value={panelLoading ? "—" : String(panel?.instalacionesActivas ?? 0)}
           icon={Building2}
           iconBg="bg-[var(--color-energy-50)]"
@@ -105,7 +100,7 @@ export default function CentroControlPage() {
           onRetry={refetchPanel}
         />
         <MetricCard
-          title="Generación solar hoy"
+          title={t("dash.metric.solar_gen")}
           value={panelLoading ? "—" : formatEnergy(panel?.generacionHoy)}
           icon={Zap}
           iconBg="bg-[var(--color-primary-50)]"
@@ -115,7 +110,7 @@ export default function CentroControlPage() {
           onRetry={refetchPanel}
         />
         <MetricCard
-          title="Alertas críticas"
+          title={t("dash.metric.critical_alerts")}
           value={panelLoading ? "—" : String(panel?.alertasCriticas ?? 0)}
           icon={AlertTriangle}
           iconBg="bg-[var(--color-danger-50)]"
@@ -125,7 +120,7 @@ export default function CentroControlPage() {
           onRetry={refetchPanel}
         />
         <MetricCard
-          title="Órdenes abiertas"
+          title={t("dash.metric.open_orders")}
           value={panelLoading || ordenesLoading ? "—" : String(ordenesAbiertas)}
           icon={ClipboardList}
           iconBg="bg-[var(--color-solar-50)]"
@@ -135,7 +130,7 @@ export default function CentroControlPage() {
           onRetry={refetchPanel}
         />
         <MetricCard
-          title="SLA en riesgo"
+          title={t("dash.metric.sla_risk")}
           value={panelLoading || ordenesLoading ? "—" : String(slaEnRiesgo)}
           icon={Shield}
           iconBg="bg-[var(--color-sla-50)]"
@@ -145,7 +140,7 @@ export default function CentroControlPage() {
           onRetry={refetchPanel}
         />
         <MetricCard
-          title="Ahorro estimado hoy"
+          title={t("dash.metric.savings")}
           value={panelLoading ? "—" : formatCurrency(panel?.ahorroEstimado, monedaPanel)}
           icon={DollarSign}
           iconBg="bg-[var(--color-energy-50)]"
@@ -158,7 +153,7 @@ export default function CentroControlPage() {
 
       <section className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <MetricCard
-          title="Valor consumo (red)"
+          title={t("dash.metric.grid_cost")}
           value={
             panelLoading
               ? "—"
@@ -172,7 +167,7 @@ export default function CentroControlPage() {
           onRetry={refetchPanel}
         />
         <MetricCard
-          title="Valor ahorro (solar)"
+          title={t("dash.metric.solar_savings")}
           value={
             panelLoading
               ? "—"
@@ -186,7 +181,7 @@ export default function CentroControlPage() {
           onRetry={refetchPanel}
         />
         <MetricCard
-          title="Valor total (sin paneles)"
+          title={t("dash.metric.total_cost")}
           value={
             panelLoading
               ? "—"
@@ -203,21 +198,21 @@ export default function CentroControlPage() {
 
       <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <ChartCard
-          title="Generación y consumo en tiempo real"
-          subtitle="Últimos 7 días de la instalación principal visible"
+          title={t("dash.chart.gen_cons")}
+          subtitle={t("dash.chart.gen_cons.sub")}
           loading={tendLoading}
           className="xl:col-span-2"
           toolbar={
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-energy-200)] bg-[var(--color-energy-50)] px-2 py-1 text-xs font-medium text-[var(--color-energy-700)]">
                 <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-energy-500)]" />
-                En vivo
+                {t("common.live")}
               </span>
               <button
                 type="button"
                 onClick={() => refetchPanel()}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md text-[var(--color-neutral-500)] hover:bg-[var(--color-neutral-100)]"
-                title="Actualizar"
+                title={t("common.refresh")}
               >
                 <RefreshCw className="h-4 w-4" />
               </button>
@@ -228,15 +223,15 @@ export default function CentroControlPage() {
             <AreaTimeSeries data={tendencia} />
           ) : (
             <EmptyState
-              title="Sin datos de tendencia"
-              description="Cuando haya telemetría suficiente se mostrará la serie de generación y consumo."
+              title={t("dash.empty.trend")}
+              description={t("dash.empty.trend.desc")}
               icon={Zap}
             />
           )}
         </ChartCard>
 
         <div className="grid gap-4">
-          <ChartCard title="Salud de baterías" loading={panelLoading} bodyClassName="pb-5">
+          <ChartCard title={t("dash.chart.battery")} loading={panelLoading} bodyClassName="pb-5">
             {panel ? (
               <BatteryHealthDonut
                 promedioSoc={
@@ -244,10 +239,10 @@ export default function CentroControlPage() {
                     ? Math.round(instalacionesConSoc.reduce((s, i) => s + (i.bateriaSoc ?? 0), 0) / instalacionesConSoc.length)
                     : undefined
                 }
-                segments={buildHealthSegments(panel.instalaciones)}
+                segments={buildHealthSegments(panel.instalaciones, t)}
               />
             ) : (
-              <EmptyState title="Sin datos de batería" icon={BatteryCharging} />
+              <EmptyState title={t("dash.empty.battery")} icon={BatteryCharging} />
             )}
           </ChartCard>
           <EnergySourcesCard fuentes={panel?.fuentesEnergia ?? null} loading={panelLoading} />
@@ -284,13 +279,14 @@ function EnergySourcesCard({
   fuentes: FuentesEnergia | null
   loading: boolean
 }) {
+  const { t } = useI18n()
   const solarPct = Math.max(0, Math.min(100, fuentes?.solarPct ?? 0))
   const redPct = Math.max(0, Math.min(100, fuentes?.redPct ?? 0))
 
   return (
     <PanelCard
-      title="Fuentes de energía hoy"
-      action={<Link to="/analitica" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">Ver detalle</Link>}
+      title={t("dash.card.energy_sources")}
+      action={<Link to="/analitica" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">{t("dash.view.analytics")}</Link>}
     >
       {loading ? (
         <Skeleton className="h-24 w-full" />
@@ -303,20 +299,20 @@ function EnergySourcesCard({
           <div className="mt-4 grid grid-cols-2 gap-4">
             <EnergySourceItem
               icon={<Sun className="h-5 w-5 text-[var(--color-energy-600)]" />}
-              label="Solar"
+              label={t("dash.energy.solar")}
               pct={formatPercent(fuentes.solarPct)}
               value={formatEnergy(fuentes.solarKwh)}
             />
             <EnergySourceItem
               icon={<Zap className="h-5 w-5 text-[var(--color-primary-600)]" />}
-              label="Red eléctrica"
+              label={t("dash.energy.grid")}
               pct={formatPercent(fuentes.redPct)}
               value={formatEnergy(fuentes.redKwh)}
             />
           </div>
         </div>
       ) : (
-        <EmptyState title="Sin fuentes de energía" icon={Grid2X2} className="py-5" />
+        <EmptyState title={t("dash.empty.energy")} icon={Grid2X2} className="py-5" />
       )}
     </PanelCard>
   )
@@ -354,12 +350,13 @@ function RecentTelemetryCard({
   instalaciones: InstalacionResumen[]
   loading: boolean
 }) {
+  const { t } = useI18n()
   const rows = instalaciones.slice(0, 5)
 
   return (
     <PanelCard
-      title="Telemetría reciente"
-      action={<Link to="/telemetria" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">Ver todas</Link>}
+      title={t("dash.card.telemetry")}
+      action={<Link to="/telemetria" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">{t("dash.view.telemetry")}</Link>}
     >
       {loading ? (
         <div className="space-y-2">
@@ -368,7 +365,7 @@ function RecentTelemetryCard({
           ))}
         </div>
       ) : rows.length === 0 ? (
-        <EmptyState title="Sin telemetría" icon={Radio} className="py-6" />
+        <EmptyState title={t("dash.empty.telemetry")} icon={Radio} className="py-6" />
       ) : (
         <div className="divide-y divide-[var(--color-border)]">
           {rows.map((inst) => (
@@ -379,14 +376,14 @@ function RecentTelemetryCard({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-xs font-semibold text-[var(--color-text-primary)]">{inst.nombre}</p>
                 <p className="text-xs text-[var(--color-text-muted)]">
-                  {inst.bateriaSoc != null ? `Batería ${formatPercent(inst.bateriaSoc)}` : inst.ciudad ?? "Sin ubicación"}
+                  {inst.bateriaSoc != null ? `${t("dash.chart.battery")} ${formatPercent(inst.bateriaSoc)}` : inst.ciudad ?? "Sin ubicación"}
                 </p>
               </div>
               <div className="text-right">
                 <p className="tabular text-xs font-semibold text-[var(--color-energy-700)]">{formatPower(inst.potenciaActual)}</p>
                 <span className="inline-flex items-center gap-1 text-xs text-[var(--color-text-muted)]">
                   <span className="h-1.5 w-1.5 rounded-full bg-[var(--color-energy-500)]" />
-                  {inst.estado === "activa" ? "En línea" : "Revisar"}
+                  {inst.estado === "activa" ? t("dash.online") : t("dash.check")}
                 </span>
               </div>
             </div>
@@ -398,10 +395,11 @@ function RecentTelemetryCard({
 }
 
 function ClimateIrradianceCard({ clima, loading }: { clima: Clima | null; loading: boolean }) {
+  const { t } = useI18n()
   return (
     <PanelCard
-      title="Clima e irradiancia"
-      action={<Link to="/analitica" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">Ver analítica</Link>}
+      title={t("dash.card.climate")}
+      action={<Link to="/analitica" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">{t("dash.view.analytics.link")}</Link>}
     >
       {loading ? (
         <Skeleton className="h-36 w-full" />
@@ -418,19 +416,19 @@ function ClimateIrradianceCard({ clima, loading }: { clima: Clima | null; loadin
               <p className="text-sm text-[var(--color-text-secondary)]">{clima.descripcion ?? "Clima sin descripción"}</p>
             </div>
             <div className="ml-auto border-l border-[var(--color-border)] pl-4">
-              <p className="text-xs text-[var(--color-text-secondary)]">Irradiancia actual</p>
+              <p className="text-xs text-[var(--color-text-secondary)]">{t("dash.irradiance")}</p>
               <p className="tabular text-lg font-bold text-[var(--color-text-primary)]">{formatIrradiance(clima.irradiancia)}</p>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 border-t border-[var(--color-border)] pt-3">
-            <MiniStat label="Humedad" value={formatPercent(clima.humedad)} />
-            <MiniStat label="Viento" value={clima.viento == null ? "—" : `${Math.round(clima.viento)} km/h`} />
+            <MiniStat label={t("dash.humidity")} value={formatPercent(clima.humedad)} />
+            <MiniStat label={t("dash.wind")} value={clima.viento == null ? "—" : `${Math.round(clima.viento)} km/h`} />
           </div>
         </div>
       ) : (
         <EmptyState
-          title="Sin clima disponible"
-          description="El backend no devolvió clima para el resumen."
+          title={t("dash.empty.climate")}
+          description={t("dash.empty.climate.desc")}
           icon={CloudSun}
           className="py-6"
         />
@@ -440,15 +438,16 @@ function ClimateIrradianceCard({ clima, loading }: { clima: Clima | null; loadin
 }
 
 function NotificationsCard({ notificaciones }: { notificaciones: Notificacion[] }) {
+  const { t } = useI18n()
   const visible = notificaciones.slice(0, 5)
 
   return (
     <PanelCard
-      title="Notificaciones recientes"
-      action={<Link to="/notificaciones" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">Ver todas</Link>}
+      title={t("dash.card.notifications")}
+      action={<Link to="/notificaciones" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">{t("dash.view.telemetry")}</Link>}
     >
       {visible.length === 0 ? (
-        <EmptyState title="Sin notificaciones" icon={Info} className="py-6" />
+        <EmptyState title={t("dash.empty.notifications")} icon={Info} className="py-6" />
       ) : (
         <div className="divide-y divide-[var(--color-border)]">
           {visible.map((notificacion) => (
@@ -472,12 +471,19 @@ function NotificationsCard({ notificaciones }: { notificaciones: Notificacion[] 
 }
 
 function GroupedAlertsPanel({ alertas, loading }: { alertas: Alerta[]; loading: boolean }) {
+  const { t } = useI18n()
   const total = alertas.length
+  const ALERT_GROUPS: Array<{ severidad: SeveridadAlerta; label: string; iconClass: string }> = [
+    { severidad: "critica", label: t("alert.sev.critical"), iconClass: "text-[var(--color-danger-600)]" },
+    { severidad: "alta",    label: t("alert.sev.high"),     iconClass: "text-[var(--color-warning-600)]" },
+    { severidad: "media",   label: t("alert.sev.medium"),   iconClass: "text-[var(--color-solar-600)]" },
+    { severidad: "baja",    label: t("alert.sev.low"),      iconClass: "text-[var(--color-primary-600)]" },
+  ]
 
   return (
     <PanelCard
-      title="Alertas activas"
-      action={<Link to="/alertas" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">Ver todas</Link>}
+      title={t("dash.card.alerts")}
+      action={<Link to="/alertas" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">{t("dash.view.telemetry")}</Link>}
     >
       {loading ? (
         <div className="space-y-2">
@@ -486,12 +492,12 @@ function GroupedAlertsPanel({ alertas, loading }: { alertas: Alerta[]; loading: 
           ))}
         </div>
       ) : total === 0 ? (
-        <EmptyState title="Sin alertas activas" icon={CheckCircle2} className="py-6" />
+        <EmptyState title={t("dash.empty.alerts")} icon={CheckCircle2} className="py-6" />
       ) : (
         <>
           <div className="mb-3 flex items-center justify-between rounded-[var(--radius-md)] bg-[var(--color-neutral-50)] px-3 py-2">
-            <span className="text-xs font-medium text-[var(--color-text-secondary)]">Agrupadas por severidad</span>
-            <span className="tabular text-xs font-semibold text-[var(--color-text-primary)]">{total} visibles</span>
+            <span className="text-xs font-medium text-[var(--color-text-secondary)]">{t("dash.alerts.grouped")}</span>
+            <span className="tabular text-xs font-semibold text-[var(--color-text-primary)]">{total} {t("dash.alerts.visible")}</span>
           </div>
           <div className="max-h-[360px] space-y-4 overflow-y-auto pr-1">
             {ALERT_GROUPS.map((group) => {
@@ -543,12 +549,13 @@ function MaintenancePreviewCard({
   mantenimientos: MantenimientoProgramado[]
   loading: boolean
 }) {
+  const { t } = useI18n()
   const visible = mantenimientos.slice(0, 4)
 
   return (
     <PanelCard
-      title="Próximos mantenimientos"
-      action={<Link to="/mantenimiento" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">Ver todos</Link>}
+      title={t("dash.card.maintenance")}
+      action={<Link to="/mantenimiento" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">{t("common.view.all.m")}</Link>}
     >
       {loading ? (
         <div className="space-y-2">
@@ -557,7 +564,7 @@ function MaintenancePreviewCard({
           ))}
         </div>
       ) : visible.length === 0 ? (
-        <EmptyState title="Sin mantenimientos programados" icon={Calendar} className="py-5" />
+        <EmptyState title={t("dash.empty.maintenance")} icon={Calendar} className="py-5" />
       ) : (
         <div className="divide-y divide-[var(--color-border)]">
           {visible.map((mantenimiento) => (
@@ -591,19 +598,20 @@ function InstallationsTable({
   instalaciones: InstalacionResumen[]
   loading: boolean
 }) {
+  const { t } = useI18n()
   return (
     <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Instalaciones</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{t("dash.card.installations")}</h3>
         <Link to="/instalaciones" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">
-          Ver todas
+          {t("common.view.all")}
         </Link>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr className="border-b border-[var(--color-border)] bg-[var(--color-neutral-50)]">
-              {["Instalación", "Estado", "Batería", "Potencia actual", "Generación hoy", "Riesgo", ""].map((header) => (
+              {[t("dash.inst.col.name"), t("dash.inst.col.status"), t("dash.inst.col.battery"), t("dash.inst.col.power"), t("dash.inst.col.gen"), t("dash.inst.col.risk"), ""].map((header) => (
                 <th key={header} className="whitespace-nowrap px-4 py-2.5 text-left font-medium text-[var(--color-text-secondary)]">
                   {header}
                 </th>
@@ -624,7 +632,7 @@ function InstallationsTable({
             ) : instalaciones.length === 0 ? (
               <tr>
                 <td colSpan={7}>
-                  <EmptyState title="Sin instalaciones" icon={Building2} className="py-8" />
+                  <EmptyState title={t("dash.empty.installations")} icon={Building2} className="py-8" />
                 </td>
               </tr>
             ) : (
@@ -663,7 +671,7 @@ function InstallationsTable({
                     <Link
                       to={`/instalaciones/${instalacion.id}`}
                       className="inline-flex h-7 w-7 items-center justify-center rounded-md hover:bg-[var(--color-neutral-100)]"
-                      title="Ver detalle"
+                      title={t("inst.action.view")}
                     >
                       <Eye className="h-3.5 w-3.5 text-[var(--color-neutral-500)]" />
                     </Link>
@@ -702,12 +710,13 @@ function BatteryMiniBar({ value }: { value: number | null }) {
 }
 
 function RecentOrdersCard({ ordenes }: { ordenes: Orden[] }) {
+  const { t } = useI18n()
   return (
     <div className="overflow-hidden rounded-[var(--radius-lg)] border border-[var(--color-border)] bg-[var(--color-surface)] shadow-[var(--shadow-card)]">
       <div className="flex items-center justify-between border-b border-[var(--color-border)] px-4 py-3">
-        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">Órdenes recientes</h3>
+        <h3 className="text-sm font-semibold text-[var(--color-text-primary)]">{t("dash.card.orders")}</h3>
         <Link to="/ordenes" className="text-xs font-medium text-[var(--color-primary-600)] hover:underline">
-          Ver todas
+          {t("common.view.all")}
         </Link>
       </div>
       <div className="divide-y divide-[var(--color-border)]">
@@ -784,13 +793,14 @@ function NotificationIcon({ tipo, leida }: { tipo: string | null; leida: boolean
 }
 
 function buildHealthSegments(
-  instalaciones: Array<{ bateriaSoc: number | null }>
+  instalaciones: Array<{ bateriaSoc: number | null }>,
+  t: (key: string) => string
 ): Array<{ label: string; count: number; color: string }> {
   const segments = [
-    { label: "Óptima (>90%)", count: 0, color: "var(--color-energy-500)" },
-    { label: "Buena (70-90%)", count: 0, color: "var(--color-primary-500)" },
-    { label: "Regular (50-70%)", count: 0, color: "var(--color-solar-500)" },
-    { label: "Crítica (<50%)", count: 0, color: "var(--color-danger-500)" },
+    { label: t("dash.battery.optimal"), count: 0, color: "var(--color-energy-500)" },
+    { label: t("dash.battery.good"), count: 0, color: "var(--color-primary-500)" },
+    { label: t("dash.battery.fair"), count: 0, color: "var(--color-solar-500)" },
+    { label: t("dash.battery.critical"), count: 0, color: "var(--color-danger-500)" },
   ]
   for (const instalacion of instalaciones) {
     if (instalacion.bateriaSoc == null) continue

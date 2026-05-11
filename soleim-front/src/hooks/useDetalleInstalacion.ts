@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query"
 import { empresaService } from "@/services/empresa.service"
+import { absoluteMediaUrl } from "@/lib/env"
 import type { InstalacionDetalle } from "@/types/domain"
 import type { ApiDetalleInstalacionResponse, ApiInstalacionDetalle } from "@/types/api"
 
@@ -21,7 +22,7 @@ function normalize(api: DetallePayload): InstalacionDetalle {
     capacidadSolarKwp: inst.capacidad_solar_kwp ?? inst.capacidad_panel_kw ?? 0,
     capacidadBateriaKwh: inst.capacidad_bateria_kwh ?? 0,
     ciudad: inst.ciudad ?? "",
-    imagen: inst.imagen ?? null,
+    imagen: absoluteMediaUrl(inst.imagen ?? inst.imagen_url),
     ultimaActualizacion: inst.ultima_actualizacion ?? bateria?.fecha ?? null,
     potenciaActual: inst.potencia_actual ?? null,
     generacionHoy: inst.generacion_hoy ?? consumoHoy?.solar ?? null,
